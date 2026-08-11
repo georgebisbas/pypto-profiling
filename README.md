@@ -4,9 +4,9 @@
 
 ## Spec (methodology)
 
-Authoritative plan: [pypto-3.0-notes/allreduce_benchmark_variants/collectives_performance_benchmark_plan.md](../../pypto-3.0-notes/allreduce_benchmark_variants/collectives_performance_benchmark_plan.md)
+Authoritative plan: [pypto-3.0-notes/allreduce_benchmark_variants/collectives_performance_benchmark_plan.md](../pypto-3.0-notes/collectives_benchmarking/collectives_performance_benchmark_plan.md)
 
-Profiling playbook: [pypto-3.0-notes/performance_tuning.md/profiling.md](../../pypto-3.0-notes/performance_tuning.md/profiling.md)
+Profiling playbook: [pypto-3.0-notes/performance_tuning.md/profiling.md](../pypto-3.0-notes/performance_tuning/profiling.md)
 
 ## Principles
 

@@ -1,6 +1,6 @@
 # collectives
 
-Python package for Phase E collective benchmarks. See [../README.md](../README.md) and the [notes spec](../../../pypto-3.0-notes/allreduce_benchmark_variants/collectives_performance_benchmark_plan.md).
+Python package for Phase E collective benchmarks. See [../README.md](../README.md) and the [notes spec](../../pypto-3.0-notes/collectives_benchmarking/collectives_performance_benchmark_plan.md).
 
 | Module | Role |
 |--------|------|
