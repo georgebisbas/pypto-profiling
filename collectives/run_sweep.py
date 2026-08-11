@@ -1189,7 +1189,7 @@ def _cmd_pair_impl(
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Collective benchmark sweep (pypto-tooling)")
+    parser = argparse.ArgumentParser(description="Collective benchmark sweep (pypto-profiling)")
     sub = parser.add_subparsers(dest="command", required=True)
 
     p_val = sub.add_parser("validate-case", help="Validate EquivalenceCase JSON")

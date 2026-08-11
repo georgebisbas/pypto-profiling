@@ -202,7 +202,7 @@ and collect PMU data in a dedicated campaign.
 ### Dev workspace (sibling directories)
 
 ```bash
-cd pypto-tooling/profiling
+cd pypto-profiling
 
 # Validate a case file
 PYTHONPATH=. python -m collectives.run_sweep validate-case \
@@ -251,7 +251,7 @@ The Docker image has pypto at `/opt/pypto` and simpler at `/opt/pypto/runtime`.
 Paths are auto-detected — no env vars needed. Mount the profiling directory:
 
 ```bash
-# Build the image (from pypto-tooling/)
+# Build the image (from pypto-docker/)
 docker build -t pypto3-hw-native-sys:cann9 \
   -f Dockerfile.hw-native-sys.cann9.0 .
 
@@ -261,11 +261,11 @@ docker run --rm -it --privileged --ipc=host --pid=host \
   -v /usr/local/bin/npu-smi:/usr/local/bin/npu-smi:ro \
   -v /usr/local/Ascend/driver:/usr/local/Ascend/driver:ro \
   -v /dev:/dev \
-  -v $(pwd):/pypto-tooling \
+  -v $(pwd):/pypto-profiling \
   pypto3-hw-native-sys:cann9
 
 # Inside the container
-cd /pypto-tooling/profiling
+cd /pypto-profiling
 export LD_PRELOAD=${CANN_HOME}/aarch64-linux/lib64/libhccl.so
 
 # Validate paths (should auto-detect /opt/pypto and /opt/pypto/runtime)

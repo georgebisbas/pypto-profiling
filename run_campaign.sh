@@ -3,7 +3,7 @@
 # run_campaign.sh — full collective benchmark campaign
 #
 # Usage:
-#   cd pypto-tooling/profiling
+#   cd pypto-profiling
 #
 #   # Strong scaling: one variant, sweep P
 #   bash run_campaign.sh --variant mesh --p-values 2,4,8
@@ -32,8 +32,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
 # --- auto-detect environment ---
-TOOLING_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"          # pypto-tooling/
-WORKSPACE_ROOT="$(dirname "$TOOLING_ROOT")"            # parent of pypto-tooling
+TOOLING_ROOT="$SCRIPT_DIR"                              # pypto-profiling/
+WORKSPACE_ROOT="$(dirname "$TOOLING_ROOT")"            # hw-native-sys/ (parent of pypto-profiling)
 
 if [ -z "${PYPTO_ROOT:-}" ]; then
     if [ -d "$WORKSPACE_ROOT/pypto" ]; then
