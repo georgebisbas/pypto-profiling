@@ -105,5 +105,62 @@ def test_n_bytes():
     assert bw_model.n_bytes(65536, "unknown") == 262144  # default 4 B/elt
 
 
+def _run_cn(stack, p, count, execute, variant="mesh", core_num=1):
+    run = {
+        "stack": stack,
+        "p": p,
+        "count": count,
+        "variant": variant,
+        "dtype": "fp32",
+        "execute_s_mean": execute,
+        "core_num": core_num,
+    }
+    return run
+
+
+def test_score_runs_groups_by_core_num():
+    runs = []
+    for cn in (1, 8, 16):
+        for count in (65536, 262144, 1048576):
+            # Launch width scales the marginal bandwidth until saturation.
+            bw = 1e9 + (cn - 1) * 1e8
+            t = 20e-6 + (count * 4) / bw
+            runs.append(_run_cn("pypto-host", 8, count, t, core_num=cn))
+    models = bw_model.score_runs(runs)
+    by_cn = {m.core_num: m for m in models}
+    assert set(by_cn) == {1, 8, 16}
+    assert by_cn[16].bandwidth_b_s > by_cn[1].bandwidth_b_s
+
+
+def test_b_star_finds_saturation_width():
+    # Simulate a sweep where BW rises 1.0 / 1.9 / 2.0 GB/s at cn 1/8/16:
+    # 95% of the 2.0 peak is 1.9, so cn=8 is the smallest width that reaches it.
+    models = []
+    for cn, bw in ((1, 1.0e9), (8, 1.9e9), (16, 2.0e9)):
+        m = bw_model.BandwidthModel(
+            stack="pypto-host", p=8, variant="mesh", core_num=cn,
+            source="device_wall_s_mean", n_points=3,
+            latency_s=20e-6, bandwidth_b_s=float(bw), r2=0.99,
+            pipeline_score=0.9, largest_n_bytes=1048576 * 4, largest_t_s=1e-3,
+        )
+        models.append(m)
+    b_star_val, best, chosen = bw_model.b_star(models)
+    assert best.core_num == 16
+    assert b_star_val == 8
+    assert chosen.core_num == 8
+
+
+def test_b_star_scorecard_omits_single_core_num():
+    models = [
+        bw_model.BandwidthModel(
+            stack="pypto-composite", p=2, variant="mesh", core_num=1,
+            source="execute_s_mean", n_points=3,
+            latency_s=20e-6, bandwidth_b_s=1.0e9, r2=0.99,
+            pipeline_score=0.8, largest_n_bytes=262144, largest_t_s=1e-3,
+        )
+    ]
+    assert bw_model.b_star_scorecard(models) == []
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

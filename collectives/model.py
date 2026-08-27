@@ -91,7 +91,7 @@ def _run_time(run: dict[str, Any]) -> tuple[str, float | None]:
 
 @dataclass
 class BandwidthModel:
-    """Fitted T(N) = O + N/B for one (stack, P, variant) group."""
+    """Fitted T(N) = O + N/B for one (stack, P, variant, core_num) group."""
 
     stack: str
     p: int
@@ -104,6 +104,7 @@ class BandwidthModel:
     pipeline_score: float
     largest_n_bytes: int
     largest_t_s: float
+    core_num: int = 1
     bw_eff_vs_hccl: float | None = None
     latency_ratio_vs_hccl: float | None = None
     # (n_bytes, seconds) points used for the fit — for plotting.
@@ -113,13 +114,13 @@ class BandwidthModel:
         return asdict(self)
 
 
-def group_points(runs: Iterable[dict[str, Any]]) -> dict[tuple[str, int, str], list[tuple[float, float, str]]]:
-    """Group runs into (stack, P, variant) buckets of (n_bytes, seconds, source).
+def group_points(runs: Iterable[dict[str, Any]]) -> dict[tuple[str, int, str, int], list[tuple[float, float, str]]]:
+    """Group runs into (stack, P, variant, core_num) buckets of (n_bytes, seconds, source).
 
     Points keep the best source available per run; the group-level fit later
     requires a consistent source across all points.
     """
-    groups: dict[tuple[str, int, str], list[tuple[float, float, str]]] = {}
+    groups: dict[tuple[str, int, str, int], list[tuple[float, float, str]]] = {}
     for run in runs:
         stack = run.get("stack")
         p = run.get("p")
@@ -129,7 +130,12 @@ def group_points(runs: Iterable[dict[str, Any]]) -> dict[tuple[str, int, str], l
         source, seconds = _run_time(run)
         if not source or seconds is None:
             continue
-        key = (stack, int(p), str(run.get("variant") or "?"))
+        key = (
+            stack,
+            int(p),
+            str(run.get("variant") or "?"),
+            int(run.get("core_num") or 1),
+        )
         groups.setdefault(key, []).append(
             (float(n_bytes(int(count), run.get("dtype") or "fp32")), seconds, source)
         )
@@ -151,6 +157,7 @@ def fit_group(
     variant: str,
     points: list[tuple[float, float, str]],
     hccl_model: BandwidthModel | None = None,
+    core_num: int = 1,
 ) -> BandwidthModel | None:
     """Fit one (stack, P, variant) group. Returns None when not enough points."""
     pts = sorted(points, key=lambda pt: pt[0])
@@ -173,6 +180,7 @@ def fit_group(
         stack=stack,
         p=p,
         variant=variant,
+        core_num=core_num,
         source=_group_source(points),
         n_points=len(pts),
         latency_s=round(latency, 12),
@@ -192,13 +200,13 @@ def fit_group(
 
 
 def score_runs(runs: Iterable[dict[str, Any]]) -> list[BandwidthModel]:
-    """Fit the O + N/B model for every (stack, P, variant) group in ``runs``."""
+    """Fit the O + N/B model for every (stack, P, variant, core_num) group in ``runs``."""
     groups = group_points(runs)
     models: list[BandwidthModel] = []
     hccl: dict[tuple[int, str], BandwidthModel] = {}
     # First pass: fit everything; remember HCCL references for (P, variant).
-    for (stack, p, variant), points in groups.items():
-        model = fit_group(stack, p, variant, points)
+    for (stack, p, variant, core_num), points in groups.items():
+        model = fit_group(stack, p, variant, points, core_num=core_num)
         if model is None:
             continue
         models.append(model)
@@ -216,6 +224,55 @@ def score_runs(runs: Iterable[dict[str, Any]]) -> list[BandwidthModel]:
         if ref.latency_s > 0.0:
             model.latency_ratio_vs_hccl = round(model.latency_s / ref.latency_s, 6)
     return models
+
+
+def b_star(
+    models: Iterable[BandwidthModel], threshold: float = 0.95
+) -> tuple[int | None, BandwidthModel | None, BandwidthModel | None]:
+    """Smallest core_num reaching ``threshold`` of the best measured bandwidth.
+
+    The saturation width from the L2-collective RFC: ``B* = min { B | BW(B) >=
+    0.95 * max_tested_B BW(B) }``. Returns ``(b_star, best_model, chosen_model)``;
+    all ``None`` when no model carries positive bandwidth.
+    """
+    models = [m for m in models if m.bandwidth_b_s > 0.0]
+    if not models:
+        return None, None, None
+    best = max(models, key=lambda m: m.bandwidth_b_s)
+    peak = best.bandwidth_b_s
+    candidates = [m for m in models if m.bandwidth_b_s >= threshold * peak]
+    if not candidates:
+        return best.core_num, best, best
+    chosen = min(candidates, key=lambda m: m.core_num)
+    return chosen.core_num, best, chosen
+
+
+def b_star_scorecard(
+    models: Iterable[BandwidthModel], threshold: float = 0.95
+) -> list[dict[str, Any]]:
+    """Per (stack, P, variant) B* rows, for groups that swept more than one core_num.
+
+    A group with a single launch width is omitted — its B* would trivially be 1.
+    """
+    grouped: dict[tuple[str, int, str], list[BandwidthModel]] = {}
+    for m in models:
+        grouped.setdefault((m.stack, m.p, m.variant), []).append(m)
+    rows: list[dict[str, Any]] = []
+    for (stack, p, variant), group in sorted(grouped.items()):
+        if len({m.core_num for m in group}) < 2:
+            continue
+        b_star_val, best, chosen = b_star(group, threshold)
+        rows.append({
+            "stack": stack,
+            "p": p,
+            "variant": variant,
+            "b_star": b_star_val,
+            "best_core_num": best.core_num if best is not None else None,
+            "best_bw_b_s": best.bandwidth_b_s if best is not None else None,
+            "b_star_bw_b_s": chosen.bandwidth_b_s if chosen is not None else None,
+            "threshold": threshold,
+        })
+    return rows
 
 
 def format_bandwidth(bandwidth_b_s: float) -> str:

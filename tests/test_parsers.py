@@ -11,7 +11,7 @@ _PROFILING = Path(__file__).resolve().parents[1]
 if str(_PROFILING) not in sys.path:
     sys.path.insert(0, str(_PROFILING))
 
-from collectives.metrics import parse_device_wall_s, parse_hccl_per_rank  # noqa: E402
+from collectives.metrics import dispersion, parse_device_wall_s, parse_hccl_per_rank  # noqa: E402
 
 
 def test_device_wall_single_span():
@@ -57,6 +57,27 @@ def test_hccl_per_rank_none():
     assert parse_hccl_per_rank("HCCL_COMM_SETUP_OK setup_s=1.28") is None
     assert parse_hccl_per_rank("HCCL_TIMED round=1 per_rank=") is None
     assert parse_hccl_per_rank("garbage") is None
+
+
+def test_dispersion_ratio():
+    assert dispersion([1.0, 2.0, 4.0]) == pytest.approx(4.0)
+    assert dispersion([2.0, 2.0]) == pytest.approx(1.0)
+
+
+def test_dispersion_flags_wide_spread():
+    # >2x spread marks a row whose mean is not a useful summary.
+    assert dispersion([1.0, 10.0]) > 2.0
+    assert dispersion([10.0, 11.0]) <= 2.0
+
+
+def test_dispersion_not_computable():
+    assert dispersion([]) is None
+    assert dispersion([3.0]) is None
+    assert dispersion([0.0, 5.0]) is None  # zero floor is not a valid ratio
+
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])
 
 
 if __name__ == "__main__":

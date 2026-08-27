@@ -47,10 +47,15 @@ All stacks in `run_sweep.py` report a shared metric schema in `results.json`:
 |-------|---------|
 | `setup_s` | One-time compile + init + comm setup (first warmup round only) |
 | `execute_s` | **Primary timed metric** — `rt.run()` wall (host dispatch + collective) |
+| `execute_s_median` | p50 of timed `execute_s` (robust to shared-box spikes) |
+| `execute_spread_ratio` | `max/min` of timed `execute_s`; `>2.0` marks a row whose mean is not a useful summary |
 | `device_wall_s_mean` | Pure on-device collective time (slowest-rank `[STRACE] device_wall` span); `None` when the runtime did not emit it |
+| `device_wall_s_median` / `device_wall_spread_ratio` | p50 and spread of the on-device span |
 | `wall_s` | Total round wall (kept for debugging / subprocess stacks) |
 | `bw_execute_mb_s` | `n_bytes / execute_s` |
 | `per_rank_execute_s` | HCCL only: per-rank times from `HCCL_TIMED` lines |
+| `persistent` | Whether the pypto runner used `prepare(persistent=True)` |
+| `core_num` | Requested AIV launch width (pypto-host mesh; 1 = single-AIV) |
 
 **`execute_s` vs `device_wall_s`:** for the pypto stacks `execute_s` includes
 per-dispatch host overhead (on the 2026-08-10 NPU run that was ~16 ms at P=2,
@@ -59,6 +64,13 @@ scaling to ~240 ms at P=8 — larger than the collective itself).
 Pass `--batch N` to run N back-to-back `rt.run()` per timed round and divide,
 amortising that dispatch overhead for a second view (each round still reports
 both metrics).
+
+**Persistent mode (`--persistent`)** removes a large part of that overhead
+upstream: `prepare(persistent=True)` retains each program's CommDomains across
+dispatches instead of re-creating the domain + window per `rt.run()`. Run each
+campaign with and without it and compare — the delta is the per-dispatch domain
+lifecycle cost, and with `--persistent` + `--batch` `execute_s` converges toward
+`device_wall_s`.
 
 **Per-stack `execute_s` definition:**
 
@@ -95,6 +107,22 @@ deliberate:
   (`summarize.py --model`) prefers it over `execute_s`.
 - **Host-side zeroing is outside the timed region** — `outputs.zero_()` runs before
   `t0`, so `execute_s` is dispatch + device time only, not dispatch + memset + device.
+- **Persistent mode is opt-in and reported** — without `--persistent` every timed
+  `rt.run()` pays the CommDomain create/destroy lifecycle; with it, domains are
+  retained and windows zero-restored per reuse. Never mix the two regimes in one
+  comparison; the results row records which regime each run used.
+- **Single-AIV vs multi-AIV is a launch-width question, not a stack question** —
+  `pypto-composite` is single-AIV by design (`core_num==1` through
+  `LowerCompositeOps`); multi-AIV is measured via `pypto-host` `core_num`
+  (mesh only). Compare each pypto stack against HCCL at its own width, and use
+  the `--model` B* score to find the saturation width before quoting "BW vs HCCL".
+- **Spread flag on every number** — each row reports `execute_spread_ratio`
+  (`max/min` over timed rounds); rows over 2× are flagged `⚑` and their median is
+  the robust summary (the runtime is bimodal on shared boxes).
+- **Box-health probe** — before any hardware campaign the harness opens one real
+  multi-rank CommDomain on the target devices. `comm_alloc_domain_windows` can
+  fail with `-1` while `npu-smi` reports Health OK; the probe stops a shared-box
+  condition from being misattributed to the stack under test.
 - **Known residual biases (documented, not yet fixed):**
   - *Fixed stack order* per (P, count): `hccl → simpler-own → pypto-*`. On a shared
     box, thermal/tenant drift can bias later stacks; the median + `device_wall`
@@ -129,8 +157,8 @@ deliberate:
 | **hccl** | campaign | mesh, ring, twophase | unbounded | CANN `HcclAllReduce` baseline; algorithm internal to HCCL |
 | **simpler** | subprocess | mesh, ring, twophase | `[256]` only | hand-written L3 C++ allreduce; current `examples/workers/l3/allreduce/main.py` is mesh-only (ring/twophase need the legacy `allreduce_distributed` example) |
 | **simpler-own** | campaign | mesh | unbounded | our dynamic-count AIV kernel via simpler `KernelCompiler` |
-| **pypto-composite** | campaign | mesh, ring | unbounded | InCore `pld.tensor.allreduce` composite via `@pl.jit.host` |
-| **pypto-host** | campaign | mesh, ring | unbounded | HOST builtin `pld.tensor.allreduce` via `@pl.jit.host`; ring = Sum + FP32 only |
+| **pypto-composite** | campaign | mesh, ring | unbounded | InCore `pld.tensor.allreduce` composite via `@pl.jit.host`; **single-AIV only** (`core_num==1`) |
+| **pypto-host** | campaign | mesh, ring | unbounded | HOST builtin `pld.tensor.allreduce` via `@pl.jit.host`; `core_num` launch width (mesh); ring = Sum + FP32 only |
 | **pto-isa** | subprocess | mesh | unbounded | PTO-ISA path |
 
 Default apples-to-apples set (`DEFAULT_STACKS`): `hccl,simpler,pypto-composite,pypto-host`.
@@ -163,6 +191,11 @@ sweep to `T(N) = O + N/B` (least squares over payload bytes):
   moves.
 - `BW vs HCCL` — `B / B_hccl` at the same (P, variant), the headline
   "how close to HCCL's data plane" number.
+- **B\* (saturation width)** — over a `core_num` sweep,
+  `B* = min { L | BW(L) >= 0.95 * max BW }`: the smallest launch width that
+  reaches the bandwidth-bound regime. A `B*` of 1 means one AIV already saturates
+  the link; a larger `B*` means multi-AIV is required. `summarize.py --model`
+  emits a B* scorecard section when the sweep includes more than one width.
 
 Timing source precedence: `device_wall_s_mean` (pure on-device) →
 `execute_s_mean` → wall times. Raw fits land in `reports/model_fit.json` and
@@ -224,6 +257,19 @@ PYTHONPATH=. python -m collectives.run_sweep pair-mesh \
   --timed-rounds 2 --warmup-rounds 1 \
   --campaign smoke \
   --out results/campaigns/smoke/run_001/results.json
+
+# Persistent domains + a launch-width sweep (pypto-host mesh only)
+PYTHONPATH=. python -m collectives.run_sweep pair-mesh \
+  --case-file collectives/cases/mesh_p8_count65536_fp32_a2a3_d0-1-2-3-4-5-6-7.json \
+  --stacks pypto-host \
+  --persistent --core-num 8 \
+  --timed-rounds 5 --warmup-rounds 2 \
+  --campaign multicore \
+  --out results/campaigns/multicore/run_001/results.json
+
+# Full core_num sweep via the campaign driver (mesh, pypto-host, counts >= 64 KiB)
+bash run_campaign.sh --variant mesh --p-values 8 --counts 65536,262144,1048576 \
+  --stacks hccl,pypto-host --core-nums 1,8,16
 
 # Strong scaling campaign: mesh P=2,4,8
 bash run_campaign.sh --variant mesh --p-values 2,4,8 --count 65536

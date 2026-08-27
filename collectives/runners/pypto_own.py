@@ -198,7 +198,7 @@ def host_orch(
 """
 
 
-def _render_host_mesh(count: int, nranks: int, dattr: str, dtype_bytes: int) -> str:
+def _render_host_mesh(count: int, nranks: int, dattr: str, dtype_bytes: int, core_num: int = 1) -> str:
     sz, nr = count, nranks
     stage_rows, stage_cols = _stage_params(sz, dtype_bytes)
     return f"""\
@@ -239,13 +239,13 @@ def host_orch(
     outputs: pl.Out[pl.Tensor[[{nr}, 1, {sz}], pl.{dattr}]],
 ) -> pl.Tensor[[{nr}, 1, {sz}], pl.{dattr}]:
     data_buf = pld.alloc_window_buffer({sz} * pl.{dattr}.get_byte())
-    signal_buf = pld.alloc_window_buffer({nr} * pl.INT32.get_byte())
+    signal_buf = pld.alloc_window_buffer({nr * core_num} * pl.INT32.get_byte())
     for r in pl.range({nr}):
         data = pld.window(data_buf, [1, {sz}], dtype=pl.{dattr})
         publish_orch(inputs[r], data, device=r)
     data = pld.window(data_buf, [1, {sz}], dtype=pl.{dattr})
-    signal = pld.window(signal_buf, [{nr}], dtype=pl.INT32)
-    data = pld.tensor.allreduce(data, signal, op=pld.ReduceOp.Sum)
+    signal = pld.window(signal_buf, [{nr}, {core_num}], dtype=pl.INT32)
+    data = pld.tensor.allreduce(data, signal, op=pld.ReduceOp.Sum, core_num={core_num})
     # The @pl.jit specializer does not model pld.tensor.allreduce as
     # shape-preserving, so re-derive the window view to restore the local
     # metadata the consume dispatch needs.
@@ -312,7 +312,7 @@ def host_orch(
 """
 
 
-def _render_program(mode: str, variant: str, count: int, nranks: int, dtype: str) -> str:
+def _render_program(mode: str, variant: str, count: int, nranks: int, dtype: str, core_num: int = 1) -> str:
     dattr = _DTYPE_ATTR[dtype]
     dtype_bytes = _DTYPE_BYTES[dtype]
     if mode == "composite":
@@ -322,19 +322,19 @@ def _render_program(mode: str, variant: str, count: int, nranks: int, dtype: str
     if mode == "host":
         if variant == "ring":
             return _render_host_ring(count, nranks, dattr, dtype_bytes)
-        return _render_host_mesh(count, nranks, dattr, dtype_bytes)
+        return _render_host_mesh(count, nranks, dattr, dtype_bytes, core_num)
     raise ValueError(f"unknown pypto runner mode: {mode}")
 
 
-def _load_program_module(mode: str, variant: str, count: int, nranks: int, dtype: str) -> Any:
+def _load_program_module(mode: str, variant: str, count: int, nranks: int, dtype: str, core_num: int = 1) -> Any:
     """Materialise the generated program module on disk and import it.
 
     ``@pl.jit`` requires the decorated functions to live in an importable
     module on disk (``inspect.getsource``); the temp file is written once per
-    (mode, variant, count, nranks, dtype) and reused.
+    (mode, variant, count, nranks, dtype, core_num) and reused.
     """
-    src = _render_program(mode, variant, count, nranks, dtype)
-    key = f"{mode}_{variant}_{count}_{nranks}_{dtype}"
+    src = _render_program(mode, variant, count, nranks, dtype, core_num)
+    key = f"{mode}_{variant}_{count}_{nranks}_{dtype}_cn{core_num}"
     mod_name = f"pypto_own_prog_{key}"
     if mod_name in sys.modules:
         return sys.modules[mod_name]
@@ -387,6 +387,8 @@ class PyptoCollectiveSession:
         mode: str = "composite",
         pto_isa_commit: str | None = None,
         dfx_dir: str | None = None,
+        persistent: bool = False,
+        reset_persistent_windows: bool | None = None,
     ) -> None:
         from pypto.ir.distributed_compiled_program import DistributedConfig
         from pypto.runtime import RunConfig
@@ -399,6 +401,7 @@ class PyptoCollectiveSession:
         self.platform = case.platform
         self.variant = case.variant
         self.dtype = case.dtype
+        self.core_num = int(getattr(case, "core_num", 1))
         self.pto_isa_commit = pto_isa_commit
 
         if self.nranks < 2 or self.nranks > K_MAX_SUPPORTED_RANKS:
@@ -411,6 +414,17 @@ class PyptoCollectiveSession:
             raise ValueError(f"unsupported dtype {self.dtype!r}; expected fp32 or fp16")
         if self.variant == "ring" and self.mode == "host" and self.dtype != "fp32":
             raise ValueError("pypto-host ring supports fp32 only")
+        # core_num is a HOST-builtin mesh-only launch width: the InCore
+        # composite lowers via LowerCompositeOps which requires core_num == 1,
+        # and the ring builtin launches a single block.
+        if self.core_num < 1:
+            raise ValueError(f"core_num must be >= 1, got {self.core_num}")
+        if self.core_num > 1 and (self.mode != "host" or self.variant != "mesh"):
+            raise ValueError(
+                f"core_num={self.core_num} requires mode='host' variant='mesh' "
+                f"(got mode={self.mode!r} variant={self.variant!r}); InCore "
+                "composite and ring builtin are single-AIV"
+            )
 
         torch_dtype = _DTYPE_TO_TORCH[self.dtype]
 
@@ -431,7 +445,7 @@ class PyptoCollectiveSession:
         # dict feeds the compile_breakdown figure.
         t0 = time.perf_counter()
         module = _load_program_module(
-            self.mode, self.variant, self.count, self.nranks, self.dtype
+            self.mode, self.variant, self.count, self.nranks, self.dtype, self.core_num
         )
         dc = DistributedConfig(device_ids=self.devices, num_sub_workers=0)
         if dfx_dir is not None:
@@ -464,10 +478,18 @@ class PyptoCollectiveSession:
         self._strace_offset = 0
         self._saved_err_fd = os.dup(2)
         os.dup2(self._strace_fh.fileno(), 2)
+        self.persistent = persistent
+        self.reset_persistent_windows = reset_persistent_windows
         try:
             # Prepare the reusable dispatch handle (worker init + registration).
+            # persistent=True retains the compiled program's CommDomains across
+            # dispatches; without it every rt.run() re-creates and tears down the
+            # domain + window, which dominates execute_s on small payloads.
             t1 = time.perf_counter()
-            self._rt = self._compiled.prepare()
+            self._rt = self._compiled.prepare(
+                persistent=persistent,
+                reset_persistent_windows=reset_persistent_windows,
+            )
             self.init_s = time.perf_counter() - t1
         except BaseException:
             self._restore_stderr()
@@ -549,7 +571,9 @@ class PyptoCollectiveSession:
             self._rt = None
 
 
-def _session_key(case: Any, mode: str, dfx_dir: str | None) -> tuple[Any, ...]:
+def _session_key(
+    case: Any, mode: str, dfx_dir: str | None, persistent: bool = False
+) -> tuple[Any, ...]:
     return (
         mode,
         case.variant,
@@ -558,6 +582,8 @@ def _session_key(case: Any, mode: str, dfx_dir: str | None) -> tuple[Any, ...]:
         case.platform,
         case.dtype,
         dfx_dir,
+        persistent,
+        int(getattr(case, "core_num", 1)),
     )
 
 
@@ -565,14 +591,22 @@ def get_pypto_session(
     case: Any,
     mode: str = "composite",
     dfx_dir: str | None = None,
+    persistent: bool = False,
+    reset_persistent_windows: bool | None = None,
 ) -> PyptoCollectiveSession:
-    """Return a cached session for (case, mode, dfx_dir); rebuilds on key change."""
+    """Return a cached session for (case, mode, dfx_dir, persistent); rebuilds on key change."""
     global _ACTIVE_SESSION, _ACTIVE_SESSION_KEY
-    key = _session_key(case, mode, dfx_dir)
+    key = _session_key(case, mode, dfx_dir, persistent)
     if _ACTIVE_SESSION is not None and _ACTIVE_SESSION_KEY == key:
         return _ACTIVE_SESSION
     close_pypto_session()
-    _ACTIVE_SESSION = PyptoCollectiveSession(case, mode=mode, dfx_dir=dfx_dir)
+    _ACTIVE_SESSION = PyptoCollectiveSession(
+        case,
+        mode=mode,
+        dfx_dir=dfx_dir,
+        persistent=persistent,
+        reset_persistent_windows=reset_persistent_windows,
+    )
     _ACTIVE_SESSION_KEY = key
     return _ACTIVE_SESSION
 
@@ -597,8 +631,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--variant", choices=("mesh", "ring"), default="mesh")
     parser.add_argument("--mode", choices=("composite", "host"), default="composite")
     parser.add_argument("--dtype", choices=("fp32", "fp16"), default="fp32")
+    parser.add_argument("--core-num", type=int, default=1,
+                        help="AIV blocks for the HOST builtin mesh path (mode=host, variant=mesh)")
     parser.add_argument("--rounds", type=int, default=3)
     parser.add_argument("--batch", type=int, default=1, help="Back-to-back rt.run per round (amortises dispatch)")
+    parser.add_argument("--persistent", action="store_true",
+                        help="Retain CommDomains across dispatches (prepare(persistent=True))")
     args = parser.parse_args(argv)
 
     case = EquivalenceCase(
@@ -608,10 +646,11 @@ def main(argv: list[str] | None = None) -> int:
         dtype=args.dtype,
         device_ids=_parse_device_range(args.devices),
         platform=args.platform,
+        core_num=args.core_num,
         warmup_rounds=1,
         timed_rounds=args.rounds,
     )
-    session = get_pypto_session(case, mode=args.mode)
+    session = get_pypto_session(case, mode=args.mode, persistent=args.persistent)
     try:
         for r in range(args.rounds):
             if args.batch > 1:

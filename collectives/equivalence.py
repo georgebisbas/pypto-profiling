@@ -53,6 +53,7 @@ class EquivalenceCase:
     orch_tier: str = "logical"  # logical | strict_window
     block_dim: int | None = None
     aicpu_thread_num: int | None = None
+    core_num: int = 1
     warmup_rounds: int = 3
     timed_rounds: int = 20
     measure: str = "execute_only"
@@ -100,7 +101,8 @@ class EquivalenceCase:
     @property
     def case_id(self) -> str:
         dev = "-".join(str(d) for d in self.device_ids)
-        return f"{self.variant}_p{self.p}_count{self.count}_{self.dtype}_{self.platform}_d{dev}"
+        cn = f"_cn{self.core_num}" if self.core_num != 1 else ""
+        return f"{self.variant}_p{self.p}_count{self.count}_{self.dtype}_{self.platform}_d{dev}{cn}"
 
     def canonical_dict(self) -> dict[str, Any]:
         d = asdict(self)
@@ -121,6 +123,8 @@ class EquivalenceCase:
             raise ValueError(f"p must be >= 2, got {self.p}")
         if self.count <= 0:
             raise ValueError(f"count must be positive, got {self.count}")
+        if self.core_num < 1:
+            raise ValueError(f"core_num must be >= 1, got {self.core_num}")
         if self.variant == "ring" and self.count % self.p != 0:
             # pypto composite/host ring support non-divisible sizes; simpler
             # ring requires divisibility and will skip at runtime (registry).

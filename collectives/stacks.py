@@ -46,15 +46,17 @@ STACK_REGISTRY: dict[str, dict[str, Any]] = {
         "variants": ("mesh", "ring"),
         "count_constraint": None,
         "orch_profile": "mesh_l3_host_domain_v1",
-        "description": "InCore pld.tensor.allreduce composite authored with @pl.jit.host (in-process)",
+        "description": "InCore pld.tensor.allreduce composite authored with @pl.jit.host "
+        "(in-process); single-AIV only — LowerCompositeOps requires core_num==1",
     },
     "pypto-host": {
         "kind": "campaign",
         "variants": ("mesh", "ring"),
         "count_constraint": None,
         "orch_profile": "mesh_l3_host_builtin_v1",
-        "description": "HOST builtin pld.tensor.allreduce authored with @pl.jit.host (in-process)",
-        "caveats": ("ring mode: ReduceOp.Sum + FP32 only",),
+        "description": "HOST builtin pld.tensor.allreduce authored with @pl.jit.host "
+        "(in-process); core_num launch width, mesh-only",
+        "caveats": ("ring mode: ReduceOp.Sum + FP32 only", "core_num>1: mesh only"),
     },
     "pto-isa": {
         "kind": "subprocess",

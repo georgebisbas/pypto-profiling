@@ -64,12 +64,14 @@ def generate_cases(
     dtypes: list[str] | None = None,
     dry_run: bool = False,
     p_max_devices: dict[int, list[int]] | None = None,
+    core_nums: list[int] | None = None,
 ) -> list[Path]:
     """Generate EquivalenceCase JSON files. Returns list of written paths."""
     variants = variants or VARIANTS
     p_values = p_values or P_VALUES
     counts = counts or COUNTS
     dtypes = dtypes or DTYPES
+    core_nums = core_nums or [1]
 
     if p_max_devices is None:
         # Default: first P NPUs [0, 1, ..., P-1]
@@ -86,38 +88,49 @@ def generate_cases(
                     skipped.append(f"{variant}_p{p}_count{count}: count % P != 0")
                     continue
 
-                for dtype in dtypes:
-                    device_ids = p_max_devices.get(p, list(range(p)))
-                    if len(device_ids) != p:
+                for core_num in core_nums:
+                    # core_num > 1 is a HOST-builtin mesh-only launch width;
+                    # multi-AIV only matters for bandwidth-oriented payloads.
+                    if core_num > 1 and (variant != "mesh" or count < 65536):
                         skipped.append(
-                            f"{variant}_p{p}_count{count}_{dtype}: "
-                            f"device_ids length {len(device_ids)} != P={p}"
+                            f"{variant}_p{p}_count{count}_cn{core_num}: "
+                            "core_num>1 requires mesh and count >= 65536"
                         )
                         continue
 
-                    case = EquivalenceCase(
-                        variant=variant,
-                        p=p,
-                        count=count,
-                        dtype=dtype,
-                        device_ids=list(device_ids),
-                        warmup_rounds=_warmup_rounds(count),
-                        timed_rounds=_timed_rounds(count),
-                    )
+                    for dtype in dtypes:
+                        device_ids = p_max_devices.get(p, list(range(p)))
+                        if len(device_ids) != p:
+                            skipped.append(
+                                f"{variant}_p{p}_count{count}_{dtype}: "
+                                f"device_ids length {len(device_ids)} != P={p}"
+                            )
+                            continue
 
-                    filename = f"{case.case_id}.json"
-                    path = _CASES_DIR / filename
-
-                    if dry_run:
-                        print(f"[dry-run] {filename}  size={case.size_tier}  "
-                              f"warmup={case.warmup_rounds} timed={case.timed_rounds}")
-                    else:
-                        path.write_text(
-                            json.dumps(case.canonical_dict(), indent=2) + "\n",
-                            encoding="utf-8",
+                        case = EquivalenceCase(
+                            variant=variant,
+                            p=p,
+                            count=count,
+                            dtype=dtype,
+                            device_ids=list(device_ids),
+                            core_num=core_num,
+                            warmup_rounds=_warmup_rounds(count),
+                            timed_rounds=_timed_rounds(count),
                         )
 
-                    written.append(path)
+                        filename = f"{case.case_id}.json"
+                        path = _CASES_DIR / filename
+
+                        if dry_run:
+                            print(f"[dry-run] {filename}  size={case.size_tier}  "
+                                  f"warmup={case.warmup_rounds} timed={case.timed_rounds}")
+                        else:
+                            path.write_text(
+                                json.dumps(case.canonical_dict(), indent=2) + "\n",
+                                encoding="utf-8",
+                            )
+
+                        written.append(path)
 
     if skipped:
         print(f"\nSkipped {len(skipped)} combinations (constraint violations):")
@@ -154,6 +167,11 @@ def main(argv: list[str] | None = None) -> int:
         help="Restrict to dtype(s). Repeatable. Default: fp32,fp16."
     )
     parser.add_argument(
+        "--core-nums", type=str, default=None,
+        help="Comma-separated core_num (AIV block) values, e.g. '1,8,16'. "
+             "core_num>1 cases are mesh-only, count >= 65536. Default: 1."
+    )
+    parser.add_argument(
         "--dry-run", action="store_true",
         help="Print what would be generated without writing files."
     )
@@ -174,12 +192,18 @@ def main(argv: list[str] | None = None) -> int:
     # Parse dtypes
     dtypes = args.dtypes if args.dtypes else DTYPES
 
+    # Parse core_nums
+    core_nums = [1]
+    if args.core_nums is not None:
+        core_nums = [int(x.strip()) for x in args.core_nums.split(",")]
+
     written = generate_cases(
         variants=args.variants,
         p_values=p_values,
         counts=counts,
         dtypes=dtypes,
         dry_run=args.dry_run,
+        core_nums=core_nums,
     )
 
     if args.dry_run:

@@ -76,14 +76,16 @@ def _primary_stdev(run: dict[str, Any]) -> float | None:
 
 
 def _time_str(run: dict[str, Any]) -> str:
-    """Format primary time with optional stdev."""
+    """Format primary time with optional stdev; append ⚑ when the timed spread > 2x."""
     mean = _primary_time(run)
     stdev = _primary_stdev(run)
     if mean is None:
         return "—"
+    spread = run.get("execute_spread_ratio")
+    flag = " ⚑" if spread is not None and spread > 2.0 else ""
     if stdev and stdev > 0:
-        return f"{mean:.4f}±{stdev:.4f}"
-    return f"{mean:.4f}"
+        return f"{mean:.4f}±{stdev:.4f}{flag}"
+    return f"{mean:.4f}{flag}"
 
 
 def _print_table(
@@ -135,12 +137,14 @@ def _print_table(
             r = st.get(s, {})
             row[f"{s}_execute_s"] = _primary_time(r)
             row[f"{s}_execute_s_median"] = r.get("execute_s_median")
+            row[f"{s}_execute_spread"] = r.get("execute_spread_ratio")
             row[f"{s}_wall_s"] = r.get("wall_s_mean") or r.get("wall_s")
             row[f"{s}_correctness"] = r.get("correctness", "?")
             row[f"{s}_setup_s"] = r.get("setup_s")
             row[f"{s}_bw_mb_s"] = r.get("bw_execute_mb_s")
             row[f"{s}_device_wall_s"] = r.get("device_wall_s_mean")
             row[f"{s}_device_wall_s_median"] = r.get("device_wall_s_median")
+            row[f"{s}_device_wall_spread"] = r.get("device_wall_spread_ratio")
         hccl_t = row.get("hccl_execute_s")
         base_t = row.get(f"{baseline}_execute_s")
         for s in stacks:
@@ -226,6 +230,27 @@ def _model_scorecard_lines(models: list[bw_model.BandwidthModel]) -> list[str]:
             f"| {m.stack} | {m.p} | {m.variant} | {m.source} | "
             f"{lat} | {bw} | {m.r2:.3f} | {m.pipeline_score:.2f} | {eff} |"
         )
+    bstar_rows = bw_model.b_star_scorecard(models)
+    if bstar_rows:
+        lines += [
+            "",
+            "### Saturation width B* (core_num sweep)",
+            "",
+            "`B*` = smallest launch width whose fitted bandwidth reaches 95% of the "
+            "best measured at this (stack, P, variant). A `B*` of 1 means a single "
+            "AIV already saturates the link; a larger `B*` means multi-AIV is "
+            "required to reach the bandwidth-bound regime.",
+            "",
+            "| stack | P | variant | B* | best core_num | BW@B* |",
+            "|-------|---|---------|----|---------------|-------|",
+        ]
+        for r in bstar_rows:
+            bw = bw_model.format_bandwidth(r["best_bw_b_s"]) if r["best_bw_b_s"] else "—"
+            lines.append(
+                f"| {r['stack']} | {r['p']} | {r['variant']} | "
+                f"{r['b_star']} | {r['best_core_num']} | {bw} |"
+            )
+
     lines += [
         "",
         "Raw fits (latency_s, bandwidth_b_s, points) in `reports/model_fit.json`.",
@@ -470,6 +495,18 @@ def main(argv: list[str] | None = None) -> int:
                 encoding="utf-8",
             )
             print(f"\nwrote {fit_path}")
+
+            bstar_rows = bw_model.b_star_scorecard(models)
+            if bstar_rows:
+                print("\nSaturation width B* (smallest core_num reaching 95% of best BW):")
+                print(f"{'stack':<16}{'P':>3}  {'variant':<8}{'B*':>6}{'best_cn':>9}{'BW@B*':>14}")
+                print("-" * 60)
+                for r in bstar_rows:
+                    bw = bw_model.format_bandwidth(r["best_bw_b_s"]) if r["best_bw_b_s"] else "—"
+                    print(
+                        f"{r['stack']:<16}{r['p']:>3}  {r['variant']:<8}"
+                        f"{r['b_star']:>6}{r['best_core_num']:>9}{bw:>14}"
+                    )
 
     if args.json:
         args.json.write_text(json.dumps(rows, indent=2) + "\n", encoding="utf-8")

@@ -45,3 +45,18 @@ def parse_hccl_per_rank(line: str) -> list[float] | None:
     except (ValueError, json.JSONDecodeError):
         return None
     return values if values else None
+
+
+def dispersion(values: list[float]) -> float | None:
+    """``max/min`` spread ratio of a sample list; None when not computable.
+
+    A ratio above 2.0 marks a row whose fastest and slowest samples differ
+    enough that the mean is not a useful summary (the shared-box / bimodal
+    pattern seen on this runtime).
+    """
+    if len(values) < 2:
+        return None
+    lo, hi = min(values), max(values)
+    if lo <= 0.0:
+        return None
+    return round(hi / lo, 3)

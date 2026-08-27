@@ -85,6 +85,9 @@ Options:
   --platform PLATFORM      Platform (a2a3, a2a3sim, a5, a5sim)
   --warmup-rounds N        Override warmup rounds
   --timed-rounds N         Override timed rounds
+  --core-num N             Override AIV launch width (pypto-host mesh only)
+  --core-nums CSV          Core-num sweep, e.g. 1,8,16 (mesh, pypto-host; strong-scaling)
+  --persistent             pypto stacks: retain CommDomains across dispatches
   --campaign NAME          Campaign name (default: auto)
   -h, --help               Show this help
 EOF
@@ -101,6 +104,9 @@ STACKS="hccl,simpler,pypto-composite,pypto-host"
 PLATFORM=""
 WARMUP_OVERRIDE=""
 TIMED_OVERRIDE=""
+CORE_NUM_OVERRIDE=""
+CORE_NUMS_CSV=""
+PERSISTENT=""
 CAMPAIGN=""
 
 while [[ $# -gt 0 ]]; do
@@ -149,6 +155,18 @@ while [[ $# -gt 0 ]]; do
             TIMED_OVERRIDE="$2"
             shift 2
             ;;
+        --core-num)
+            CORE_NUM_OVERRIDE="$2"
+            shift 2
+            ;;
+        --core-nums)
+            CORE_NUMS_CSV="$2"
+            shift 2
+            ;;
+        --persistent)
+            PERSISTENT="1"
+            shift
+            ;;
         --campaign)
             CAMPAIGN="$2"
             shift 2
@@ -180,6 +198,10 @@ mkdir -p "$RUN_DIR"
 
 IFS=',' read -r -a P_VALUES <<< "$P_VALUES_CSV"
 IFS=',' read -r -a VARIANTS <<< "$VARIANTS_CSV"
+IFS=',' read -r -a CORE_NUMS <<< "$CORE_NUMS_CSV"
+if [[ ${#CORE_NUMS[@]} -eq 1 && -z "${CORE_NUMS[0]}" ]]; then
+    CORE_NUMS=(1)
+fi
 RESULTS_FILES=()
 
 RUN_SWEEP_EXTRA_ARGS=()
@@ -201,6 +223,12 @@ fi
 if [[ -n "$PLATFORM" ]]; then
     RUN_SWEEP_EXTRA_ARGS+=(--platform "$PLATFORM")
 fi
+if [[ -n "$CORE_NUM_OVERRIDE" ]]; then
+    RUN_SWEEP_EXTRA_ARGS+=(--core-num "$CORE_NUM_OVERRIDE")
+fi
+if [[ "$PERSISTENT" == "1" ]]; then
+    RUN_SWEEP_EXTRA_ARGS+=(--persistent)
+fi
 
 echo "============================================"
 echo " Campaign:  ${CAMPAIGN}"
@@ -218,6 +246,12 @@ if [[ -n "$COUNT_OVERRIDE" ]]; then
 fi
 if [[ ${#COUNTS[@]} -gt 0 ]]; then
     echo " Counts:    ${COUNTS[*]}"
+fi
+if [[ ${#CORE_NUMS[@]} -gt 1 || "${CORE_NUMS[0]}" != "1" ]]; then
+    echo " Core nums: ${CORE_NUMS[*]}"
+fi
+if [[ "$PERSISTENT" == "1" ]]; then
+    echo " Persistent: yes"
 fi
 if [[ ${#RUN_SWEEP_EXTRA_ARGS[@]} -gt 0 ]]; then
     echo " Overrides:  ${RUN_SWEEP_EXTRA_ARGS[*]}"
@@ -256,44 +290,55 @@ if [[ "$MODE" == "strong-scaling" ]]; then
             exit 1
         fi
 
-        # Message-size sweep: one result file per (P, count). The merge,
-        # summarize and plot stages key on the per-run `count`, so multi-count
-        # results land in the same results.json and the message_size_bw_eff
-        # crossover figure just works.
-        if [[ ${#COUNTS[@]} -gt 0 ]]; then
-            for COUNT in "${COUNTS[@]}"; do
-                OUT_FILE="${RUN_DIR}/results_p${P}_count${COUNT}.json"
+        for CORE_NUM in "${CORE_NUMS[@]}"; do
+            CN_SUFFIX=""
+            CN_ARGS=()
+            if [[ ${#CORE_NUMS[@]} -gt 1 || "$CORE_NUM" != "1" ]]; then
+                CN_SUFFIX="_cn${CORE_NUM}"
+                CN_ARGS=(--core-num "$CORE_NUM")
+            fi
+
+            # Message-size sweep: one result file per (P, count). The merge,
+            # summarize and plot stages key on the per-run `count`, so multi-count
+            # results land in the same results.json and the message_size_bw_eff
+            # crossover figure just works.
+            if [[ ${#COUNTS[@]} -gt 0 ]]; then
+                for COUNT in "${COUNTS[@]}"; do
+                    OUT_FILE="${RUN_DIR}/results_p${P}_count${COUNT}${CN_SUFFIX}.json"
+
+                    echo ""
+                    echo "--- P=${P} count=${COUNT}${CN_SUFFIX} (${VARIANT}) ---"
+                    python3 -m collectives.run_sweep pair-mesh \
+                        --case-file "$CASE_FILE" \
+                        --stacks "$STACKS" \
+                        --campaign "$CAMPAIGN" \
+                        "${RUN_SWEEP_EXTRA_ARGS[@]}" \
+                        "${CN_ARGS[@]}" \
+                        --count "$COUNT" \
+                        --out "$OUT_FILE" || {
+                        echo "WARNING: P=${P} count=${COUNT} failed (exit $?), continuing."
+                        continue
+                    }
+                    RESULTS_FILES+=("$OUT_FILE")
+                done
+            else
+                OUT_FILE="${RUN_DIR}/results_p${P}${CN_SUFFIX}.json"
 
                 echo ""
-                echo "--- P=${P} count=${COUNT} (${VARIANT}) ---"
+                echo "--- P=${P}${CN_SUFFIX} (${VARIANT}) ---"
                 python3 -m collectives.run_sweep pair-mesh \
                     --case-file "$CASE_FILE" \
                     --stacks "$STACKS" \
                     --campaign "$CAMPAIGN" \
                     "${RUN_SWEEP_EXTRA_ARGS[@]}" \
-                    --count "$COUNT" \
+                    "${CN_ARGS[@]}" \
                     --out "$OUT_FILE" || {
-                    echo "WARNING: P=${P} count=${COUNT} failed (exit $?), continuing."
-                    continue
+                    echo "FATAL: P=${P} failed (exit $?), stopping."
+                    exit 1
                 }
                 RESULTS_FILES+=("$OUT_FILE")
-            done
-        else
-            OUT_FILE="${RUN_DIR}/results_p${P}.json"
-
-            echo ""
-            echo "--- P=${P} (${VARIANT}) ---"
-            python3 -m collectives.run_sweep pair-mesh \
-                --case-file "$CASE_FILE" \
-                --stacks "$STACKS" \
-                --campaign "$CAMPAIGN" \
-                "${RUN_SWEEP_EXTRA_ARGS[@]}" \
-                --out "$OUT_FILE" || {
-                echo "FATAL: P=${P} failed (exit $?), stopping."
-                exit 1
-            }
-            RESULTS_FILES+=("$OUT_FILE")
-        fi
+            fi
+        done
     done
 
 # ── Mode: cross-variant ──────────────────────────────────────────────────

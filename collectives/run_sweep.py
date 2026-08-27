@@ -18,7 +18,7 @@ from collectives.artifacts import RunArtifactBundle
 from collectives.config import simpler_root
 from collectives.equivalence import EquivalenceCase
 from collectives.golden import fill_rank_inputs, verify_outputs
-from collectives.metrics import parse_device_wall_s, parse_hccl_per_rank
+from collectives.metrics import parse_device_wall_s, parse_hccl_per_rank, dispersion
 from collectives.stacks import (
     CAMPAIGN_STACKS,
     DEFAULT_STACKS,
@@ -150,6 +150,8 @@ def _apply_case_overrides(case: EquivalenceCase, args: argparse.Namespace) -> Eq
         case.warmup_rounds = args.warmup_rounds
     if getattr(args, "timed_rounds", None) is not None:
         case.timed_rounds = args.timed_rounds
+    if getattr(args, "core_num", None) is not None:
+        case.core_num = args.core_num
 
     if case.count <= 0:
         raise ValueError(f"count must be positive, got {case.count}")
@@ -654,6 +656,7 @@ def _run_pypto_campaign(
     profile_spec: str = "",
     dfx_dir: str | None = None,
     batch: int = 1,
+    persistent: bool = False,
 ) -> tuple[list[dict[str, Any]], str]:
     """Run warmup+timed pypto rounds in-process with one session (composite or host builtin)."""
     from collectives.runners.pypto_own import close_pypto_session, get_pypto_session
@@ -661,7 +664,9 @@ def _run_pypto_campaign(
     stack_name = f"pypto-{mode}"
     samples: list[dict[str, Any]] = []
     try:
-        session = get_pypto_session(case, mode=mode, dfx_dir=dfx_dir)
+        session = get_pypto_session(
+            case, mode=mode, dfx_dir=dfx_dir, persistent=persistent
+        )
         run_config = _pypto_run_config(profile_spec, case.platform)
         compile_profile = getattr(session, "compile_profile", None)
         round_idx = 0
@@ -777,11 +782,17 @@ def _run_stack_multi(
     bundle: RunArtifactBundle,
     profile_spec: str,
     batch: int = 1,
+    persistent: bool = False,
 ) -> tuple[bool, str, list[dict[str, Any]], float, float, float, float | None, float]:
     """Run warmup + timed rounds for one stack.
 
-    Returns (all_ok, error, samples, execute_s_mean, execute_s_stdev, wall_s_mean, setup_s).
+    Returns (all_ok, error, samples, execute_s_mean, execute_s_stdev,
+    wall_s_mean, setup_s, execute_s_median).
     """
+    # One prepared worker set per device set — close any session a previous
+    # stack left behind before starting this one.
+    _close_inproc_sessions()
+
     warmup = case.warmup_rounds
     timed_rounds = case.timed_rounds
     total = warmup + timed_rounds
@@ -809,7 +820,8 @@ def _run_stack_multi(
             )
             mode = "composite" if stack == "pypto-composite" else "host"
             campaign_samples, err = _run_pypto_campaign(
-                case, warmup, timed_rounds, mode, profile_spec, dfx_dir=dfx_dir, batch=batch
+                case, warmup, timed_rounds, mode, profile_spec,
+                dfx_dir=dfx_dir, batch=batch, persistent=persistent,
             )
         else:
             return False, f"unknown campaign stack: {stack}", [], 0.0, 0.0, 0.0, None, 0.0
@@ -995,6 +1007,57 @@ def _run_golden_only(case: EquivalenceCase) -> tuple[bool, str]:
     return verify_outputs(case, per_rank)
 
 
+def _close_inproc_sessions() -> None:
+    """Close any in-process benchmark sessions — one worker set per device set.
+
+    Two prepared workers on the same devices collide at communicator init
+    (HcclCommInitRootError: 7); each stack's run must start from a clean
+    session state.
+    """
+    for mod, fn in (
+        ("collectives.runners.simpler_own", "close_mesh_allreduce_session"),
+        ("collectives.runners.pypto_own", "close_pypto_session"),
+    ):
+        try:
+            m = __import__(mod, fromlist=[fn])
+            getattr(m, fn)()
+        except Exception:
+            pass
+
+
+def _probe_comm_domains(case: EquivalenceCase) -> tuple[bool, str]:
+    """Open one real multi-rank CommDomain on the case's devices.
+
+    Guards against a passing box condition where ``comm_alloc_domain_windows``
+    fails with code -1 while npu-smi reports Health OK: without an actual
+    domain open, a multi-rank failure is misattributed to the stack under test.
+    Reuses the simpler-own session (worker init + one execute opens the domain)
+    and reports the open cost.
+    """
+    try:
+        from collectives.runners.simpler_own import (
+            close_mesh_allreduce_session,
+            get_mesh_allreduce_session,
+        )
+
+        session = get_mesh_allreduce_session(
+            case.count, case.device_ids, case.platform, None
+        )
+        try:
+            ok, execute_s, err = session.execute()
+        finally:
+            close_mesh_allreduce_session()
+        if not ok:
+            return False, f"comm-domain probe round failed: {err}"
+        print(
+            f"  box-health: CommDomain opened on {case.device_ids} "
+            f"(probe round {execute_s * 1e3:.1f} ms)"
+        )
+        return True, ""
+    except Exception as exc:  # noqa: BLE001
+        return False, f"comm-domain probe exception: {exc}"
+
+
 def _cmd_pair_mesh(args: argparse.Namespace) -> int:
     return _cmd_pair_impl(args)
 
@@ -1059,6 +1122,19 @@ def _cmd_pair_impl(
         print(f"ERROR: unknown stacks: {unknown}", file=sys.stderr)
         return 1
 
+    # ── box-health probe: open one real CommDomain before attributing failures ──
+    # Only on hardware; the sim platforms do not exhibit the passing-domain
+    # condition the probe exists to detect.
+    if ({"simpler-own", "pypto-composite", "pypto-host"}.intersection(stacks)
+            and not case.platform.endswith("sim")):
+        print("\n[probe] box-health — opening one real multi-rank CommDomain")
+        probe_ok, probe_err = _probe_comm_domains(case)
+        if not probe_ok:
+            print(f"  box-health FAILED: {probe_err}", file=sys.stderr)
+            print("  A comm domain could not be opened on these devices — this looks "
+                  "like a passing box condition, not the stack under test.", file=sys.stderr)
+            return 1
+
     out_path = Path(args.out)
     if label_prefix:
         # cross-variant: write per-variant results files, e.g. results_mesh.json
@@ -1095,7 +1171,9 @@ def _cmd_pair_impl(
               f"payload: {payload_desc}")
 
         all_ok, last_error, samples, exec_mean, exec_stdev, wall_mean, setup_s, exec_median = _run_stack_multi(
-            case, stack, bundle, args.profile, batch=getattr(args, "batch", 1),
+            case, stack, bundle, args.profile,
+            batch=getattr(args, "batch", 1),
+            persistent=getattr(args, "persistent", False),
         )
 
         bundle.write_manifest(
@@ -1108,6 +1186,16 @@ def _cmd_pair_impl(
             round(statistics.mean(float(s["bw_execute_mb_s"]) for s in timed_samples), 6)
             if timed_samples else 0.0
         )
+        exec_spread = (
+            dispersion([float(s["execute_s"]) for s in timed_samples])
+            if timed_samples else None
+        )
+        dev_vals = [
+            float(s["device_wall_s"])
+            for s in timed_samples
+            if s.get("device_wall_s") is not None
+        ]
+        dev_spread = dispersion(dev_vals) if dev_vals else None
 
         rows.append({
             "case_id": case.case_id,
@@ -1118,12 +1206,16 @@ def _cmd_pair_impl(
             "count": case.count,
             "dtype": case.dtype,
             "platform": case.platform,
+            "persistent": getattr(args, "persistent", False),
+            "core_num": case.core_num,
             "correctness": "pass" if all_ok else "fail",
             "execute_s_mean": round(exec_mean, 6),
             "execute_s_stdev": round(exec_stdev, 6),
             "execute_s_median": round(exec_median, 6),
+            "execute_spread_ratio": exec_spread,
             "device_wall_s_mean": _aggregate_timed_device_wall_stats(samples)[0],
             "device_wall_s_median": _aggregate_timed_device_wall_stats(samples)[1],
+            "device_wall_spread_ratio": dev_spread,
             "setup_s": round(setup_s, 6) if setup_s is not None else None,
             "bw_execute_mb_s": bw_execute,
             "wall_s_mean": round(wall_mean, 6),
@@ -1159,20 +1251,24 @@ def _cmd_pair_impl(
     print(f"  RESULTS  ({case.count}×{case.dtype}, {nbytes} B/rank, P={case.p})")
     print(f"  Primary metric: execute_s (collective execution only)")
     print(f"{'═'*70}")
-    print(f"  {'stack':>11}  {'execute_s':>16}  {'setup_s':>10}  {'bw_execute':>14}  ok")
-    print(f"  {'-'*11}  {'-'*16}  {'-'*10}  {'-'*14}  --")
+    print(f"  {'stack':>11}  {'execute_s':>19}  {'med':>10}  {'setup_s':>10}  {'bw_execute':>14}  ok")
+    print(f"  {'-'*11}  {'-'*19}  {'-'*10}  {'-'*10}  {'-'*14}  --")
     bw_map: dict[str, float] = {}
     for r in rows:
         exec_mean = r["execute_s_mean"]
         exec_stdev = r["execute_s_stdev"]
+        exec_median = r.get("execute_s_median")
+        spread = r.get("execute_spread_ratio")
         setup_s = r.get("setup_s")
         bw = r.get("bw_execute_mb_s") or (nbytes / exec_mean / 1e6 if exec_mean > 0 else 0)
         bw_map[r["stack"]] = bw * 1e6  # bytes/s for ratio math
         ok = r["correctness"]
         setup_str = f"{setup_s:.2f}s" if setup_s is not None else "—"
+        med_str = f"{exec_median:.4f}s" if exec_median is not None else "—"
+        flag = " ⚑" if spread is not None and spread > 2.0 else ""
         bw_str = _format_bw(nbytes, exec_mean)
-        print(f"  {r['stack']:>11}  {exec_mean:>8.4f}s±{exec_stdev:.4f}s  {setup_str:>10}  {bw_str:>14}  "
-              f"{'✅' if ok == 'pass' else '❌'}")
+        print(f"  {r['stack']:>11}  {exec_mean:>8.4f}s±{exec_stdev:.4f}s  {med_str:>10}  {setup_str:>10}  {bw_str:>14}  "
+              f"{'✅' if ok == 'pass' else '❌'}{flag}")
 
     if "hccl" in bw_map and bw_map["hccl"] > 0:
         hccl_bw = bw_map["hccl"]
@@ -1182,6 +1278,11 @@ def _cmd_pair_impl(
                 continue
             eff = bw_map[stack] / hccl_bw * 100
             print(f"  {stack:>11} vs HCCL execute bandwidth: {eff:>5.1f}%")
+    if any(
+        r.get("execute_spread_ratio") is not None and r["execute_spread_ratio"] > 2.0
+        for r in rows
+    ):
+        print("  ⚑ = timed execute_s spread (max/min) > 2× — the median is the robust summary")
     print(f"{'═'*70}")
 
     all_ok = all(r["correctness"] == "pass" for r in rows)
@@ -1205,8 +1306,13 @@ def main(argv: list[str] | None = None) -> int:
     p_pair.add_argument("--platform", default=None, help="Override case platform (e.g. a2a3sim for sim testing)")
     p_pair.add_argument("--warmup-rounds", type=int, default=None, help="Override case warmup rounds")
     p_pair.add_argument("--timed-rounds", type=int, default=None, help="Override case timed rounds")
+    p_pair.add_argument("--core-num", type=int, default=None,
+                        help="Override AIV launch width (pypto-host mesh only)")
     p_pair.add_argument("--batch", type=int, default=1,
                         help="Back-to-back rt.run per timed round (pypto stacks; amortises dispatch)")
+    p_pair.add_argument("--persistent", action="store_true",
+                        help="pypto stacks: prepare(persistent=True) — retain CommDomains across "
+                             "dispatches (removes the per-dispatch domain lifecycle from execute_s)")
     p_pair.add_argument("--out", required=True, help="results.json path under results/campaigns/")
 
     p_cross = sub.add_parser("cross-variant", help="Compare two algorithm variants at same (P,count,dtype,devices)")
@@ -1220,8 +1326,13 @@ def main(argv: list[str] | None = None) -> int:
     p_cross.add_argument("--count", type=int, default=None, help="Override case payload element count")
     p_cross.add_argument("--warmup-rounds", type=int, default=None, help="Override case warmup rounds")
     p_cross.add_argument("--timed-rounds", type=int, default=None, help="Override case timed rounds")
+    p_cross.add_argument("--core-num", type=int, default=None,
+                         help="Override AIV launch width (pypto-host mesh only)")
     p_cross.add_argument("--batch", type=int, default=1,
                          help="Back-to-back rt.run per timed round (pypto stacks; amortises dispatch)")
+    p_cross.add_argument("--persistent", action="store_true",
+                         help="pypto stacks: prepare(persistent=True) — retain CommDomains across "
+                              "dispatches (removes the per-dispatch domain lifecycle from execute_s)")
     p_cross.add_argument("--out", required=True, help="results.json path under results/campaigns/")
 
     args = parser.parse_args(argv)
