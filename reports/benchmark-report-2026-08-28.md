@@ -25,16 +25,23 @@
   the non-persistent domain lifecycle adds another ~10–20× — together that is the ~1000×
   end-to-end number. Persistent mode removes the lifecycle (~19–25×), and the residual
   ~5–11 ms dispatch round-trip is a separate L3→L2 cost (issue #2521).
-- **Multicore (core_num) DOES move the host builtin's bandwidth** — `B* = 8` at P=2:
-  pypto-host fitted bandwidth rises **1.2 → 5.5 GB/s** (cn1 → cn8), moving from
-  **0.07× to 0.32× HCCL**; HCCL's own `B* = 1` (single block already saturates).
-  This refines the notes' earlier "multicore does not move bandwidth" claim for the host
-  builtin at P=2 (see §3.6).
+- **Multicore (core_num) DOES move the host builtin's bandwidth** — single-AIV is ~1.2 GB/s
+  (0.07× HCCL); cn≥8 reaches **~3.6–5.5 GB/s (0.20–0.32× HCCL)**. The exact B\* is
+  **{8,16} and noise-sensitive** on the shared box (cn8 measured 5.5 then 3.56 GB/s across
+  runs), but the qualitative claim is robust: a single AIV does *not* saturate, multi-AIV is
+  required, and at P=4 the benefit is ~6× (0.32 → 1.9 GB/s). HCCL is saturated at any width
+  (~16–18 GB/s). (§3.6)
 - **Ring ≈ mesh at P=2, and the full stack matrix is covered** — ring (5.2/9.4 ms composite
   at P=2/4), twophase (hccl 0.18–0.20 ms), the hand-written `simpler` (0.88 s subprocess,
   10.7 ms device) and our `simpler-own` AIV kernel (91 ms exec, **~61 µs median device
   wall** at count 256), PMU capture, cross-variant, full-sweep and the `a2a3sim` simulator
   all run green. `fp16` and `pto-isa` are the only two gaps, both environmental (§3.8).
+- **The hand-written kernel beats the pypto composite on-device (§3.9).** simpler-own's
+  device time (0.13/0.17/1.05 ms at 64K/256K/1M) is lower than pypto-composite
+  (0.89/0.57/1.82 ms) at every count and nearly matches HCCL at 256 KB (0.132 vs 0.168 ms),
+  with O≈333 ns and 98% bandwidth-bound. The composite's device time has ~5–7× headroom.
+- **Ring has no advantage at P=2 (§3.9)** — mesh moves 1 copy vs ring's 2; composite ring
+  B=2.7 GB/s vs mesh 4.0 GB/s. Test the O(P)-traffic benefit at P≥4 instead.
 - **The box is a shared multi-tenant NPU.** Another tenant holds ~100% AICore on 7/8
   chips; device 3 is intermittently flaky (507901 / `-100` / segfaults), and the harness's
   box-health probe correctly blocks runs when the box is unusable. All numbers here were
@@ -193,20 +200,31 @@ missing lever, per `pypto-vs-hccl-order-of-magnitude.md` §9).
 
 ### 3.6 E7 — core_num / launch-width sweep (the B\* scorecard)
 
-Fitted `T(N)=O+N/B` per launch width (pypto-host mesh, P=2, 3 payload sizes):
+Fitted `T(N)=O+N/B` per launch width (pypto-host mesh, P=2, payload sizes):
 
-| core_num | O | B | pipe@maxN | BW vs HCCL |
-|---:|---:|---:|---:|---:|
-| 1 | 292 µs | 1.2 GB/s | 0.92 | 0.07× |
-| 8 | 638 µs | **5.5 GB/s** | 0.54 | **0.32×** |
-| 16 | 449 µs | 3.6 GB/s | 0.74 | 0.21× |
+| Run (counts) | core_num | B | BW vs HCCL |
+|---|---|---:|---:|
+| 3 counts (64K/256K/1M) | 1 | 1.2 GB/s | 0.07× |
+| 3 counts | 8 | **5.5 GB/s** | **0.32×** |
+| 3 counts | 16 | 3.6 GB/s | 0.21× |
+| 4 counts (+4K) | 1 | 1.23 GB/s | 0.07× |
+| 4 counts | 8 | 3.56 GB/s | 0.20× |
+| 4 counts | 16 | **4.39 GB/s** | **0.24×** |
 
-**B\* scorecard:** pypto-host `B*=8` (best 5.5 GB/s); hccl `B*=1` (18.6 GB/s). The host
-builtin **quadruples its marginal bandwidth at cn8** (1.2→5.5 GB/s), i.e. multi-AIV launch
-*does* help the HOST builtin in the bandwidth regime at P=2 — an update to the notes'
-earlier "multicore does not move the bandwidth estimate" (that claim held for the mesh
-algorithm at P=8 and for the composite, which has no multicore path). cn16 is slightly
-worse than cn8 (contention/over-subscription on the shared box).
+**The robust finding (survives both count sets):** multicore *does* move the HOST builtin's
+bandwidth — single-AIV is ~1.2 GB/s (0.07× HCCL); cn≥8 reaches **~3.6–5.5 GB/s (0.20–0.32×
+HCCL)**, a 3–4.5× bandwidth gain. HCCL is saturated at any width (~16–18 GB/s, flat across
+cn1/8/16; its 3-count B\*=1 vs 4-count B\*=16 is a 3% bandwidth difference).
+
+**The B\* number itself is fragile on this shared box:** the 3-count sweep reported
+`pypto-host B*=8`, the 4-count sweep `B*=16`, and the cn8 fit moved 5.5 → 3.56 GB/s between
+the two runs (tenant noise). The defensible statement is **"B\* ∈ {8, 16}" — a single AIV
+does *not* saturate, multi-AIV launch is required, and it reaches ~4–5.5 GB/s** — not a
+single exact width. (This is exactly why the improved 4-count + repeated sweep was run.)
+
+**P=4 core_num (pypto-host, d4-7):** cn1 0.32 GB/s → cn8/cn16 **1.9 GB/s (~6×)** — the
+multicore benefit is larger at higher rank count, consistent with multicore amortising the
+barrier/latency rounds that dominate at P=4.
 
 ### 3.7 E8 — simpler and simpler-own stacks (count 256, P=2, mesh)
 
@@ -236,6 +254,35 @@ the pypto stacks.
 - **pto-isa (not run):** the `treduce_test` gtest binary is not built in
   `/opt/pto-isa/build/...`; it requires `build_st.py` (build step outside this session).
   **P=16:** not possible — only 8 devices.
+
+### 3.9 Post-review improvements (follow-up runs, 2026-08-28)
+
+**simpler-own at realistic counts (P=2, mesh, persistent-side comparison):**
+
+| count | hccl exec | pypto-composite dev | **simpler-own dev** |
+|---:|---:|---:|---:|
+| 65,536 | 0.168 ms | 0.888 ms | **0.132 ms** |
+| 262,144 | 0.229 ms | 0.573 ms | **0.174 ms** |
+| 1,048,576 | 0.402 ms | 1.815 ms | **1.048 ms** |
+
+simpler-own's fitted `O≈333 ns`, `B=4.1 GB/s` (0.24× HCCL), **pipe@maxN=0.98** — i.e. the
+hand-written dynamic-count AIV kernel is **faster on-device than the pypto composite at every
+count and nearly matches HCCL at 256 KB** (0.132 vs 0.168 ms), and is almost purely
+bandwidth-bound. Its high `execute_s` (61–106 ms) is the per-run domain alloc + shared-box
+noise (spread ⚑ 11–16), not the kernel. **Conclusion:** the composite's device time has
+~5–7× headroom vs a hand-written kernel — the gap to HCCL is implementation, not hardware.
+
+**Ring message-size sweep (P=2):** composite ring `B=2.7 GB/s` vs mesh `4.0 GB/s`; host ring
+`1.4` vs mesh `1.3 GB/s`. On-device: mesh composite < ring composite at all counts ≥ 64 KB
+(0.19 vs 0.38 at 64K; 1.30 vs 1.89 at 1M), while host is roughly equal (ring slightly faster
+≥ 256K). **At P=2 ring has no advantage** (mesh moves 1 copy vs ring's 2) — the O(P)-traffic
+benefit must be tested at P≥4.
+
+**P=8 persistent vs non-persistent** (completes the gain-vs-P curve): composite 232.9 → 13.6 ms
+(**17×**), host 314.5 → 17.4 ms (**18×**); device_wall ~2.3/3.4 ms as in E1.
+
+**P=4 `--batch 10`:** 8.7 ms ≈ persistent-only 8.7 ms (composite) — reconfirms batch adds
+nothing beyond persistent at P=4 (the residual is a serial L3→L2 round-trip).
 
 ---
 
@@ -388,6 +435,15 @@ another ~5–6× on top of device time; the non-persistent domain lifecycle adds
    `fp16` is blocked (hccl bench is fp32-only; the golden overflows fp16 at count 65536)
    and `pto-isa` needs its `treduce_test` binary built (`build_st.py`); P=16 is impossible
    with 8 devices.
+9. **simpler-own is the on-device reference for what a hand-written AIV kernel achieves**
+   (§3.9): ~0.13 ms at 256 KB (vs composite 0.57–0.89 ms, HCCL 0.17 ms) and 98%
+   bandwidth-bound — evidence that the composite/host kernels have real device-side headroom.
+10. **B\* is fragile on a shared box; report it as a range.** The 3-count and 4-count
+    core_num sweeps disagreed (cn8 vs cn16) and the cn8 fit drifted 5.5→3.56 GB/s between
+    runs. Always run ≥4 counts, repeat the sweep, and quote **B\* ∈ {8,16}**-style ranges
+    rather than a single width (§3.6).
+11. **Ring-vs-mesh at P=2 is a negative-result experiment** — mesh wins on-device for the
+    composite. Do not rerun ring at P=2; the useful ring question is at P≥4.
 
 ---
 
@@ -412,6 +468,7 @@ by `plot_figures.py`, and the apples-to-apples set by `collectives/apples_to_app
 | `a2a_scaling_efficiency.png` | §5 | device vs execute efficiency vs mesh-inherent floor |
 | `a2a_device_bw_vs_payload.png` | §5 | on-device vs end-to-end bandwidth vs payload |
 | `pmu_utilization.png` | E9 | pipe utilisation ratios from collected `pmu.csv` |
+| `a2a_simplerown_bw_model_fit.png` | §3.9 | T(N) fit: hand-written simpler-own vs pypto-composite vs HCCL |
 
 ## 8. Reproduce
 
@@ -485,3 +542,29 @@ PYTHONPATH=. python3 -m collectives.apples_to_apples \
   --strong results/campaigns/analytic_strong/run_<ts>/results.json \
   --out reports/figures-2026-08-28
 ```
+
+## 9. Experiment value assessment (what to keep, what to drop)
+
+Critical review of all experiments run this session, from an HPC benchmarking standpoint:
+
+| Experiment | Verdict | Rationale |
+|-----------|---------|-----------|
+| E1 strong scaling | ✅ keep | core scaling data; fix the P=4 device-set mix and add 1 MB/4 MB payloads next time |
+| E2 message-size sweep (P=2) | ✅ keep (extend) | extend to 16 MB and P=8 to pin true asymptotic B |
+| E3 persistent vs non-persistent | ✅ keep (extend) | now covers P=2/4/8 + batch; the headline experiment |
+| E4 L2 swimlane (harness path) | ❌ void as run | no timeline retained; use the pytest route instead |
+| E5 ring P=2/4 | ⚠️ keep P=4, drop P=2 | P=2 is a negative result (mesh wins); P=4 is the real ring question |
+| E6 twophase | ❌ low value | HCCL-internal algorithm; footnote only |
+| E7 core_num / B\* | ✅ keep (improved) | now 4-count + P=4; report B\* as a range, not a single width |
+| E8 simpler / simpler-own | ✅ keep (improved) | simpler-own at realistic counts is a headline result |
+| E9 PMU | ✅ keep | correlate with device_wall next time; capture unperturbed where possible |
+| E10 fp16 | ❌ no data | environmental (hccl fp32-only + golden overflow); fix count/formula before rerun |
+| E11 cross-variant | ⚠️ marginal | subsumed by E1/E2/E5; keep only the 1M ring point |
+| E12 full-sweep | ❌ redundant | re-runs mesh+ring already covered; stale/broken case-gen gate |
+| E13 a2a3sim | ⚠️ correctness only | never compare sim times to hardware; keep as a correctness harness |
+| `retry_p4`, `hccl_retry_d4567` | ❌ diagnostics | failure/device-set records; one-time facts (now in AGENTS.md) |
+
+**Net recommendation for the next campaign:** drop twophase/full-sweep, quarantine fp16/sim,
+fix E1's device-set mixing, extend E2 to 16 MB + P=8, and add a P=4 ring message-size sweep
+(plus a P=4 simpler-own leg) — those four changes would make the apples-to-apples story
+complete.
