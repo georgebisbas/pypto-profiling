@@ -187,6 +187,19 @@ execute_s = t_device + t_dispatch_residual + t_domain_lifecycle
 
 `collectives/apples_to_apples.py` computes this decomposition and renders the figures below.
 
+### Key numbers at a glance (65536×fp32; persistent = `--persistent`)
+
+| What | Value |
+|------|-------|
+| Device gap vs HCCL (`device_wall`, P=2 → P=8) | **1.9× → 16×** (composite 1.9×→10.6×, host 3.1×→16.0×) |
+| Persistent `execute_s` vs HCCL (P=2 → P=8) | 37× → 87× |
+| Non-persistent `execute_s` vs HCCL (P=2 → P=4) | 689× → 1211× |
+| Persistent-mode gain on `execute_s` | **~19–25×** (grows with P) |
+| Domain lifecycle cost (P=2 → P=4) | ~108 ms → ~159–212 ms (the part `--persistent` removes) |
+| Residual dispatch round-trip (P=2 → P=4) | ~5.2 → ~9.2 ms (L3→L2, **not** removable by `--batch`) |
+| Composite on-device bandwidth @ P=8 | 0.81 GB/s vs HCCL 8.6 GB/s |
+| Device scaling vs mesh-inherent floor | matches `2/(P(P−1))` exactly — no extra device loss |
+
 ### 5.1 Per-call time decomposition (65536×fp32)
 
 | P | Stack | execute (non-persist) | execute (persist) | `--batch 10` | device | dispatch residual | domain lifecycle | gain |
