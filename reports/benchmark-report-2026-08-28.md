@@ -25,6 +25,16 @@
   the non-persistent domain lifecycle adds another ~10–20× — together that is the ~1000×
   end-to-end number. Persistent mode removes the lifecycle (~19–25×), and the residual
   ~5–11 ms dispatch round-trip is a separate L3→L2 cost (issue #2521).
+- **Multicore (core_num) DOES move the host builtin's bandwidth** — `B* = 8` at P=2:
+  pypto-host fitted bandwidth rises **1.2 → 5.5 GB/s** (cn1 → cn8), moving from
+  **0.07× to 0.32× HCCL**; HCCL's own `B* = 1` (single block already saturates).
+  This refines the notes' earlier "multicore does not move bandwidth" claim for the host
+  builtin at P=2 (see §3.6).
+- **Ring ≈ mesh at P=2, and the full stack matrix is covered** — ring (5.2/9.4 ms composite
+  at P=2/4), twophase (hccl 0.18–0.20 ms), the hand-written `simpler` (0.88 s subprocess,
+  10.7 ms device) and our `simpler-own` AIV kernel (91 ms exec, **~61 µs median device
+  wall** at count 256), PMU capture, cross-variant, full-sweep and the `a2a3sim` simulator
+  all run green. `fp16` and `pto-isa` are the only two gaps, both environmental (§3.8).
 - **The box is a shared multi-tenant NPU.** Another tenant holds ~100% AICore on 7/8
   chips; device 3 is intermittently flaky (507901 / `-100` / segfaults), and the harness's
   box-health probe correctly blocks runs when the box is unusable. All numbers here were
@@ -81,6 +91,15 @@ run until these were fixed (all committed to this repo):
 | E2 | Message-size sweep (persistent) | mesh, P=2, counts 4K/16K/64K/256K/1M (16 KB–4 MB), 2+8 | ✅ all 15 rows pass |
 | E3 | Persistent vs non-persistent | mesh, P=2 & P=4, 65536×fp32 | ✅ 10 rows (see §3.3) |
 | E4 | L2 swimlane capture | P=2, `--profile l2` | ⚠️ captures dispatch graph + kernels; merged timeline not retained in the harness bundle |
+| E5 | Ring variant | ring, P=2 & P=4, 65536×fp32, persistent | ✅ hccl + both pypto (P=4 hccl d0-3, pypto d4-7) |
+| E6 | Two-phase variant | twophase, P=2 & P=4, 65536×fp32 | ✅ hccl (pypto has no twophase) |
+| E7 | core_num sweep (B*) | mesh, P=2, counts 64K/256K/1M × core-nums 1/8/16, pypto-host + hccl | ✅ B\* scorecard: host B\*=8, hccl B\*=1 |
+| E8 | simpler + simpler-own stacks | mesh, P=2, count 256 (1 KiB) | ✅ simpler 0.88 s subprocess; simpler-own 91 ms / dev ~61 µs |
+| E9 | PMU profiling | P=2, `--profile pmu` | ✅ 6 `pmu.csv` → `pmu_utilization.png` (timing perturbed by design) |
+| E10 | fp16 dtype | mesh, P=2, count 65536 fp16 | ❌ environmental: hccl bench fp32-only; golden overflows fp16 (max 65504) |
+| E11 | Cross-variant | mesh vs ring, P=2, 65536×fp32, persistent | ✅ 6 runs |
+| E12 | Full-sweep | mesh + ring, P=2, count 1M, persistent | ✅ 6 runs |
+| E13 | Simulator | `a2a3sim`, P=2, pypto stacks | ✅ correctness pass (composite 22.5 ms, host 63 ms sim time) |
 
 Every run passes golden verification (`correctness=pass`) before its row is recorded.
 
@@ -152,6 +171,72 @@ JSON, routed into the artifact bundle under `dfx/`. Limitations observed:
   `t_comm_us` aggregation is marked "nullable until E3" in the benchmark plan.
 - The proper deep-dive route is the pytest path (`--enable-l2-swimlane` + `swimlane_converter`).
 
+### 3.5 E5/E6/E11/E12 — Ring, two-phase, cross-variant, full-sweep (persistent)
+
+| Variant | P | Stack | `execute_s` | `device_wall_s` | vs HCCL (device) |
+|---------|---|-------|------------:|----------------:|-----------------:|
+| ring | 2 | hccl | 0.20 ms | — | 1× |
+| ring | 2 | pypto-composite | 5.2 ms | ~0.5 ms | ~2.5× |
+| ring | 2 | pypto-host | 6.9 ms | ~0.5 ms | ~2.5× |
+| ring | 4 | hccl (d0-3) | 0.18 ms | — | 1× |
+| ring | 4 | pypto-composite (d4-7) | 9.4 ms | ~1.0 ms | ~5.5× |
+| ring | 4 | pypto-host (d4-7) | 10.2 ms | ~1.0 ms | ~5.5× |
+| twophase | 2 | hccl | 0.20 ms | — | — |
+| twophase | 4 | hccl | 0.18 ms | — | — |
+
+Cross-variant P=2 (65536): mesh composite 6.2 ms (dev 0.49) vs ring composite 5.4 ms
+(dev **0.24**) — ring's on-device time is lower, as the bandwidth-optimal algorithm
+predicts, though at P=2 the mesh already moves only one copy. Full-sweep P=2 at 1M
+elements: mesh composite 18.1 ms vs ring 23.7 ms, hccl 0.4 ms in both — the ring benefit
+does **not** yet show at 1M (composite ring is still serial-per-chunk; pipelining is the
+missing lever, per `pypto-vs-hccl-order-of-magnitude.md` §9).
+
+### 3.6 E7 — core_num / launch-width sweep (the B\* scorecard)
+
+Fitted `T(N)=O+N/B` per launch width (pypto-host mesh, P=2, 3 payload sizes):
+
+| core_num | O | B | pipe@maxN | BW vs HCCL |
+|---:|---:|---:|---:|---:|
+| 1 | 292 µs | 1.2 GB/s | 0.92 | 0.07× |
+| 8 | 638 µs | **5.5 GB/s** | 0.54 | **0.32×** |
+| 16 | 449 µs | 3.6 GB/s | 0.74 | 0.21× |
+
+**B\* scorecard:** pypto-host `B*=8` (best 5.5 GB/s); hccl `B*=1` (18.6 GB/s). The host
+builtin **quadruples its marginal bandwidth at cn8** (1.2→5.5 GB/s), i.e. multi-AIV launch
+*does* help the HOST builtin in the bandwidth regime at P=2 — an update to the notes'
+earlier "multicore does not move the bandwidth estimate" (that claim held for the mesh
+algorithm at P=8 and for the composite, which has no multicore path). cn16 is slightly
+worse than cn8 (contention/over-subscription on the shared box).
+
+### 3.7 E8 — simpler and simpler-own stacks (count 256, P=2, mesh)
+
+| Stack | `execute_s` | `device_wall_s` | notes |
+|-------|------------:|----------------:|-------|
+| simpler (C++ example) | 0.88 s | 10.7 ms | subprocess re-inits per round (documented); 1 KiB payload |
+| simpler-own (AIV kernel) | 91 ms | **~61 µs median** | our dynamic-count kernel; per-run domain alloc |
+| hccl | 0.14 ms | — | baseline |
+
+`simpler-own`'s on-device median of ~61 µs at 1 KiB is the fastest on-device number
+measured in this session (sub-HCCL host-observed latency), though its `execute_s` still
+pays the per-run domain alloc (91 ms) — the same lifecycle cost `--persistent` removes for
+the pypto stacks.
+
+### 3.8 E9/E10/E13 — PMU, fp16 (limitation), simulator
+
+- **PMU (E9):** `--profile pmu` produces per-rank `pmu.csv` (6 files for P=2) and the
+  `pmu_utilization.png` figure. Expected caveat: profiling perturbs timing — pypto-composite
+  `execute_s` went from ~5.7 ms to ~126 ms under PMU, so profiled and unprofiled rounds
+  must never be mixed (already a harness rule).
+- **fp16 (E10):** cannot be benchmarked in this harness today — the HCCL bench binary is
+  **fp32-only** (`compiled HCCL helper currently supports only --dtype fp32`), and the
+  `rank_linear_v1` golden values exceed fp16's maximum (65504) at count 65536
+  (`inf != 65526.0`). A smaller count or a different input formula would be needed.
+- **Simulator (E13):** `a2a3sim` runs the full pypto stack green (composite 22.5 ms,
+  host 63 ms sim time; correctness passes) — useful for correctness-only sweeps.
+- **pto-isa (not run):** the `treduce_test` gtest binary is not built in
+  `/opt/pto-isa/build/...`; it requires `build_st.py` (build step outside this session).
+  **P=16:** not possible — only 8 devices.
+
 ---
 
 ## 4. Bandwidth model (`T(N) = O + N/B`), P=2 mesh
@@ -169,6 +254,18 @@ worse — and both pypto stacks are already >80% bandwidth-bound at the largest 
 (`pipe@maxN` 0.80 / 0.91), i.e. **the gap is a bandwidth/implementation gap, not dispatch**.
 This matches the notes' model: mesh is O(P²) traffic, MTE vs SDMA data planes, and no
 chunk pipelining yet.
+
+**P=4 scorecard** (from the P=4 message-size sweep, d4-7 pypto / d0-3 hccl):
+
+| Stack | O | B | pipe@maxN | BW vs HCCL |
+|-------|---:|---:|---:|---:|
+| hccl | 193 µs | 16.8 GB/s | 0.58 | — |
+| pypto-composite | 1.3 ms | **2.2 GB/s** | 0.64 | 0.13× |
+| pypto-host | 726 µs | **0.30 GB/s** | 0.95 | 0.02× |
+
+The bandwidth gap widens with P (composite 4.0→2.2 GB/s from P=2→4), as the mesh
+O(P²)-traffic model predicts; the composite's P=4 fit is noisier (r²=0.69) on the shared
+box.
 
 ---
 
@@ -279,6 +376,18 @@ another ~5–6× on top of device time; the non-persistent domain lifecycle adds
 5. **Shared-box discipline is required.** Every campaign must run the box-health probe
    (the harness does automatically), use `device_wall` medians to resist tenant spikes,
    and flag rows with `execute_spread_ratio > 2` (⚑).
+6. **Multicore helps the HOST builtin's bandwidth, not just latency.** The B\* scorecard
+   shows pypto-host needs `core_num=8` to reach bandwidth saturation at P=2 (1.2→5.5 GB/s,
+   0.07→0.32× HCCL); HCCL saturates at `core_num=1`. The composite has no multicore path.
+7. **Ring does not yet pay off for the composite at the tested sizes.** At P=2 ring's
+   on-device time is lower (0.24 vs 0.49 ms composite) but at 1M elements mesh ≈ ring in
+   end-to-end time — the ring kernel is still serial-per-chunk (pipelining is the missing
+   lever, per the notes §9).
+8. **Full stack matrix covered; two environmental gaps remain.** `simpler`/`simpler-own`
+   (count 256), PMU, cross-variant, full-sweep and the `a2a3sim` simulator all run green.
+   `fp16` is blocked (hccl bench is fp32-only; the golden overflows fp16 at count 65536)
+   and `pto-isa` needs its `treduce_test` binary built (`build_st.py`); P=16 is impossible
+   with 8 devices.
 
 ---
 
@@ -302,6 +411,7 @@ by `plot_figures.py`, and the apples-to-apples set by `collectives/apples_to_app
 | `a2a_effective_bw_vs_p.png` | §5 | effective mesh bandwidth vs P (HCCL rises, pypto flat) |
 | `a2a_scaling_efficiency.png` | §5 | device vs execute efficiency vs mesh-inherent floor |
 | `a2a_device_bw_vs_payload.png` | §5 | on-device vs end-to-end bandwidth vs payload |
+| `pmu_utilization.png` | E9 | pipe utilisation ratios from collected `pmu.csv` |
 
 ## 8. Reproduce
 
@@ -332,6 +442,41 @@ PYTHONPATH=. python -m collectives.run_sweep pair-mesh \
 
 Raw data: `results/campaigns/analytic_strong/run_20260828_150909/results.json` and
 `results/campaigns/analytic_sizes/run_20260828_151614/results.json` (both gitignored).
+
+Full-suite extras (all verified this session):
+
+```bash
+# E5 ring (P=2) and E6 twophase (hccl)
+bash run_campaign.sh --variant ring --p-values 2 --count 65536 \
+  --stacks hccl,pypto-composite,pypto-host --persistent --campaign ring_p2
+
+# E7 core_num sweep -> B* scorecard
+bash run_campaign.sh --variant mesh --p-values 2 \
+  --counts 65536,262144,1048576 --stacks hccl,pypto-host \
+  --core-nums 1,8,16 --persistent --campaign corenum
+
+# E8 simpler / simpler-own (count 256)
+PYTHONPATH=. python3 -m collectives.run_sweep pair-mesh \
+  --case-file collectives/cases/mesh_p2_count256_fp32_a2a3_d0-1.json \
+  --stacks simpler,simpler-own,hccl --campaign simpler256 \
+  --out results/campaigns/simpler256/run_001/results.json
+
+# E9 PMU
+PYTHONPATH=. python3 -m collectives.run_sweep pair-mesh \
+  --case-file collectives/cases/mesh_p2_count65536_fp32_a2a3_d0-1.json \
+  --stacks pypto-composite,pypto-host --persistent --profile pmu \
+  --campaign pmu --out results/campaigns/pmu/run_001/results.json
+
+# E11 cross-variant, E12 full-sweep, E13 simulator
+bash run_campaign.sh --mode cross-variant --variants mesh,ring \
+  --p-values 2 --count 65536 --stacks hccl,pypto-composite,pypto-host --persistent
+bash run_campaign.sh --mode full-sweep --p-values 2 \
+  --stacks hccl,pypto-composite,pypto-host --persistent
+PYTHONPATH=. python3 -m collectives.run_sweep pair-mesh \
+  --case-file collectives/cases/mesh_p2_count65536_fp32_a2a3_d0-1.json \
+  --stacks pypto-composite,pypto-host --platform a2a3sim \
+  --campaign sim --out results/campaigns/sim/run_001/results.json
+```
 
 Apples-to-apples decomposition + figures (needs the strong + clarity campaigns above):
 

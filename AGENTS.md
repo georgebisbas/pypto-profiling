@@ -87,6 +87,13 @@ bash run_campaign.sh --variant mesh --p-values 2 \
 
 ## 4. What every experiment option does
 
+Full suite verified 2026-08-28: ring & twophase variants (ring runs pypto-composite/host
++ hccl; twophase is hccl-only), `--core-nums` B\* sweep (pypto-host mesh), `simpler`/
+`simpler-own` at count 256, `--profile pmu`, cross-variant (`--mode cross-variant`),
+`--mode full-sweep`, and `--platform a2a3sim` (simulator). Known gaps: `fp16` (hccl bench
+is fp32-only and the `rank_linear_v1` golden overflows fp16 at count 65536), `pto-isa`
+(needs `treduce_test` built via `build_st.py`), P=16 (only 8 devices).
+
 | Flag | Effect |
 |------|--------|
 | `--stacks` | `hccl,simpler,simpler-own,pypto-composite,pypto-host,pto-isa` (default `hccl,simpler,pypto-composite,pypto-host`) |
