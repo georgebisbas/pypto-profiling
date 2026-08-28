@@ -63,11 +63,33 @@ def expected_output(nranks: int, count: int) -> list[float]:
     return [float(nranks * i + 100 * nranks * (nranks - 1) // 2) for i in range(count)]
 
 
+# Kernel variants for the perf-improvement experiments (2026-08-28). Select with
+# PYPTO_SIMPLER_KERNEL in {mesh (default), pipelined, handicapped}.
+_KERNEL_VARIANTS = {
+    "mesh": "allreduce_mesh.cpp",
+    "pipelined": "allreduce_mesh_pipelined.cpp",
+    "handicapped": "allreduce_mesh_handicapped.cpp",
+}
+
+
+def _kernel_variant() -> tuple[str, str]:
+    """Return (variant_tag, kernel_filename) from PYPTO_SIMPLER_KERNEL."""
+    variant = os.environ.get("PYPTO_SIMPLER_KERNEL", "mesh").strip().lower()
+    if variant not in _KERNEL_VARIANTS:
+        raise ValueError(
+            f"unknown PYPTO_SIMPLER_KERNEL={variant!r}; "
+            f"expected one of {sorted(_KERNEL_VARIANTS)}"
+        )
+    return variant, _KERNEL_VARIANTS[variant]
+
+
 def _kernel_cache_key(platform: str, pto_isa_commit: str | None) -> tuple[Any, ...]:
-    kernel_source = _KERNEL_DIR / "aiv" / "allreduce_mesh.cpp"
+    variant, fname = _kernel_variant()
+    kernel_source = _KERNEL_DIR / "aiv" / fname
     orch_source = _KERNEL_DIR / "orchestration" / "allreduce_mesh_orch.cpp"
     return (
         platform,
+        variant,
         pto_isa_commit or "",
         kernel_source.stat().st_mtime,
         orch_source.stat().st_mtime,
@@ -90,7 +112,8 @@ def _build_chip_callable_uncached(
     include_dirs = kc.get_orchestration_include_dirs(runtime)
     kernel_include_dirs = list(include_dirs) + [str(kc.project_root / "src" / "common")]
 
-    kernel_source = str(_KERNEL_DIR / "aiv" / "allreduce_mesh.cpp")
+    _variant, _fname = _kernel_variant()
+    kernel_source = str(_KERNEL_DIR / "aiv" / _fname)
     if not os.path.isfile(kernel_source):
         raise FileNotFoundError(f"kernel source not found: {kernel_source}")
 
