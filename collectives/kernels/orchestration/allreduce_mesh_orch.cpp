@@ -23,24 +23,24 @@
 
 #include <stdint.h>
 
-#include "pto_orchestration_api.h"
+#include "orchestration_api.h"
 
 extern "C" {
 
-__attribute__((visibility("default"))) PTO2OrchestrationConfig
-allreduce_mesh_orch_config(const L2TaskArgs &orch_args) {
+__attribute__((visibility("default"))) OrchestrationConfig
+allreduce_mesh_orch_config(const ChipTaskArgs &orch_args) {
     (void)orch_args;
-    return PTO2OrchestrationConfig{
+    return OrchestrationConfig{
         .expected_arg_count = 6,  // 3 tensors + 3 scalars
     };
 }
 
-__attribute__((visibility("default"))) void allreduce_mesh_orch(const L2TaskArgs &orch_args) {
-    const Tensor &input = orch_args.tensor(0).ref();
-    const Tensor &output = orch_args.tensor(1).ref();
-    const Tensor &scratch = orch_args.tensor(2).ref();
+__attribute__((visibility("default"))) void allreduce_mesh_orch(const ChipTaskArgs &orch_args) {
+    const simpler::tmr::Tensor &input = orch_args.tensor(0).ref();
+    const simpler::tmr::Tensor &output = orch_args.tensor(1).ref();
+    const simpler::tmr::Tensor &scratch = orch_args.tensor(2).ref();
 
-    L0TaskArgs params;
+    CoreTaskArgs params;
     params.add_input(input);
     params.add_output(output);
     params.add_inout(scratch);

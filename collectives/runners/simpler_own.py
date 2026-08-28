@@ -262,9 +262,9 @@ class MeshAllreduceSession:
         return {"execute": execute_s}
 
     def _orch_fn(self, orch: Any, _args: Any, cfg: Any) -> None:
-        from simpler.task_interface import DataType, TaskArgs, Tensor, TensorArgType
-        from simpler_setup.torch_interop import make_tensor_arg
+        from simpler.task_interface import DataType, TaskArgs, TensorArgType
 
+        _F32 = DataType.FLOAT32
         with orch.allocate_domain(
             name="default",
             workers=list(range(self.nranks)),
@@ -275,17 +275,16 @@ class MeshAllreduceSession:
             for i in range(self.nranks):
                 domain = handle[i]
                 chip_args = TaskArgs()
-                chip_args.add_tensor(make_tensor_arg(self.host_inputs[i]), TensorArgType.INPUT)
                 chip_args.add_tensor(
-                    make_tensor_arg(self.host_outputs[i]), TensorArgType.OUTPUT_EXISTING
+                    self.worker.make_tensor_arg(self.host_inputs[i], shapes=(self.count,), dtype=_F32),
+                    TensorArgType.INPUT,
                 )
                 chip_args.add_tensor(
-                    Tensor.make(
-                        data=domain.buffer_ptrs["scratch"],
-                        shapes=(self.count,),
-                        dtype=DataType.FLOAT32,
-                        child_memory=True,
-                    ),
+                    self.worker.make_tensor_arg(self.host_outputs[i], shapes=(self.count,), dtype=_F32),
+                    TensorArgType.OUTPUT_EXISTING,
+                )
+                chip_args.add_tensor(
+                    domain.buffers["scratch"].tensor((self.count,), _F32),
                     TensorArgType.INOUT,
                 )
                 chip_args.add_scalar(self.count)

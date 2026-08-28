@@ -199,7 +199,7 @@ mkdir -p "$RUN_DIR"
 IFS=',' read -r -a P_VALUES <<< "$P_VALUES_CSV"
 IFS=',' read -r -a VARIANTS <<< "$VARIANTS_CSV"
 IFS=',' read -r -a CORE_NUMS <<< "$CORE_NUMS_CSV"
-if [[ ${#CORE_NUMS[@]} -eq 1 && -z "${CORE_NUMS[0]}" ]]; then
+if [[ ${#CORE_NUMS[@]} -eq 0 || ( ${#CORE_NUMS[@]} -eq 1 && -z "${CORE_NUMS[0]}" ) ]]; then
     CORE_NUMS=(1)
 fi
 RESULTS_FILES=()
