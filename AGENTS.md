@@ -160,7 +160,9 @@ python3 -m collectives.apples_to_apples --strong results/campaigns/<strong>/run_
 ```
 
 See `reports/benchmark-report-2026-08-28.md` for a complete worked example (methodology,
-per-experiment tables, bandwidth model, findings).
+per-experiment tables, bandwidth model, findings), and `reports/issue-2521-context.md` for
+the upstream RFC behind the residual dispatch cost (L2 orchestration, persistent-vs-per-call
+numbers, HCCL launch-width policy).
 
 ## 9. Golden rules
 

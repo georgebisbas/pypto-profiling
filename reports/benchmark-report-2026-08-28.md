@@ -185,6 +185,11 @@ execute_s = t_device + t_dispatch_residual + t_domain_lifecycle
 - `t_dispatch_residual` — host L3→L2 task setup/round-trip that survives persistent mode.
 - `t_domain_lifecycle` — CommDomain allocate/exchange/teardown per `rt.run()`; removed by `--persistent`.
 
+See also [`reports/issue-2521-context.md`](issue-2521-context.md) — the upstream RFC
+behind this residual cost (L2 orchestration + runtime multi-AIV), with vloncar's independent
+persistent-vs-per-call numbers (63–75× at P=4, and persistent beats 16-batch amortisation)
+and the HCCL AIV launch-width policy table.
+
 `collectives/apples_to_apples.py` computes this decomposition and renders the figures below.
 
 ### Key numbers at a glance (65536×fp32; persistent = `--persistent`)
