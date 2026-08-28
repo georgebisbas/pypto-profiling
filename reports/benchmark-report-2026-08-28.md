@@ -20,6 +20,11 @@
 - **Bandwidth model (P=2, mesh):** HCCL B≈16.9 GB/s; pypto-composite B≈4.0 GB/s
   (**0.24× HCCL**), pypto-host B≈1.3 GB/s (**0.08× HCCL**). Latency O is only ~1.7× HCCL;
   the gap widens with payload — an implementation (bandwidth) gap, not a hardware limit.
+- **Decomposed apples-to-apples (§5):** `execute_s = device + dispatch + lifecycle`. The
+  real device gap vs HCCL is **~2–16×** (1.9× at P=2); persistent dispatch adds ~5–6×;
+  the non-persistent domain lifecycle adds another ~10–20× — together that is the ~1000×
+  end-to-end number. Persistent mode removes the lifecycle (~19–25×), and the residual
+  ~5–11 ms dispatch round-trip is a separate L3→L2 cost (issue #2521).
 - **The box is a shared multi-tenant NPU.** Another tenant holds ~100% AICore on 7/8
   chips; device 3 is intermittently flaky (507901 / `-100` / segfaults), and the harness's
   box-health probe correctly blocks runs when the box is unusable. All numbers here were
@@ -167,7 +172,80 @@ chunk pipelining yet.
 
 ---
 
-## 5. Findings
+## 5. Apples-to-apples analysis — persistent vs non-persistent and the cost of dispatch
+
+An HPC/compiler benchmarking view separates each per-call time into three additive
+components:
+
+```
+execute_s = t_device + t_dispatch_residual + t_domain_lifecycle
+```
+
+- `t_device` — the pure on-device collective (`device_wall_s`), identical in both modes.
+- `t_dispatch_residual` — host L3→L2 task setup/round-trip that survives persistent mode.
+- `t_domain_lifecycle` — CommDomain allocate/exchange/teardown per `rt.run()`; removed by `--persistent`.
+
+`collectives/apples_to_apples.py` computes this decomposition and renders the figures below.
+
+### 5.1 Per-call time decomposition (65536×fp32)
+
+| P | Stack | execute (non-persist) | execute (persist) | `--batch 10` | device | dispatch residual | domain lifecycle | gain |
+|---|-------|----------------------:|------------------:|-------------:|-------:|------------------:|-----------------:|-----:|
+| 2 | pypto-composite | 113.7 ms | 5.7 ms | 5.1 ms | 0.49 ms | 5.2 ms | 108.0 ms | **20.0×** |
+| 2 | pypto-host | 114.8 ms | 6.2 ms | 6.6 ms | 0.38 ms | 5.8 ms | 108.6 ms | **18.5×** |
+| 4 | pypto-composite | 220.4 ms | 8.7 ms | — | 0.96 ms | 7.8 ms | 211.7 ms | **25.3×** |
+| 4 | pypto-host | 170.9 ms | 12.4 ms | — | 3.23 ms | 9.2 ms | 158.5 ms | **13.8×** |
+
+Figure: `a2a_time_breakdown.png` (stacked, log-y).
+
+### 5.2 What persistent mode gains, and how dispatch is affected
+
+- **~19–25× on `execute_s`**, and the gain **grows with P**: the domain lifecycle cost is
+  ~108 ms at P=2 and ~159–212 ms at P=4 — it is rank-count-dependent (each rank joins the
+  window exchange + teardown handshake).
+- **`device_wall_s` is untouched** (0.19–0.96 ms composite) — persistent mode removes host
+  cost only; the collective itself is identical. That is the key evidence that the ~100 ms
+  is **dispatch/lifecycle, not device**.
+- **`--batch 10` adds little** beyond persistent (5.1 vs 5.7 ms at P=2): the residual
+  ~5 ms is a **per-dispatch L3→L2 task round-trip** that batching does not amortise the way
+  it would a fixed per-call cost — it is a serialised round-trip per dispatch, the second
+  lever targeted by the L2-orchestration work (issue #2521).
+- Figure: `a2a_persistent_gain.png` (speedup per P, stack).
+
+### 5.3 The honest ratios vs HCCL (what the "~1000×" really is)
+
+| P | Stack | device vs HCCL | persistent execute vs HCCL | non-persist execute vs HCCL |
+|---|-------|---------------:|---------------------------:|----------------------------:|
+| 2 | pypto-composite | **1.9×** | 37× | 689× |
+| 2 | pypto-host | **3.1×** | 47× | 696× |
+| 4 | pypto-composite | **4.3×** | 51× | 1211× |
+| 4 | pypto-host | **9.3×** | 64× | 939× |
+| 8 | pypto-composite | **10.6×** | 68× | — |
+| 8 | pypto-host | **16.0×** | 87× | — |
+
+Reading: the "~1000×" figure quoted for pypto allreduce is **entirely host dispatch**.
+Decomposed: the real device gap is **~2–16×** (1.9× at P=2!); persistent dispatch adds
+another ~5–6× on top of device time; the non-persistent domain lifecycle adds another
+~10–20× on top of that. Figure: `a2a_ratios_vs_hccl.png` (log bars, all three per P, stack).
+
+### 5.4 Effective bandwidth and scaling (mesh)
+
+- **Effective mesh bandwidth** `(P−1)·N·4 / time`: HCCL (execute) **rises with P** —
+  1.6 → 4.3 → 8.6 GB/s at P=2/4/8 — because its algorithm is bandwidth-optimal, while
+  pypto device bandwidth is **flat at ~0.5–1.0 GB/s** (composite 0.82/1.00/0.81 GB/s).
+  At P=8: HCCL 8.6 GB/s vs composite 0.81 GB/s. Figure: `a2a_effective_bw_vs_p.png`.
+- **On-device vs end-to-end bandwidth** (`a2a_device_bw_vs_payload.png`): at P=2 the
+  composite reaches **~3.2 GB/s device-only** at 4 MB vs ~0.23 GB/s end-to-end — the solid
+  (device_wall) vs dashed (persistent execute) lines expose the dispatch gap directly.
+- **Strong-scaling efficiency at fixed N** (`a2a_scaling_efficiency.png`): device-based
+  efficiency (composite 20% @P=4, 3.5% @P=8) tracks the mesh algorithm's **inherent floor
+  `2/(P(P−1))`** (16.7% @P=4, 3.6% @P=8) — the device time scales exactly as the O(P²) mesh
+  traffic dictates; there is no additional device-side scaling loss. The execute-based
+  efficiency *looks* better (33% @P=4) only because the ~5 ms fixed dispatch inflates the
+  P=2 baseline — **host dispatch can mask poor device scaling**, so always quote the
+  device-based efficiency.
+
+## 6. Findings
 
 1. **`device_wall` is the only cross-stack metric.** `execute_s` mixes host dispatch with
    device time; comparisons against HCCL must use `device_wall` (or persistent `--batch`
@@ -186,22 +264,28 @@ chunk pipelining yet.
 
 ---
 
-## 6. Figures
+## 7. Figures
 
-Copies are committed under `reports/figures-2026-08-28/` (generated into each run dir's
-`figures/` by `plot_figures.py`):
+Committed under `reports/figures-2026-08-28/` (generated into each run dir's `figures/`
+by `plot_figures.py`, and the apples-to-apples set by `collectives/apples_to_apples.py`):
 
-| Figure | Source campaign | Shows |
-|--------|-----------------|-------|
+| Figure | Source | Shows |
+|--------|--------|-------|
 | `strong_scaling_t_total.png` | E1 | execute time vs P, one line per stack |
 | `strong_scaling_efficiency.png` | E1 | parallel efficiency E(P) per stack |
 | `wall_vs_device.png` | E1 | `execute_s` vs `device_wall_s` (the dispatch-overhead gap) |
-| `message_size_bw_eff.png` | E2 | BW vs payload (log-x crossover) |
+| `message_size_bw_eff.png` | E2 | end-to-end BW vs payload (log-x crossover) |
 | `bw_model_fit.png` | E2 | measured T(N) points + fitted O+N/B lines vs HCCL |
 | `setup_breakdown.png` / `phase_breakdown.png` | E1/E2 | compile / init / execute phase means |
 | `compile_breakdown.png` | E1/E2 | pypto compile sub-stages (passes / codegen) |
+| `a2a_time_breakdown.png` | §5 | **execute_s = device + dispatch + lifecycle** (persistent vs not) |
+| `a2a_ratios_vs_hccl.png` | §5 | device / persist-exec / nonpersist-exec ratios vs HCCL (log) |
+| `a2a_persistent_gain.png` | §5 | persistent-mode speedup per (P, stack) |
+| `a2a_effective_bw_vs_p.png` | §5 | effective mesh bandwidth vs P (HCCL rises, pypto flat) |
+| `a2a_scaling_efficiency.png` | §5 | device vs execute efficiency vs mesh-inherent floor |
+| `a2a_device_bw_vs_payload.png` | §5 | on-device vs end-to-end bandwidth vs payload |
 
-## 7. Reproduce
+## 8. Reproduce
 
 ```bash
 cd pypto-profiling
@@ -230,3 +314,11 @@ PYTHONPATH=. python -m collectives.run_sweep pair-mesh \
 
 Raw data: `results/campaigns/analytic_strong/run_20260828_150909/results.json` and
 `results/campaigns/analytic_sizes/run_20260828_151614/results.json` (both gitignored).
+
+Apples-to-apples decomposition + figures (needs the strong + clarity campaigns above):
+
+```bash
+PYTHONPATH=. python3 -m collectives.apples_to_apples \
+  --strong results/campaigns/analytic_strong/run_<ts>/results.json \
+  --out reports/figures-2026-08-28
+```

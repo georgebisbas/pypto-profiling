@@ -20,6 +20,9 @@ collectives. Authoritative methodology: `pypto-3.0-notes/collectives_benchmarkin
   - `runners/` — in-process session runners for pypto and simpler-own; subprocess runners
     for hccl / simpler / pto-isa.
   - `summarize.py` — aggregation, paired comparison, `--model` scorecard, `--emit-report`.
+  - `apples_to_apples.py` — **the HPC-view analysis**: decomposes `execute_s` into
+    device + dispatch + lifecycle (persistent vs non-persistent), honest ratios vs HCCL,
+    effective mesh bandwidth, scaling efficiency vs the mesh-inherent floor. Emits 6 figures.
   - `plot_figures.py` — 10 figures (scaling, efficiency, bw-crossover, wall-vs-device, model fit…).
   - `cases/` — pre-generated EquivalenceCase JSON files (P × count × dtype × variant × devices).
   - `kernels/` — the AIV kernel + orchestration shim for the simpler-own stack.
@@ -150,6 +153,10 @@ paired_stack_ratio,phase_breakdown,setup_breakdown,compile_breakdown,pmu_utiliza
 wall_vs_device,bw_model_fit
 # report → $RD/reports/summary.md ; figures → $RD/figures/*.png
 # commit important figures under reports/figures-<date>/ and write reports/<report>.md
+
+# Apples-to-apples analysis (persistent vs non-persistent decomposition, ratios vs HCCL):
+python3 -m collectives.apples_to_apples --strong results/campaigns/<strong>/run_*/results.json
+# → prints the decomposition tables and writes 6 figures to reports/figures-<date>/
 ```
 
 See `reports/benchmark-report-2026-08-28.md` for a complete worked example (methodology,
