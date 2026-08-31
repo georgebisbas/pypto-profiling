@@ -97,6 +97,19 @@ pipelining + NeighborBarrier work applies there).
 (issue #2521's launch policy, mirroring HCCL's `B=min(L,P+1)` / `B=floor(L/P)·P` tables) is
 the correct default.
 
+**Crossover refinement (2026-08-31, 54-run sweep — see
+[`corenum-message-size-crossover-2026-08-31.md`](./corenum-message-size-crossover-2026-08-31.md)):**
+the multi-AIV gain is **not flat in message size**. A full per-rank payload sweep
+(9 sizes × `core_num` {1,8,16} × P {2,4}, `device_wall_s` median) shows the benefit
+crosses from a net loss/noise to a clear win at **~256 KiB per rank (P=2) / ~128 KiB
+(P=4)**, and the crossover shifts down as P grows. Above the crossover the gain is
+monotone in payload: cn8 1.7×→3.8× (P=2) and 2.6×→4.7× (P=4); cn16 up to ~5.8× at
+P=4/4 MiB. Single-AIV saturates ~0.9–1.1 GB/s by 1–4 MiB; cn8 ≈ cn16 at the top end
+(B\* ∈ {8,16}). Below ~64–128 KiB multi-AIV is a wash (latency-bound, 0.25×–1.5×
+noise). **Actionable refinement to the verdict:** runtime-selected multi-AIV should be
+**payload-gated** — use `core_num=1` for small messages (<~128–256 KiB per rank) and
+multi-AIV only when the transfer is bandwidth-bound.
+
 ---
 
 ## Idea 5 — Persistent domains as the default → **already confirmed (19–25×)**

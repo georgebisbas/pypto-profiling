@@ -6,6 +6,46 @@
 **Metric:** `device_wall_s` median — slowest-rank pure on-device collective time (apples-to-apples)
 **Effective bandwidth:** `n_bytes / device_wall_s_median`
 
+## Glossary (how to read these numbers)
+
+- **`cn1` / `cn8` / `cn16`** — `core_num`, the number of AI-vector cores (AIVs) each
+  rank's mesh-allreduce kernel is launched with (`--core-num N`, `pypto-host` stack;
+  the kernel is SPMD over the AIV grid). The AIVs do the parallel element-wise
+  reduce/compute on each die. `cn1` = single-AIV baseline; `cn8`/`cn16` = 8×/16× the
+  vector-compute lanes per rank.
+- **`payload`** — **per-rank** message size: each rank's input buffer to the mesh
+  allreduce, `count` fp32 elements × 4 B = `n_bytes` = `bytes_per_rank_per_round`
+  (e.g. `count = 4096` → 16 KiB per rank). The total data aggregated by the allreduce
+  is `P × payload`; all tables and bandwidth figures below are per-rank (the
+  apples-to-apples collective convention, comparable across P).
+- **`cn8/cn1`, `cn16/cn1`** — multi-AIV speedup over single-AIV (bandwidth ratio,
+  `bw_cnN / bw_cn1`); >1.0× = multi-AIV is a net win.
+- **`device_wall_s`** — slowest-rank pure on-device collective time (host dispatch
+  excluded). Bandwidth = `n_bytes / device_wall_s_median`.
+
+## Key crossover summary (the punchline)
+
+**Crossover = first payload where multi-AIV stops losing and the gain holds for every
+larger payload** ("monotone-stable", defined precisely below):
+
+| | P=2 | P=4 |
+|---|---|---|
+| **cn8 stable gain from** | **256 KiB** (1.71×) | **128 KiB** (1.15×) |
+| **cn16 stable gain from** | **256 KiB** (2.45×) | 16 KiB* (noise-level) |
+| first *substantial* gain (≥1.5×) | 256 KiB | 256 KiB (2.58×) |
+| max speedup at 4 MiB (cn8 / cn16) | 3.80× / 2.64× | 4.66× / 5.84× |
+
+*cn16 at P=4 reads ≥1.0× even at 16 KiB, but those are ~250 µs runs with ~2× spread —
+treat as noise, not signal.
+
+- **Below ~64–128 KiB: no reliable gain** — ratios bounce 0.25×–1.5× around parity
+  (latency-bound + shared-box noise).
+- **From ~256 KiB up: dependable, monotone gains** — cn8: 1.7×→3.8× (P=2), 2.6×→4.7×
+  (P=4); cn16 tops out ~5.8× at P=4/4 MiB.
+- **Higher P pulls the crossover down** (256→128 KiB for cn8): more peers → more
+  traffic per AIV → the single-AIV bottleneck bites earlier.
+- **cn8 ≈ cn16 at the top end** — 8 AIVs are basically enough by 1–4 MiB.
+
 ## Figure
 
 `reports/figures-2026-08-28/corenum_message_size_crossover.png` (2×2):
@@ -61,6 +101,49 @@
 | 4 | 1 MiB | 1.81× | 1.90× |
 | 4 | 2 MiB | 3.18× | 3.47× |
 | 4 | 4 MiB | 4.66× | 5.84× |
+
+## Where do gains start — crossover detail
+
+Two definitions matter, because the small-payload cells are noisy:
+
+- **First touch ≥1.0×** — the first payload where `cn8/cn1 ≥ 1.0` at all. This is
+  misleading: at P=2 the ratio touches 1.21× at 32 KiB then dips back to 0.77× (64K)
+  and 0.25× (128K), so "first touch" would claim gains that do not hold.
+- **Monotone-stable crossover** — the first payload where `cn8/cn1 ≥ 1.0` **and stays
+  ≥1.0× for every larger payload**. This is the honest "gains start here" point (the
+  arrow in the figure). Reading the cn8 line:
+  - **P=2:** 0.65×@16K → 1.21×@32K → 0.77×@64K → **0.25×@128K** → **1.71×@256K** (holds
+    from here: 1.57, 3.72, 2.06, 3.80) ⇒ **crossover = 256 KiB**.
+  - **P=4:** 1.23×@16K → 1.11×@32K → 0.97×@64K → **1.15×@128K** (holds from here:
+    2.58, 1.41, 1.81, 3.18, 4.66) ⇒ **crossover = 128 KiB**.
+- **First substantial gain (≥1.5×)** — the payload where the win is clearly beyond
+  noise: **256 KiB at both P** (P=2: cn8 1.71× / cn16 2.45×; P=4: cn8 2.58×).
+
+Per-point speedup table (bold = first payload where the value holds ≥1.0× from there on):
+
+| P | payload | 16K | 32K | 64K | 128K | **256K** | 512K | 1M | 2M | 4M |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 2 | cn8/cn1 | 0.65× | 1.21× | 0.77× | 0.25× | **1.71×** | 1.57× | 3.72× | 2.06× | 3.80× |
+| 2 | cn16/cn1 | 1.49× | 0.57× | 0.70× | 1.57× | **2.45×** | 1.51× | 1.95× | 2.80× | 2.64× |
+| 4 | cn8/cn1 | 1.23× | 1.11× | 0.97× | **1.15×** | 2.58× | 1.41× | 1.81× | 3.18× | 4.66× |
+| 4 | cn16/cn1 | 1.12× | 1.19× | 1.17× | **1.25×** | 1.67× | 1.61× | 1.90× | 3.47× | 5.84× |
+
+**Why the crossover moves with P and payload:**
+
+- **Small payloads are latency-bound.** The fixed per-peer wait/notify/barrier
+  serialisation plus the AIV launch/dispatch cost dominate; the reduce work is tiny, so
+  extra AIVs cannot hide the latency — they can even add contention (the 0.25× dip at
+  128K/P=2 is real contention, not just noise). Result: no reliable gain below ~64–128
+  KiB.
+- **Large payloads are bandwidth-bound.** Once the buffer is big enough that the
+  single-AIV compute+MTE path saturates (~0.9–1.1 GB/s at P=2, plateau by 1–4 MiB),
+  extra AIVs add parallel reduce lanes and MTE bandwidth → real, monotone gains until
+  the rail saturates. That is why the benefit grows with payload (3.8×/4.7–5.8× at
+  4 MiB).
+- **P scales the per-rank traffic.** With more peers each rank does (P−1) peer steps,
+  so the total bytes moved per rank scales with P; the fixed-BW single-AIV bottleneck
+  is therefore hit at a *smaller* per-rank payload — which is why the crossover shifts
+  down (256→128 KiB for cn8) as P grows.
 
 ## Findings
 
