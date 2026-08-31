@@ -48,6 +48,14 @@
   collected when the probe passed; some P=4 runs used devices 4-7 because HCCL and the
   pypto stacks failed on the default d0-3 set under contention.
 
+> **Follow-up (2026-08-31):** the six performance ideas benchmarked from this report are
+> in [`perf-improvement-ideas-2026-08-28.md`](perf-improvement-ideas-2026-08-28.md), with a
+> §"Where do these optimizations stand in pypto today?" audit mapping each idea to
+> **exists / opt-in / novel** with compiler + runtime file evidence (ring, `core_num` and
+> persistent all exist as opt-ins; pipelining and SDMA/L2 are novel; the per-peer
+> barrier/dcci in generated composite code is a measured defect). The actionable plans
+> derived from that audit live in `pypto-3.0-notes/pr_plans/` (plans 98–102).
+
 ---
 
 ## 1. Environment and methodology

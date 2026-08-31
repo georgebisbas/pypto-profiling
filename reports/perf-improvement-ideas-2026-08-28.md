@@ -116,6 +116,32 @@ quantified by the bandwidth model.
 
 ---
 
+## Where do these optimizations stand in pypto today? (exists / opt-in / novel)
+
+Audited 2026-08-31 against the compiler (`/opt/pypto/src`) and runtime
+(`/opt/pypto/runtime`) at commit `c361b8a`-era main. The headline: **most "existing"
+optimizations exist only as opt-in capabilities, never as defaults — which is exactly why
+the benchmark gains exist.** Two ideas are genuinely novel (no code exists), one is a
+defect in current generated code.
+
+| # | Idea | In pypto today? | Evidence (file + line) |
+|---|------|-----------------|------------------------|
+| 1 | Pipelined chunks / multi-buffering | **Novel — not present** | Generated composite (`reduce_step.cpp`) is chunked at UB size but fully serial per chunk (TLOAD→accum→TSTORE, event-flag waits). Ring kernel chunks by rank (P slots) but every ring step is serialized by `NeighborBarrier` + `pipe_barrier(PIPE_ALL)` (`runtime/tests/st/.../aiv/allreduce_ring_kernel.cpp`). No multi-buffering/overlap anywhere. |
+| 2 | Remove per-peer barrier/dcci | **Pattern exists; fix is novel** | Generated composite **does** emit per-peer `pipe_barrier(PIPE_ALL)` + `TNOTIFY/TWAIT` + `dcci(0, ENTIRE_DATA_CACHE)` — confirmed in the generated `reduce_step.cpp` (lines 241/282, 284/307-308, 506/529-530). This is current pypto behaviour; slimming/removing it is the proposed fix. |
+| 3 | Ring at P≥4 | **Exists — opt-in** (`mode="ring"`) | `builtin.tensor.allreduce_ring` host builtin + runtime ring/bidirectional_ring/onephase/twophase/ibing kernels. `mode` defaults to `"mesh"` (`lower_host_tensor_collectives_pass.cpp:62`); **no auto-selection** (plan 42 pending). |
+| 4 | Multi-AIV (`core_num`) | **Exists — opt-in, default = 1** | `core_num` attr on host mesh allreduce → SPMD AIV grid (distributed_ops_codegen.cpp:245-281). InCore composite restricted to `core_num == 1` (`lower_composite_ops_pass.cpp:890`). |
+| 5 | Persistent domains | **Exists — opt-in, not default** | `DistributedWorker(persistent=True)` + `bench.benchmark(persistent=...)` + codegen `_domain_provider` hook (distributed_codegen.cpp:280). Plain `run()` still creates transient domains. |
+| 6 | L2 orchestration + SDMA | **Novel — not present** | All `*_orch.cpp` kernels are thin `rt_submit_aiv_task` wrappers; data movement is AIV MTE (TLOAD/TSTORE). **Zero SDMA/TPUT data movement** in the collectives. |
+
+**Consequences for the landing list below:**
+- Ideas 3, 4, 5 are **capability-exists work** — the win is making them the default or
+  auto-selecting them, not building new mechanisms.
+- Ideas 1 and 6 are **genuinely new compiler/runtime work** (ring pipelining; SDMA/L2 plane).
+- Idea 2 is a **defect fix in current generated code** — the cost was measured directly
+  (+15–40% device), so it is the lowest-risk, most attributable change.
+
+---
+
 ## Prioritised landing list (with measured evidence)
 
 | # | Idea | Measured gain | Effort | Landing |
