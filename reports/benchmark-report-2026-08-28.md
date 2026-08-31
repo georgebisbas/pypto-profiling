@@ -53,8 +53,10 @@
 > §"Where do these optimizations stand in pypto today?" audit mapping each idea to
 > **exists / opt-in / novel** with compiler + runtime file evidence (ring, `core_num` and
 > persistent all exist as opt-ins; pipelining and SDMA/L2 are novel; the per-peer
-> barrier/dcci in generated composite code is a measured defect). The actionable plans
-> derived from that audit live in `pypto-3.0-notes/pr_plans/` (plans 98–102).
+> barrier/dcci in generated composite code is a measured defect). The first of these —
+> the composite barrier/dcci slimming — is implemented on branch
+> `perf/composite-slim-peer-dcci-barrier` and **NPU-measured at −16–32 % `device_wall_s`**
+> (see [`barrier-dcci-npu-results-2026-08-31.md`](barrier-dcci-npu-results-2026-08-31.md)).
 
 ---
 

@@ -1,4 +1,4 @@
-# Plan 98 — Composite barrier/dcci slimming: NPU verification + measured perf (2026-08-31)
+# Composite barrier/dcci slimming — NPU verification + measured perf (2026-08-31)
 
 **Branch:** `perf/composite-slim-peer-dcci-barrier` on `georgebisbas/pypto`
 (2 commits on `49aea216`): `79077d93` (dcci batching), `9189014a` (PIPE_V notify).
@@ -38,9 +38,9 @@ protocol, put/get notify sites, and the (unchanged) ring path are all verified.
 
 ## Measured perf A/B (device_wall_s median, pypto-composite, `--persistent`)
 
-Controlled interleaved campaign on the shared box (`plan98_before` /
-`plan98_after` / `plan98_before_r2` / `plan98_after_r2`, 10–15 timed rounds,
-correctness ✅ every run; box-health probe gating):
+Controlled interleaved campaign on the shared box (`barrier_slim_before` /
+`barrier_slim_after` / `barrier_slim_before_r2` / `barrier_slim_after_r2`,
+10–15 timed rounds, correctness ✅ every run; box-health probe gating):
 
 | P | count | BEFORE | AFTER | robust delta |
 |---|---|---:|---:|---:|
@@ -56,7 +56,7 @@ consistent with the mechanism (each chunk-barrier generation used to pay
 `(P-1)` whole-cache `dcci` + `(P-1)` full-pipe barriers; both are now O(1) per
 generation). This reclaims the +15–40 % device cost measured in the 2026-08-28
 "handicapped" A/B, confirming the attribution. `execute_s` is essentially flat
-(the residual L3→L2 dispatch round-trip dominates it — plan 101/102 territory).
+(the residual L3→L2 dispatch round-trip dominates it — separate dispatch work).
 
 ## Reproduce
 
@@ -68,18 +68,18 @@ export PATH=/usr/local/python3.12.13/bin:$PATH
 for spec in "2 65536 collectives/cases/mesh_p2_count65536_fp32_a2a3_d0-1.json" \
             "2 262144 collectives/cases/mesh_p2_count262144_fp32_a2a3_d0-1.json" \
             "2 1048576 collectives/cases/mesh_p2_count1048576_fp32_a2a3_d0-1.json" \
-            "4 65536 /tmp/plan98_cases/mesh_p4_count65536_fp32_a2a3_d4-7.json" \
-            "4 262144 /tmp/plan98_cases/mesh_p4_count262144_fp32_a2a3_d4-7.json" \
-            "4 1048576 /tmp/plan98_cases/mesh_p4_count1048576_fp32_a2a3_d4-7.json"; do
+            "4 65536 /tmp/barrier_dcci_cases/mesh_p4_count65536_fp32_a2a3_d4-7.json" \
+            "4 262144 /tmp/barrier_dcci_cases/mesh_p4_count262144_fp32_a2a3_d4-7.json" \
+            "4 1048576 /tmp/barrier_dcci_cases/mesh_p4_count1048576_fp32_a2a3_d4-7.json"; do
   set -- $spec
   PYTHONPATH=. python3 -m collectives.run_sweep pair-mesh \
     --case-file "$3" --stacks pypto-composite --persistent \
-    --warmup-rounds 3 --timed-rounds 15 --campaign plan98 --out "results/campaigns/plan98/p${1}_c${2}/results.json"
+    --warmup-rounds 3 --timed-rounds 15 --campaign barrier_slim --out "results/campaigns/barrier_slim/p${1}_c${2}/results.json"
 done
-# device_wall medians: results/campaigns/plan98_{before,after,before_r2,after_r2}/p*_c*/results.json
+# device_wall medians: results/campaigns/barrier_slim_{before,after,before_r2,after_r2}/p*_c*/results.json
 ```
 
-Raw campaigns (gitignored): `results/campaigns/plan98_{before,after,before_r2,after_r2}/`.
+Raw campaigns (gitignored): `results/campaigns/barrier_slim_{before,after,before_r2,after_r2}/`.
 
 ## Notes
 
@@ -89,5 +89,5 @@ Raw campaigns (gitignored): `results/campaigns/plan98_{before,after,before_r2,af
   follow-up).
 - Ring path intentionally unchanged (wait+load loop is not pure) — verified by
   `test_l3_allreduce_ring.py` passing.
-- Follow-ups (plan 103): hoist the per-notify `PIPE_V` to once per notify-loop,
+- Follow-ups: hoist the per-notify `PIPE_V` to once per notify-loop, and
   and peer-region `cacheinvalid` (plan 68) to drop the whole-GM flush entirely.

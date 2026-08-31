@@ -10,11 +10,11 @@ generated kernel carries two per-peer serialisation primitives — a full-pipeli
 
 Artifact repository: **`https://github.com/georgebisbas/pypto-profiling`**
 (main; measurement harness + analytic tools) — this document lives at
-`reports/plan98-reproducibility-artifact.md`.
+`reports/barrier-dcci-reproducibility-artifact.md`.
 Code under test: branch `perf/composite-slim-peer-dcci-barrier` on
 **`https://github.com/georgebisbas/pypto`** (base `49aea216`, 3 commits:
 `a587b00c`, `10ff419f`, `ad07b591`).
-Generated-kernel before/after artifacts: `reports/plan98-codegen/`.
+Generated-kernel before/after artifacts: `reports/barrier-dcci-codegen/`.
 
 ---
 
@@ -104,10 +104,10 @@ for spec in "2 65536 collectives/cases/mesh_p2_count65536_fp32_a2a3_d0-1.json" \
   set -- $spec
   PYTHONPATH=. python3 -m collectives.run_sweep pair-mesh --case-file "$3" \
     --stacks pypto-composite --persistent --warmup-rounds 3 --timed-rounds 15 \
-    --campaign plan98_before --out "results/campaigns/plan98_before/p${1}_c${2}/results.json"
+    --campaign barrier_slim_before --out "results/campaigns/barrier_slim_before/p${1}_c${2}/results.json"
 done
-# ── AFTER leg (branch editable) — same loop, campaign=plan98_after ──
-# ── repeat both for the r2 interleave (campaign=plan98_{before,after}_r2) ──
+# ── AFTER leg (branch editable) — same loop, campaign=barrier_slim_after ──
+# ── repeat both for the r2 interleave (campaign=barrier_slim_{before,after}_r2) ──
 ```
 
 **P=4 case files on d4-7:** copy `collectives/cases/mesh_p4_count{65536,262144,1048576}_fp32_a2a3_d0-1-2-3.json`,
@@ -123,8 +123,8 @@ def med(leg, P, C):
     if not os.path.exists(f): return None
     return json.load(open(f))['runs'][0]['device_wall_s_median']*1e6
 for P,C in [(2,65536),(2,262144),(2,1048576),(4,65536),(4,262144),(4,1048576)]:
-    b=[med(l,P,C) for l in ['plan98_before','plan98_before_r2']]
-    a=[med(l,P,C) for l in ['plan98_after','plan98_after_r2']]
+    b=[med(l,P,C) for l in ['barrier_slim_before','barrier_slim_before_r2']]
+    a=[med(l,P,C) for l in ['barrier_slim_after','barrier_slim_after_r2']]
     b=[x for x in b if x]; a=[x for x in a if x]
     if b and a: print(f'P{P}/C{C}: {(min(a)/min(b)-1)*100:+.1f}%')  # best-leg ratio
 "
@@ -148,7 +148,7 @@ roughly flat. On a different machine/load, expect the same *direction* and
 
 ## 7. Emitted-code artifacts (why the numbers move)
 
-`reports/plan98-codegen/reduce_step.{before,after}.cpp` — the P=2/64K mesh
+`reports/barrier-dcci-codegen/reduce_step.{before,after}.cpp` — the P=2/64K mesh
 composite kernels emitted by PTOAS from `origin/main` vs the branch (a2a3sim
 codegen is identical to hardware; capture via `--profile l2`). The 5-hunk diff:
 3 notify barriers `pipe_barrier(PIPE_ALL)` → `pipe_barrier(PIPE_V)`, and 2
@@ -164,7 +164,7 @@ full-pipeline drain to a VEC-only drain (TNOTIFY already drains MTE2/MTE3).
 - **External validity:** same platform class (910B2) and CANN version required;
   absolute times are box-specific, ratios transfer.
 - **What is NOT claimed:** `execute_s` (host dispatch) improvements — the
-  residual L3→L2 dispatch round-trip (~5–11 ms) is separate work (plans 101/102);
+  residual L3→L2 dispatch round-trip (~5–11 ms) is separate work;
   ring-path behavior (intentionally unchanged — its `wait+load` loops are not
   pure); the host-builtin templates (they do not go through `pld.system.notify`).
 
@@ -176,8 +176,8 @@ full-pipeline drain to a VEC-only drain (TNOTIFY already drains MTE2/MTE3).
 | `collectives/apples_to_apples.py` | `execute_s = device + dispatch + lifecycle` decomposition + figures |
 | `collectives/summarize.py --model` | bandwidth model `T(N) = O + N/B` |
 | `collectives/cases/*.json` | case definitions (P, count, dtype, device_ids, golden) |
-| `reports/plan98-npu-results-2026-08-31.md` | full A/B + correctness report |
-| `reports/plan98-codegen/` | before/after generated kernels |
+| `reports/barrier-dcci-npu-results-2026-08-31.md` | full A/B + correctness report |
+| `reports/barrier-dcci-codegen/` | before/after generated kernels |
 | `reports/perf-improvement-ideas-2026-08-28.md` | the six ideas, "handicapped" A/B motivation |
 | `AGENTS.md` | from-scratch agent guide (interpreter, env pitfalls, golden rules) |
 
@@ -185,5 +185,5 @@ full-pipeline drain to a VEC-only drain (TNOTIFY already drains MTE2/MTE3).
 
 Measured 2026-08-28 (motivation) and 2026-08-31 (this PR's A/B) on the a2a3 box
 by the pypto-profiling harness; methodology, per-round data and campaigns
-(`plan98_{before,after,before_r2,after_r2}`) retained under `results/campaigns/`
+(`barrier_slim_{before,after,before_r2,after_r2}`) retained under `results/campaigns/`
 (gitignored raw data, on the origin machine).
