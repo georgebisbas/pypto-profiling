@@ -64,11 +64,18 @@ def expected_output(nranks: int, count: int) -> list[float]:
 
 
 # Kernel variants for the perf-improvement experiments (2026-08-28). Select with
-# PYPTO_SIMPLER_KERNEL in {mesh (default), pipelined, handicapped}.
+# PYPTO_SIMPLER_KERNEL selects the kernel; see _KERNEL_VARIANTS below.
+# Default is "mesh" (the fast hand-written baseline).
 _KERNEL_VARIANTS = {
     "mesh": "allreduce_mesh.cpp",
     "pipelined": "allreduce_mesh_pipelined.cpp",
     "handicapped": "allreduce_mesh_handicapped.cpp",
+    # plan 107 ablations — each adds back exactly ONE construct the pypto
+    # generated composite emits, to attribute the 6.7x on-device gap.
+    "chunkbarrier": "allreduce_mesh_chunkbarrier.cpp",
+    "fillpad": "allreduce_mesh_fillpad.cpp",
+    "chunkdcci": "allreduce_mesh_chunkdcci.cpp",
+    "allfour": "allreduce_mesh_allfour.cpp",
 }
 
 
