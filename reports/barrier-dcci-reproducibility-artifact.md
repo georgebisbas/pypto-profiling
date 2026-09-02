@@ -43,12 +43,13 @@ Generated-kernel before/after artifacts: `reports/barrier-dcci-codegen/`.
 | **pto-isa** | `/opt/pto-isa` |
 | **HCCL** | `libhccl.so` on `LD_LIBRARY_PATH` (reference baseline) |
 
-**Shared-box caveat (important):** this is a multi-tenant NPU. At measurement
-time another tenant held ~100 % AICore on 7/8 chips (`npu-smi` AICore column),
-and device 3 intermittently fails. The protocol below is designed for exactly
-this: box-health probe, interleaved A/B/A/B, `device_wall` **medians**, spread
-flags. Absolute numbers drift run-to-run; **ratios** (before vs after under the
-same box state) are the reproducible claim.
+**Shared-box caveat (important):** this is a shared multi-tenant NPU, so absolute
+times drift run-to-run and device 3 intermittently fails. The npu-smi AICore %
+column on this box is a known visual artifact (owner-confirmed 2026-09-02) and is
+NOT a real utilization/contention signal. The protocol below is designed for
+exactly this: box-health probe, interleaved A/B/A/B, `device_wall` **medians**,
+spread flags. **Ratios** (before vs after under the same box state) are the
+reproducible claim, not absolute numbers.
 
 ## 3. Environment / build
 
@@ -78,14 +79,14 @@ only for context.
 **Design (controls shared-box drift):**
 1. Box-health probe first: `run_sweep` opens one real multi-rank `CommDomain`
    and refuses to run if the box is unusable.
-2. Interleave **BEFORE → AFTER → BEFORE(r2) → AFTER(r2)** so tenant load
+2. Interleave **BEFORE → AFTER → BEFORE(r2) → AFTER(r2)** so time-correlated drift
    cannot bias one leg. Configs where the first AFTER leg "regressed" were
    re-run (r2) and confirmed the regressions were noise — always report the
    best (most favorable to baseline) BEFORE in the ratio.
 3. Use **medians** over 10–15 timed rounds (warmup 2–3); flag rows with
    `spread_ratio > 2` (⚑) and treat them as noisy.
 4. P=2 on **devices 0–1**; P=4 on **devices 4–7** (avoid the flaky dev 3 and
-   the d0-3 PCIe domain where pypto intermittently fails under contention).
+   the d0-3 PCIe domain where pypto intermittently fails).
 5. `--persistent` (retain `CommDomain`s) so `execute_s` is not dominated by the
    per-dispatch lifecycle; the claim is about `device_wall`, unaffected by this
    flag, but it keeps runs fast and stable.

@@ -35,7 +35,7 @@ collectives. Authoritative methodology: `pypto-3.0-notes/collectives_benchmarkin
 
 | Thing | Where | Notes |
 |-------|-------|-------|
-| NPU | `/dev/davinci*` (8× Ascend 910B2) | **shared box** — another tenant runs at ~100% AICore; verify with `npu-smi info` |
+| NPU | `/dev/davinci*` (8× Ascend 910B2) | **shared box** — box-health probe + interleaving; the npu-smi AICore % column is a known visual artifact on this box (not a contention signal) |
 | CANN | `/usr/local/Ascend/cann-9.0.0` | env vars are pre-set in this container |
 | HCCL | `libhccl.so` on `LD_LIBRARY_PATH` | needed for the `hccl` stack |
 | pypto | `/opt/pypto` (installed, v0.1.0) | auto-detected |
@@ -119,8 +119,9 @@ is fp32-only and the `rank_linear_v1` golden overflows fp16 at count 65536), `pt
 
 1. **Correct interpreter is `/usr/local/python3.12.13/bin/python3`.** The `ptoas-bin` venv
    cannot import `pypto`/`torch`. `run_campaign.sh` needs `PATH` prefixed (see §2).
-2. **The NPU is a SHARED, contended box.** Other tenants run ~100% AICore on most chips;
-   device 3 is intermittently broken (errors `507901`, `-100`, segfaults at domain release).
+2. **The NPU is a SHARED box — and the npu-smi AICore % column is a known visual artifact on it
+   (owner-confirmed 2026-09-02), NOT a real utilization/contention signal.** Device 3 is
+   intermittently broken (errors `507901`, `-100`, segfaults at domain release).
    The harness's **box-health probe** opens a real CommDomain before each campaign and
    aborts with "passing box condition" when the box is unusable — that is the harness
    working as designed, not a bug. Retry later or use a working device set.

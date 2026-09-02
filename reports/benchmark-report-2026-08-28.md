@@ -42,11 +42,12 @@
   with O≈333 ns and 98% bandwidth-bound. The composite's device time has ~5–7× headroom.
 - **Ring has no advantage at P=2 (§3.9)** — mesh moves 1 copy vs ring's 2; composite ring
   B=2.7 GB/s vs mesh 4.0 GB/s. Test the O(P)-traffic benefit at P≥4 instead.
-- **The box is a shared multi-tenant NPU.** Another tenant holds ~100% AICore on 7/8
-  chips; device 3 is intermittently flaky (507901 / `-100` / segfaults), and the harness's
+- **The box is a shared multi-tenant NPU.** (Correction 2026-09-02: the npu-smi AICore %
+  column on this box is a known visual artifact — it is NOT a real utilization/contention
+  signal.) Device 3 is intermittently flaky (507901 / `-100` / segfaults), and the harness's
   box-health probe correctly blocks runs when the box is unusable. All numbers here were
   collected when the probe passed; some P=4 runs used devices 4-7 because HCCL and the
-  pypto stacks failed on the default d0-3 set under contention.
+  pypto stacks failed on the default d0-3 set.
 
 > **Follow-up (2026-08-31):** the six performance ideas benchmarked from this report are
 > in [`perf-improvement-ideas-2026-08-28.md`](perf-improvement-ideas-2026-08-28.md), with a
