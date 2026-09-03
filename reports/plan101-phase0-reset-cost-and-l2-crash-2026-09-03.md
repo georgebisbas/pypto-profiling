@@ -112,6 +112,15 @@ dispatches (the common device-consumed collective case), or expose the reset-fre
 choice. Recommend plan 101 records a payload threshold and a follow-up optimization ask on the
 reset implementation itself (~2.5–4 ms/MiB is a slow host path).
 
+**Ecosystem precedent — pypto-lib already ships `persistent=True` + `reset=False`:**
+pypto-lib's serving/benchmark dispatch paths (`golden/runner.py` `_dispatch_resident` ~line
+1161 and non-resident L3 benchmark ~line 807; `models/deepseek_v4_pro/synthetic_token_loop.py`
+`_create_persistent_worker` ~line 184) all pass `reset_persistent_windows=False`, with the
+explicit rationale *"retain CommDomains across rounds and let kernels clear their own signal
+windows."* So the biggest existing persistent consumer never host-reads windows and already
+made the reset-off choice — independent support for making reset opt-in/auto rather than a
+global on-default, and for promoting Phase C (reset-free fast path) to first-class in plan 101.
+
 ## 4. Task C — `--profile l2 --persistent` crash: repro + root cause
 
 ### 4.1 Repro (deterministic)
