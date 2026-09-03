@@ -18,6 +18,12 @@
  * If the four compose to the measured 6.7x composite gap the decomposition is
  * complete. If they fall short, a FIFTH cause exists and the campaign must say
  * so rather than report a partial decomposition as complete.
+ *
+ * NOTE (2026-09-03): the TASSIGN slot order differs from allreduce_mesh.cpp
+ * (recvTile is at 0x0, stageTile at 0x20000). recvTile is the only TFILLPAD'd
+ * tile, and a FULL-width (16384-col) TFILLPAD tail-pad addresses tile_end; if
+ * recvTile ended at the 192 KiB UB top (0x30000) that write faulted the AIV
+ * (chip run lane poisoned, code -100). Slot order is cost-neutral.
  */
 
 #include <cstdint>
@@ -46,9 +52,9 @@ AICORE inline __gm__ T *CommRemotePtr(__gm__ CommContext *ctx, __gm__ T *localPt
 }
 
 extern "C" __aicore__ __attribute__((always_inline)) void kernel_entry(__gm__ int64_t *args) {
-    __gm__ TaskTensor *input_tensor = reinterpret_cast<__gm__ TaskTensor *>(args[0]);
-    __gm__ TaskTensor *output_tensor = reinterpret_cast<__gm__ TaskTensor *>(args[1]);
-    __gm__ TaskTensor *scratch_tensor = reinterpret_cast<__gm__ TaskTensor *>(args[2]);
+    __gm__ Tensor *input_tensor = reinterpret_cast<__gm__ Tensor *>(args[0]);
+    __gm__ Tensor *output_tensor = reinterpret_cast<__gm__ Tensor *>(args[1]);
+    __gm__ Tensor *scratch_tensor = reinterpret_cast<__gm__ Tensor *>(args[2]);
     int count = static_cast<int>(args[3]);
     int nranks = static_cast<int>(args[4]);
     __gm__ CommContext *commCtx = reinterpret_cast<__gm__ CommContext *>(args[5]);
@@ -77,9 +83,15 @@ extern "C" __aicore__ __attribute__((always_inline)) void kernel_entry(__gm__ in
     TileData accTile(1, kChunkCols);
     TileData recvTile(1, kChunkCols);
 
-    TASSIGN(stageTile, 0x0);
+    // UB layout (safety constraint): recvTile is the ONLY tile that receives
+    // TFILLPAD<InPlace>, and a FULL-width (kChunkCols == 16384) fillpad's
+    // tail-pad vector_dup addresses tile_end (dst + srcValidCol32B). If recvTile
+    // ended at 0x30000 (the top of the 192 KiB UB) that address would be one past
+    // UB and fault the AIV core (-100). So recvTile lives at 0x0; stageTile (never
+    // fillpad'd) takes the top slot.
+    TASSIGN(stageTile, 0x20000);
     TASSIGN(accTile, 0x10000);
-    TASSIGN(recvTile, 0x20000);
+    TASSIGN(recvTile, 0x0);
 
     StrideDyn fullStride(count, count, count, count, 1);
 
