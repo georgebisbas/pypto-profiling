@@ -657,6 +657,7 @@ def _run_pypto_campaign(
     dfx_dir: str | None = None,
     batch: int = 1,
     persistent: bool = False,
+    reset_persistent_windows: bool | None = None,
 ) -> tuple[list[dict[str, Any]], str]:
     """Run warmup+timed pypto rounds in-process with one session (composite or host builtin)."""
     from collectives.runners.pypto_own import close_pypto_session, get_pypto_session
@@ -665,7 +666,11 @@ def _run_pypto_campaign(
     samples: list[dict[str, Any]] = []
     try:
         session = get_pypto_session(
-            case, mode=mode, dfx_dir=dfx_dir, persistent=persistent
+            case,
+            mode=mode,
+            dfx_dir=dfx_dir,
+            persistent=persistent,
+            reset_persistent_windows=reset_persistent_windows,
         )
         run_config = _pypto_run_config(profile_spec, case.platform)
         compile_profile = getattr(session, "compile_profile", None)
@@ -783,6 +788,7 @@ def _run_stack_multi(
     profile_spec: str,
     batch: int = 1,
     persistent: bool = False,
+    reset_persistent_windows: bool | None = None,
 ) -> tuple[bool, str, list[dict[str, Any]], float, float, float, float | None, float]:
     """Run warmup + timed rounds for one stack.
 
@@ -822,6 +828,7 @@ def _run_stack_multi(
             campaign_samples, err = _run_pypto_campaign(
                 case, warmup, timed_rounds, mode, profile_spec,
                 dfx_dir=dfx_dir, batch=batch, persistent=persistent,
+                reset_persistent_windows=reset_persistent_windows,
             )
         else:
             return False, f"unknown campaign stack: {stack}", [], 0.0, 0.0, 0.0, None, 0.0
@@ -1122,6 +1129,15 @@ def _cmd_pair_impl(
         print(f"ERROR: unknown stacks: {unknown}", file=sys.stderr)
         return 1
 
+    # --reset-persistent-windows ("true"/"false"/None): controls the
+    # semantics-preserving whole-buffer re-stage on persistent dispatches.
+    # None = runtime default. Parsed here so every stack run in this command
+    # sees one consistent value; threaded into the pypto session cache key so
+    # flipping it between runs rebuilds the session (see pypto_own._session_key).
+    reset_persistent_windows = getattr(args, "reset_persistent_windows", None)
+    if isinstance(reset_persistent_windows, str):
+        reset_persistent_windows = reset_persistent_windows.lower() == "true"
+
     # ── box-health probe: open one real CommDomain before attributing failures ──
     # Only on hardware; the sim platforms do not exhibit the passing-domain
     # condition the probe exists to detect.
@@ -1174,6 +1190,7 @@ def _cmd_pair_impl(
             case, stack, bundle, args.profile,
             batch=getattr(args, "batch", 1),
             persistent=getattr(args, "persistent", False),
+            reset_persistent_windows=reset_persistent_windows,
         )
 
         bundle.write_manifest(
@@ -1313,6 +1330,11 @@ def main(argv: list[str] | None = None) -> int:
     p_pair.add_argument("--persistent", action="store_true",
                         help="pypto stacks: prepare(persistent=True) — retain CommDomains across "
                              "dispatches (removes the per-dispatch domain lifecycle from execute_s)")
+    p_pair.add_argument("--reset-persistent-windows", choices=["true", "false"], default=None,
+                        help="pypto stacks (with --persistent): true = semantics-preserving whole-buffer "
+                             "host re-stage before each dispatch (reset_persistent_windows=True); "
+                             "false = skip the reset; default = runtime default. The value is part of "
+                             "the session cache key, so flipping it forces a fresh session.")
     p_pair.add_argument("--out", required=True, help="results.json path under results/campaigns/")
 
     p_cross = sub.add_parser("cross-variant", help="Compare two algorithm variants at same (P,count,dtype,devices)")

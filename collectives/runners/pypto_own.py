@@ -572,7 +572,11 @@ class PyptoCollectiveSession:
 
 
 def _session_key(
-    case: Any, mode: str, dfx_dir: str | None, persistent: bool = False
+    case: Any,
+    mode: str,
+    dfx_dir: str | None,
+    persistent: bool = False,
+    reset_persistent_windows: bool | None = None,
 ) -> tuple[Any, ...]:
     return (
         mode,
@@ -583,6 +587,7 @@ def _session_key(
         case.dtype,
         dfx_dir,
         persistent,
+        reset_persistent_windows,
         int(getattr(case, "core_num", 1)),
     )
 
@@ -594,9 +599,14 @@ def get_pypto_session(
     persistent: bool = False,
     reset_persistent_windows: bool | None = None,
 ) -> PyptoCollectiveSession:
-    """Return a cached session for (case, mode, dfx_dir, persistent); rebuilds on key change."""
+    """Return a cached session for (case, mode, dfx_dir, persistent, reset);
+    rebuilds on key change. The cache key deliberately includes
+    ``reset_persistent_windows`` so flipping only that flag between two runs
+    rebuilds the session instead of silently reusing the first run's."""
     global _ACTIVE_SESSION, _ACTIVE_SESSION_KEY
-    key = _session_key(case, mode, dfx_dir, persistent)
+    key = _session_key(
+        case, mode, dfx_dir, persistent, reset_persistent_windows
+    )
     if _ACTIVE_SESSION is not None and _ACTIVE_SESSION_KEY == key:
         return _ACTIVE_SESSION
     close_pypto_session()
