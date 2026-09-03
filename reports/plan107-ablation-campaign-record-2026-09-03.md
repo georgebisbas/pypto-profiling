@@ -1,8 +1,9 @@
 # Plan 107 — re-anchored ablation campaign record (2026-09-03)
 
-**Status:** executed (re-anchored on the current composite gap) — **attribution table
-DEFERRED** (timing contaminated by shared-box noise; see §6). Two hard findings landed:
-fillpad NPU crash (root-caused) and P=8 box wedge.
+**Status:** executed (re-anchored on the current composite gap) — **full matrix measured
+126/126 correctness PASS; attribution table NOT FILED** (see §6/§9: single-pass medians are
+unreliable on this shared box). Two hard findings landed: fillpad NPU crash (root-caused,
+**fixed**, re-validated) and a P=8 box wedge (recovered).
 **Companion:** the fillpad minimal-reproducer / root-cause bundle lives in `/tmp/fp_repro/`
 (kernels `tfillpad_probe_{top,low}.cpp`, driver, `issue_body.md`, logs).
 
@@ -111,6 +112,34 @@ record.** Raw per-cell medians/spreads are in
 ## 8. Report fields
 
 box 8×910B2 a2a3 (shared, contended window) · pypto `d9d3dd60` · runtime `15f5cbd` ·
-pypto-profiling `a3a58ef`+`7a74a2d` (+uncommitted fillpad fix) · P 2/4/(8 blocked) ·
-payload 1 KiB→4 MiB fp32 · 3 warmup/15 timed · gate reproduced: **no** (composite 357 µs vs
-expected 888 µs) · correctness 82/82 pass · sweep attribution: **deferred** (box noise).
+pypto-profiling `a3a58ef`+`7a74a2d`+`0790b5d` · P 2/4/8 · payload 1 KiB→4 MiB fp32 ·
+3 warmup/15 timed · gate reproduced: **no** (composite 357 µs vs expected 888 µs) ·
+correctness 126/126 pass (final kernels) · sweep attribution: **not filed** (box noise; §9).
+
+## 9. Addendum — full clean-pass matrix (10:00–10:55, final committed kernels)
+
+After the fillpad slot-order fix (`0790b5d`) was validated on-device, the full matrix was
+re-measured once under a nominally idle box (the noisy first pass is archived under
+`results/campaigns/plan107_20260903_firstpass_noisy/`). Raw per-cell medians/spreads live in
+`results/campaigns/plan107/<variant>/p{P}_c{count}/results.json`.
+
+**Result: 126/126 cells correctness PASS** (composite 18 + 6 variants × P=2/4/8 × 6 payloads),
+including the previously-crashing `fillpad`/`allfour` at count ≥ 16384 on all three device sets
+— the fix holds across the whole matrix.
+
+**Why the attribution table is NOT filed (methodology conclusion):** even in this window the
+shared box produced unusable per-cell timing:
+- spread ratios up to **130** (e.g. `mesh` P4 @1 KiB: mean 1033 µs vs median 216 µs);
+- `mesh` baselines non-monotonic and drifting ~2× between passes (count 65536 P=2: 90 µs gate →
+  175 µs this pass) and even within a pass (P2 mesh 175 µs @256 KiB vs 167 µs @1 MiB);
+- composite/mesh ratio for the *same* (P, payload) swung 1.6–6× across passes and cells.
+
+A sub-2× construct signal cannot be separated from this noise with single-pass medians. The
+plan-98 **interleaved A/B protocol** (mesh and variant timed back-to-back per cell, so the box
+drift cancels in the ratio) is the required follow-up; it was not run here because the box was
+not stable long enough. Directional observations only (not filed): `chunkbarrier` shows the
+largest consistent overhead at large multi-chunk payloads; `chunkdcci`/`fillpad` are smaller;
+`handicapped` did not reproduce its plan-98 +25 % cleanly in this noisy window.
+
+**Committed in pypto-profiling:** `7a74a2d` (Tensor port, 5 kernels) · `0790b5d` (fillpad/allfour
+slot-order fix) · `0028280` (this record).
