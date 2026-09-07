@@ -2,7 +2,9 @@
 
 **Source:** https://github.com/hw-native-sys/pypto/issues/2521
 **Author:** YunjiQin · **Review:** vloncar (ZeCO) — measured, not projected
-**Last read:** 2026-08-28
+**Review 2:** georgebisbas (this repo) — measured, merged PR #2591
+**Roadmap:** YunjiQin 2026-09-01 (AllToAllV execution roadmap, C0 freeze)
+**Last read:** 2026-09-03
 
 This is the RFC behind the "residual ~5–11 ms L3→L2 dispatch round-trip" finding in
 `benchmark-report-2026-08-28.md` §5. Keep this note next to the benchmark report: it is
@@ -100,6 +102,31 @@ pypto-host mesh rail; HCCL's effective `B` is a reference worth tabulating along
 | `--persistent` ~19–25× faster; `--batch` adds little | 63–75× faster, and beats 16-batch amortisation |
 | Residual ~5–11 ms `execute_s − device_wall_s` | the L3→L2 task round-trip this RFC removes |
 | `device_wall` ~2–16× of HCCL (the real device gap) | "underlying data movement was competitive all along" |
+
+## 6. Status update (2026-09-03)
+
+The issue thread has moved since this note was written. Additions relevant here:
+
+- **Our measured results are now on the thread** (georgebisbas, 2026-08-31): the persistent-mode
+  19–25× / `--batch`-adds-little findings of §5, the pull-family notify-barrier + `dcci`-batching
+  work (**merged PR [#2591](https://github.com/hw-native-sys/pypto/pull/2591)**, commit `690da78`,
+  refs #2521), and the `core_num` sweep (single-AIV ~1.2 GB/s → cn8–16 ~3.6–5.5 GB/s,
+  `B*` ∈ {8,16}, box-load-sensitive). Final balanced numbers for #2591 are in
+  [`benchmark-report-2026-09-02-pr2591-final.md`](benchmark-report-2026-09-02-pr2591-final.md)
+  (−4…−16 % at P=2/4, ~0 at P=8); the crossover / B\* analysis is in
+  [`corenum-message-size-crossover-2026-08-31.md`](corenum-message-size-crossover-2026-08-31.md).
+  The A/B campaign, emitted-kernel artifacts (`reports/barrier-dcci-codegen/`), and the analytic
+  pipeline are the reproducibility trail behind the numbers posted to the issue.
+- **The RFC author published an AllToAllV execution roadmap** (YunjiQin, 2026-09-01): C0 contract
+  freeze ✅ (14 items); three parallel tracks (benchmark / L2 sinking / kernel rework); work items
+  `A1`+`O1` ready to start; milestones M0–M5. Two corrections that affect how our numbers should
+  be read:
+  - the current hand-written kernel *already* transfers only the clamped valid prefix
+    (exact-traffic fix #2524 / PR #2536, merged 2026-08-28), so there is no "full-capacity →
+    exact" work item — the RFC body's "transfers padding" motivation describes the pre-#2536 state;
+  - the roadmap's benchmark contract (`persistent=True`, `reset_persistent_windows=False`,
+    5 warmup / 100 measured, fastest-rank-mean swimlane gang span, ≥50 runs/case) matches this
+    harness's `--persistent` defaults, so our persistent numbers are directly comparable.
 
 See also: `pypto-3.0-notes/collectives_benchmarking/issue2521_expert_review.md` and
 `issue2521_l2_orchestration_multiaiv_collectives.md` (fuller review corpus).

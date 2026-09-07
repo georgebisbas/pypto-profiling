@@ -94,10 +94,17 @@ Full suite verified 2026-08-28: ring & twophase variants (ring runs pypto-compos
 is fp32-only and the `rank_linear_v1` golden overflows fp16 at count 65536), `pto-isa`
 (needs `treduce_test` built via `build_st.py`), P=16 (only 8 devices).
 
+**Added 2026-09-03 (after the 08-28 suite — not covered by that verification line):**
+`--reset-persistent-windows` (plan 101 Phase 0), the four composite-gap ablation kernels +
+plan 107 clean pass (126/126 correctness), and the `TaskTensor → Tensor` kernel port for
+simpler runtime `15f5cbd`. Records: `reports/plan101-phase0-reset-cost-and-l2-crash-2026-09-03.md`,
+`reports/plan107-ablation-campaign-record-2026-09-03.md`.
+
 | Flag | Effect |
 |------|--------|
 | `--stacks` | `hccl,simpler,simpler-own,pypto-composite,pypto-host,pto-isa` (default `hccl,simpler,pypto-composite,pypto-host`) |
 | `--persistent` | **Use for all real benchmarks.** `prepare(persistent=True)` keeps CommDomains across dispatches → removes ~95% of per-dispatch overhead (~20–25× faster `execute_s`). |
+| `--reset-persistent-windows` | (plan 101 Phase 0, added 2026-09-03) reset CommDomain windows between rounds of a persistent pair-mesh run — isolates the domain-reset cost the persistent default must amortise. |
 | `--batch N` | N back-to-back `rt.run()` per timed round, amortizing dispatch (second view). |
 | `--count` / `--counts` | payload element count (or sweep). `--counts` → one result per (P,count), merged. |
 | `--p-values` | rank sweep. `--platform` `a2a3` (hardware) or `a2a3sim` (sim). |
@@ -127,12 +134,16 @@ is fp32-only and the `rank_linear_v1` golden overflows fp16 at count 65536), `pt
    working as designed, not a bug. Retry later or use a working device set.
 3. **HCCL works on d0-3 but fails on d4-7** (`exit=1`, empty log). For P=4 use d0-3 for
    hccl and d4-7 for the pypto stacks (as the 2026-08-28 report did) — or wait for a quiet box.
-4. **The harness was fixed to track the current simpler runtime** (kernel `TaskTensor`,
-   orch `orchestration_api.h`/`ChipTaskArgs`, `worker.make_tensor_arg(t, shapes=, dtype=)`,
-   `domain.buffers["scratch"].tensor(...)`, `run_campaign.sh` CORE_NUMS bug). If you see
-   compile errors mentioning `BufferDescriptor`/`start_offset`/`pto_orchestration_api.h`,
-   the simpler runtime moved again — port the runtime's own `examples/workers/l3/allreduce`
-   kernel/orch patterns into `collectives/kernels/` and `runners/simpler_own.py`.
+4. **The harness tracks the current simpler runtime.** Kernels declare `__gm__ Tensor *` args
+   (orch `orchestration_api.h`/`ChipTaskArgs`, `worker.make_tensor_arg(t, shapes=, dtype=)`,
+   `domain.buffers["scratch"].tensor(...)`, `run_campaign.sh` CORE_NUMS bug). History: the
+   runtime used `TaskTensor` for a stretch; commit `7a74a2d` (2026-09-03) ported the kernels
+   back to plain `Tensor` for simpler runtime `15f5cbd`. If you see compile errors naming a
+   type or symbol that no longer exists (`BufferDescriptor`/`start_offset`/
+   `pto_orchestration_api.h` are the pre-`TaskTensor`-era names; `TaskTensor` was the interim
+   one), the simpler runtime moved again — port the runtime's own
+   `examples/workers/l3/allreduce` kernel/orch patterns into `collectives/kernels/` and
+   `runners/simpler_own.py`.
 5. **pypto JIT artifacts** land in `build_output/` (gitignored). Campaign outputs go under
    `results/campaigns/<name>/run_<ts>/` (gitignored). Commit only `reports/` + code.
 
