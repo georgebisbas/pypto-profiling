@@ -1,0 +1,440 @@
+cmd=/opt/ptoas-bin/bin/python3 /opt/pypto/tests/st/distributed/collectives/all_to_all_v_benchmark.py --ep 4 --peer-bytes 1024 --count-pattern uniform --core-num 1 --impl managed-l2 --rounds 2 --warmup 1 --profile timing-slot --platform a2a3 --devices 0,1,2,3 --output-json /opt/pypto-profiling/reports/issue-2521-a1-alltoallv-ep8-2026-09-10/heal/ep4_1789029409/out.json --output-dir /opt/pypto-profiling/reports/issue-2521-a1-alltoallv-ep8-2026-09-10/heal/ep4_1789029409/build
+rc=0
+----- stdout -----
+[a2av-bench] session=timing-slot enter warmup=1 rounds=2
+[a2av-bench] session=timing-slot exit ok
+{
+  "platform": "a2a3",
+  "pypto_commit": "fcd92b971f04",
+  "cann": "9.0.0",
+  "device_ids": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "P": 4,
+  "peer_bytes": 1024,
+  "count_pattern": "uniform",
+  "requested_L": 1,
+  "launched_B": 1,
+  "expected_B": 1,
+  "impl": "managed-l2",
+  "outer_l3_l2_dispatches": 1,
+  "row_width": 1024,
+  "max_recv": 1,
+  "persistent": true,
+  "warmup": 1,
+  "rounds": 2,
+  "metric": "timing_slot",
+  "per_rank_kernel_us": {
+    "0": [
+      2343.378961086273,
+      2248.2378408312798
+    ],
+    "1": [
+      2343.378961086273,
+      2248.2378408312798
+    ],
+    "2": [
+      2343.378961086273,
+      2248.2378408312798
+    ],
+    "3": [
+      2343.378961086273,
+      2248.2378408312798
+    ]
+  },
+  "per_rank_send_bytes": {
+    "0": 3072,
+    "1": 3072,
+    "2": 3072,
+    "3": 3072
+  },
+  "per_rank_recv_bytes": {
+    "0": 3072,
+    "1": 3072,
+    "2": 3072,
+    "3": 3072
+  },
+  "fastest_rank": 0,
+  "fastest_mean_us": 2295.8084009587765,
+  "fastest_p50_us": 2295.8084009587765,
+  "fastest_p95_us": 2343.378961086273,
+  "slowest_rank": 0,
+  "slowest_mean_us": 2295.8084009587765,
+  "rank_spread_us": 0.0,
+  "egress_gbps": 0.01070472605193733,
+  "duplex_gbps": 0.02140945210387466,
+  "host_timing_slot_mean_us": 2295.8084009587765,
+  "host_timing_slot_p50_us": 2295.8084009587765,
+  "host_timing_slot_includes_swimlane_tax": false
+}
+
+----- stderr -----
+[mono_ns=7233510227637825][T0xf4ed0382b020][TIMING] clock_anchor: [CLOCK_ANCHOR] v=1 pid=1489936 mono_ns=7233510227637495 wall_ns=1789029424700217141
+[mono_ns=7233510265090910][T0xf4ed0382b020][TIMING] clock_anchor: [CLOCK_ANCHOR] v=1 pid=1489968 mono_ns=7233510265090560 wall_ns=1789029424737670206
+[mono_ns=7233510299170678][T0xf4ed0382b020][TIMING] clock_anchor: [CLOCK_ANCHOR] v=1 pid=1489997 mono_ns=7233510299170388 wall_ns=1789029424771750064
+[mono_ns=7233510334062382][T0xf4ed0382b020][TIMING] clock_anchor: [CLOCK_ANCHOR] v=1 pid=1490024 mono_ns=7233510334062152 wall_ns=1789029424806641808
+[mono_ns=7233511390349923][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=0 hid=0 depth=0 name=chip.prewarm.build ts=7233511303282504 dur=87049829 
+[chip_process pid=1489936 dev=0] ready
+[mono_ns=7233511397243769][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=0 hid=0 depth=0 name=chip.prewarm.build ts=7233511319507246 dur=77719213 
+[chip_process pid=1489997 dev=2] ready
+[mono_ns=7233511412664334][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=0 hid=0 depth=0 name=chip.prewarm.build ts=7233511329889641 dur=82732633 
+[chip_process pid=1489968 dev=1] ready
+[mono_ns=7233511449736426][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=0 hid=0 depth=0 name=chip.prewarm.build ts=7233511361938001 dur=87782925 
+[chip_process pid=1490024 dev=3] ready
+[mono_ns=7233511458351036][T0xf4ed0382b020][TIMING] clock_anchor: [CLOCK_ANCHOR] v=1 pid=1485394 mono_ns=7233511458350796 wall_ns=1789029425930930432
+[mono_ns=7233512434312359][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1485394 inv=1 hid=9c4985547c6e63f8 depth=0 name=node.submit ts=7233512434268719 dur=32520 run_id=1 task_slot=0 group_index=0 group_size=1 worker_id=0 role=facade
+[mono_ns=7233512434407680][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=1 hid=9c4985547c6e63f8 depth=0 name=node.frame_submit ts=7233512434363799 dur=24581 run_id=1 task_slot=0 group_index=0 worker_id=0 dispatch_id=1 endpoint_kind=local_mailbox prepare_only=0 role=worker
+[mono_ns=7233512434423530][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=1 hid=9c4985547c6e63f8 depth=0 name=node.dispatch ts=7233512434340399 dur=75001 run_id=1 task_slot=0 group_index=0 worker_id=0 dispatch_id=1 endpoint_kind=local_mailbox prepare_only=0 role=scheduler slot_id=0 generation=1
+[mono_ns=7233512434437230][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=0 hid=0 depth=0 name=node.scheduler_loop ts=7233512434318899 dur=111921 role=scheduler drained=0 dispatched=1 drain_ns=5410 spins=2
+[mono_ns=7233512434699542][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1485394 inv=1 hid=9c4985547c6e63f8 depth=0 name=node.submit ts=7233512434666832 dur=26300 run_id=1 task_slot=1 group_index=0 group_size=1 worker_id=1 role=facade
+[mono_ns=7233512434728862][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=1 hid=9c4985547c6e63f8 depth=0 name=node.frame_submit ts=7233512434709822 dur=15100 run_id=1 task_slot=1 group_index=0 worker_id=1 dispatch_id=1 endpoint_kind=local_mailbox prepare_only=0 role=worker
+[mono_ns=7233512434738263][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=1 hid=9c4985547c6e63f8 depth=0 name=node.dispatch ts=7233512434706072 dur=26690 run_id=1 task_slot=1 group_index=0 worker_id=1 dispatch_id=1 endpoint_kind=local_mailbox prepare_only=0 role=scheduler slot_id=0 generation=1
+[mono_ns=7233512434746123][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=0 hid=0 depth=0 name=node.scheduler_loop ts=7233512434685312 dur=56901 role=scheduler drained=0 dispatched=1 drain_ns=810 spins=118
+[mono_ns=7233512435060405][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1485394 inv=1 hid=9c4985547c6e63f8 depth=0 name=node.submit ts=7233512435032655 dur=21370 run_id=1 task_slot=2 group_index=0 group_size=1 worker_id=2 role=facade
+[mono_ns=7233512435111616][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=1 hid=9c4985547c6e63f8 depth=0 name=node.frame_submit ts=7233512435094705 dur=13101 run_id=1 task_slot=2 group_index=0 worker_id=2 dispatch_id=1 endpoint_kind=local_mailbox prepare_only=0 role=worker
+[mono_ns=7233512435120766][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=1 hid=9c4985547c6e63f8 depth=0 name=node.dispatch ts=7233512435091315 dur=24351 run_id=1 task_slot=2 group_index=0 worker_id=2 dispatch_id=1 endpoint_kind=local_mailbox prepare_only=0 role=scheduler slot_id=0 generation=1
+[mono_ns=7233512435127886][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=0 hid=0 depth=0 name=node.scheduler_loop ts=7233512435047145 dur=77191 role=scheduler drained=0 dispatched=1 drain_ns=720 spins=150
+[mono_ns=7233512435393598][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1485394 inv=1 hid=9c4985547c6e63f8 depth=0 name=node.submit ts=7233512435366108 dur=21370 run_id=1 task_slot=3 group_index=0 group_size=1 worker_id=3 role=facade
+[mono_ns=7233512435425528][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=1 hid=9c4985547c6e63f8 depth=0 name=node.frame_submit ts=7233512435410098 dur=11730 run_id=1 task_slot=3 group_index=0 worker_id=3 dispatch_id=1 endpoint_kind=local_mailbox prepare_only=0 role=worker
+[mono_ns=7233512435434678][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=1 hid=9c4985547c6e63f8 depth=0 name=node.dispatch ts=7233512435407278 dur=22340 run_id=1 task_slot=3 group_index=0 worker_id=3 dispatch_id=1 endpoint_kind=local_mailbox prepare_only=0 role=scheduler slot_id=0 generation=1
+[mono_ns=7233512435433838][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1485394 inv=1 hid=0 depth=0 name=node.graph_build ts=7233511462066177 dur=973345061 run_id=1 role=facade
+[mono_ns=7233512435442108][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=0 hid=0 depth=0 name=node.scheduler_loop ts=7233512435379318 dur=59190 role=scheduler drained=0 dispatched=1 drain_ns=780 spins=126
+[mono_ns=7233512436390806][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=1 hid=17d60f85506650e3 depth=2 name=chip.run.bind.args ts=7233512436269935 dur=113161 
+[mono_ns=7233512436408236][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=1 hid=17d60f85506650e3 depth=2 name=chip.run.bind.prebuilt ts=7233512436402376 dur=3140 
+[mono_ns=7233512436413376][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=1 hid=17d60f85506650e3 depth=1 name=chip.run.bind ts=7233512436247345 dur=163801 
+[mono_ns=7233512437015111][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=1 hid=17d60f85506650e3 depth=2 name=chip.run.bind.args ts=7233512436887830 dur=110151 
+[mono_ns=7233512437031881][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=1 hid=17d60f85506650e3 depth=2 name=chip.run.bind.prebuilt ts=7233512437026601 dur=2490 
+[mono_ns=7233512437037841][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=1 hid=17d60f85506650e3 depth=1 name=chip.run.bind ts=7233512436864470 dur=169921 
+[mono_ns=7233512437886048][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=1 hid=17d60f85506650e3 depth=2 name=chip.run.bind.args ts=7233512437760477 dur=117311 
+[mono_ns=7233512437907948][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=1 hid=17d60f85506650e3 depth=2 name=chip.run.bind.prebuilt ts=7233512437900668 dur=4480 
+[mono_ns=7233512437913888][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=1 hid=17d60f85506650e3 depth=1 name=chip.run.bind ts=7233512437733067 dur=178191 
+[mono_ns=7233512438101180][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=1 hid=17d60f85506650e3 depth=2 name=chip.run.bind.args ts=7233512437928778 dur=162712 
+[mono_ns=7233512438124660][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=1 hid=17d60f85506650e3 depth=2 name=chip.run.bind.prebuilt ts=7233512438116840 dur=4850 
+[mono_ns=7233512438130340][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=1 hid=17d60f85506650e3 depth=1 name=chip.run.bind ts=7233512437889138 dur=238632 
+[mono_ns=7233512441822100][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=1 hid=17d60f85506650e3 depth=1 name=chip.run.runner_run ts=7233512437214573 dur=4600887 
+[mono_ns=7233512441821930][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=1 hid=17d60f85506650e3 depth=1 name=chip.run.runner_run ts=7233512438802186 dur=3012764 
+[mono_ns=7233512441823820][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=1 hid=17d60f85506650e3 depth=1 name=chip.run.runner_run ts=7233512437871408 dur=3944102 
+[mono_ns=7233512441830010][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=1 hid=17d60f85506650e3 depth=1 name=chip.run.runner_run ts=7233512439096368 dur=2726002 
+[mono_ns=7233512441904571][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=1 hid=17d60f85506650e3 depth=1 name=chip.run.validate ts=7233512441829870 dur=71001 
+[mono_ns=7233512441911241][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=1 hid=17d60f85506650e3 depth=2 name=chip.run.runner_run.device_wall ts=0 dur=2522640 clk=dev
+[mono_ns=7233512441916451][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=1 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.preamble ts=0 dur=171220 clk=dev
+[mono_ns=7233512441912441][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=1 hid=17d60f85506650e3 depth=1 name=chip.run.validate ts=7233512441834420 dur=74091 
+[mono_ns=7233512441921041][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=1 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.graph_build ts=39600 dur=2461940 clk=dev
+[mono_ns=7233512441922071][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=1 hid=17d60f85506650e3 depth=2 name=chip.run.runner_run.device_wall ts=0 dur=2019500 clk=dev
+[mono_ns=7233512441915531][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=1 hid=17d60f85506650e3 depth=1 name=chip.run.validate ts=7233512441833260 dur=78201 
+[mono_ns=7233512441926111][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=1 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.config_validate ts=43240 dur=3480 clk=dev
+[mono_ns=7233512441927031][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=1 hid=17d60f85506650e3 depth=2 name=chip.run.runner_run.device_wall ts=0 dur=921000 clk=dev
+[mono_ns=7233512441926221][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=1 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.preamble ts=0 dur=160060 clk=dev
+[mono_ns=7233512441929871][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=1 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.arena_wire ts=46860 dur=12240 clk=dev
+[mono_ns=7233512441927351][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=1 hid=17d60f85506650e3 depth=1 name=chip.run.validate ts=7233512441847720 dur=75321 
+[mono_ns=7233512441933041][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=1 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.sm_reset ts=59120 dur=18380 clk=dev
+[mono_ns=7233512441931781][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=1 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.preamble ts=0 dur=168040 clk=dev
+[mono_ns=7233512441929991][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=1 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.graph_build ts=39420 dur=1958460 clk=dev
+[mono_ns=7233512441936001][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=1 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.post_orch ts=2501620 dur=17240 clk=dev
+[mono_ns=7233512441938251][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=1 hid=17d60f85506650e3 depth=2 name=chip.run.runner_run.device_wall ts=0 dur=286440 clk=dev
+[mono_ns=7233512441933191][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=1 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.config_validate ts=43460 dur=3559 clk=dev
+[mono_ns=7233512441936031][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=1 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.graph_build ts=38280 dur=861980 clk=dev
+[mono_ns=7233512441944531][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=1 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.preamble ts=0 dur=177560 clk=dev
+[mono_ns=7233512441939381][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=1 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.orch ts=79240 dur=40380 clk=dev
+[mono_ns=7233512441936651][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=1 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.arena_wire ts=47060 dur=11940 clk=dev
+[mono_ns=7233512441940391][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=1 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.config_validate ts=42040 dur=3220 clk=dev
+[mono_ns=7233512441949121][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=1 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.graph_build ts=41480 dur=222940 clk=dev
+[mono_ns=7233512441942521][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=1 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.sched ts=172820 dur=2306120 clk=dev
+[mono_ns=7233512441939961][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=1 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.sm_reset ts=59040 dur=18340 clk=dev
+[mono_ns=7233512441943551][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=1 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.arena_wire ts=45280 dur=12140 clk=dev
+[mono_ns=7233512441953141][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=1 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.config_validate ts=45980 dur=3520 clk=dev
+[mono_ns=7233512441946201][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=1 hid=17d60f85506650e3 depth=1 name=chip.run.claim_release ts=7233512441944201 dur=250 
+[mono_ns=7233512441947591][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=1 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.sm_reset ts=57460 dur=18040 clk=dev
+[mono_ns=7233512441957471][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=1 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.arena_wire ts=49660 dur=12000 clk=dev
+[mono_ns=7233512441943671][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=1 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.post_orch ts=1997960 dur=17320 clk=dev
+[mono_ns=7233512441950841][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=1 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.post_orch ts=900340 dur=16520 clk=dev
+[mono_ns=7233512441951241][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=1 hid=17d60f85506650e3 depth=0 name=chip.run ts=7233512436208644 dur=5740487 run_id=1 dispatch_id=1 slot_id=0 generation=1 run_epoch=1
+[mono_ns=7233512441954721][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=1 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.orch ts=77080 dur=43400 clk=dev
+[mono_ns=7233512441960991][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=1 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.sm_reset ts=61699 dur=18919 clk=dev
+[mono_ns=7233512441946671][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=1 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.orch ts=79300 dur=42720 clk=dev
+[mono_ns=7233512441958841][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=1 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.sched ts=169600 dur=708240 clk=dev
+[mono_ns=7233512441991932][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=1 hid=9c4985547c6e63f8 depth=0 name=node.complete ts=7233512441977131 dur=10991 run_id=1 task_slot=0 group_index=0 worker_id=0 dispatch_id=1 endpoint_kind=local_mailbox prepare_only=0 role=worker outcome=0
+[mono_ns=7233512441965421][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=1 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.post_orch ts=264560 dur=17540 clk=dev
+[mono_ns=7233512441950031][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=1 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.sched ts=161859 dur=1813640 clk=dev
+[mono_ns=7233512441963141][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=1 hid=17d60f85506650e3 depth=1 name=chip.run.claim_release ts=7233512441961071 dur=270 
+[mono_ns=7233512441968791][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=1 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.orch ts=82280 dur=40720 clk=dev
+[mono_ns=7233512442010862][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=1 hid=9c4985547c6e63f8 depth=0 name=node.complete ts=7233512441998662 dur=360 run_id=1 task_slot=1 group_index=0 worker_id=1 dispatch_id=1 endpoint_kind=local_mailbox prepare_only=0 role=worker outcome=0
+[mono_ns=7233512441967961][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=1 hid=17d60f85506650e3 depth=0 name=chip.run ts=7233512437698027 dur=4267984 run_id=1 dispatch_id=1 slot_id=0 generation=1 run_epoch=1
+[mono_ns=7233512441972841][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=1 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.sched ts=179400 dur=63260 clk=dev
+[mono_ns=7233512441953761][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=1 hid=17d60f85506650e3 depth=1 name=chip.run.claim_release ts=7233512441951711 dur=310 
+[mono_ns=7233512441979131][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=1 hid=17d60f85506650e3 depth=1 name=chip.run.claim_release ts=7233512441977031 dur=320 
+[mono_ns=7233512441958351][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=1 hid=17d60f85506650e3 depth=0 name=chip.run ts=7233512436838060 dur=5118271 run_id=1 dispatch_id=1 slot_id=0 generation=1 run_epoch=1
+[mono_ns=7233512441985761][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=1 hid=17d60f85506650e3 depth=0 name=chip.run ts=7233512437829418 dur=4153803 run_id=1 dispatch_id=1 slot_id=0 generation=1 run_epoch=1
+[mono_ns=7233512442018452][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=1 hid=9c4985547c6e63f8 depth=0 name=node.complete ts=7233512442014972 dur=380 run_id=1 task_slot=2 group_index=0 worker_id=2 dispatch_id=1 endpoint_kind=local_mailbox prepare_only=0 role=worker outcome=0
+[mono_ns=7233512442054472][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=0 hid=0 depth=0 name=node.scheduler_loop ts=7233512441972111 dur=78221 role=scheduler drained=3 dispatched=0 drain_ns=75971 spins=3411
+[mono_ns=7233512442065092][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=1 hid=9c4985547c6e63f8 depth=0 name=node.complete ts=7233512442061632 dur=320 run_id=1 task_slot=3 group_index=0 worker_id=3 dispatch_id=1 endpoint_kind=local_mailbox prepare_only=0 role=worker outcome=0
+[mono_ns=7233512442082172][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=0 hid=0 depth=0 name=node.scheduler_loop ts=7233512442058222 dur=20460 role=scheduler drained=1 dispatched=0 drain_ns=20280 spins=0
+[mono_ns=7233512442339064][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1485394 inv=1 hid=0 depth=0 name=node.post_fence_retirement ts=7233512442072372 dur=260092 run_id=1 slot_id=0 generation=1 role=facade
+[mono_ns=7233512444837425][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1485394 inv=2 hid=9c4985547c6e63f8 depth=0 name=node.submit ts=7233512444807164 dur=23781 run_id=2 task_slot=0 group_index=0 group_size=1 worker_id=0 role=facade
+[mono_ns=7233512444936756][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=2 hid=9c4985547c6e63f8 depth=0 name=node.frame_submit ts=7233512444927735 dur=2040 run_id=2 task_slot=0 group_index=0 worker_id=0 dispatch_id=2 endpoint_kind=local_mailbox prepare_only=0 role=worker
+[mono_ns=7233512444953756][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=2 hid=9c4985547c6e63f8 depth=0 name=node.dispatch ts=7233512444919595 dur=27771 run_id=2 task_slot=0 group_index=0 worker_id=0 dispatch_id=2 endpoint_kind=local_mailbox prepare_only=0 role=scheduler slot_id=0 generation=2
+[mono_ns=7233512444969356][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=0 hid=0 depth=0 name=node.scheduler_loop ts=7233512444905265 dur=56971 role=scheduler drained=0 dispatched=1 drain_ns=6450 spins=1
+[mono_ns=7233512445131947][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1485394 inv=2 hid=9c4985547c6e63f8 depth=0 name=node.submit ts=7233512445116277 dur=10890 run_id=2 task_slot=1 group_index=0 group_size=1 worker_id=1 role=facade
+[mono_ns=7233512445138457][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=2 hid=9c4985547c6e63f8 depth=0 name=node.frame_submit ts=7233512445132637 dur=2090 run_id=2 task_slot=1 group_index=0 worker_id=1 dispatch_id=2 endpoint_kind=local_mailbox prepare_only=0 role=worker
+[mono_ns=7233512445145787][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=2 hid=9c4985547c6e63f8 depth=0 name=node.dispatch ts=7233512445129267 dur=11840 run_id=2 task_slot=1 group_index=0 worker_id=1 dispatch_id=2 endpoint_kind=local_mailbox prepare_only=0 role=scheduler slot_id=0 generation=2
+[mono_ns=7233512445151817][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=0 hid=0 depth=0 name=node.scheduler_loop ts=7233512445123257 dur=25110 role=scheduler drained=0 dispatched=1 drain_ns=800 spins=34
+[mono_ns=7233512445235158][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=2 hid=17d60f85506650e3 depth=2 name=chip.run.bind.args ts=7233512445149707 dur=80731 
+[mono_ns=7233512445246458][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=2 hid=17d60f85506650e3 depth=2 name=chip.run.bind.prebuilt ts=7233512445242228 dur=1890 
+[mono_ns=7233512445250338][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=2 hid=17d60f85506650e3 depth=1 name=chip.run.bind ts=7233512445143987 dur=104441 
+[mono_ns=7233512445410809][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1485394 inv=2 hid=9c4985547c6e63f8 depth=0 name=node.submit ts=7233512445382549 dur=22430 run_id=2 task_slot=2 group_index=0 group_size=1 worker_id=2 role=facade
+[mono_ns=7233512445430780][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=2 hid=9c4985547c6e63f8 depth=0 name=node.frame_submit ts=7233512445423769 dur=3411 run_id=2 task_slot=2 group_index=0 worker_id=2 dispatch_id=2 endpoint_kind=local_mailbox prepare_only=0 role=worker
+[mono_ns=7233512445441010][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=2 hid=9c4985547c6e63f8 depth=0 name=node.dispatch ts=7233512445420619 dur=15651 run_id=2 task_slot=2 group_index=0 worker_id=2 dispatch_id=2 endpoint_kind=local_mailbox prepare_only=0 role=scheduler slot_id=0 generation=2
+[mono_ns=7233512445449970][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=0 hid=0 depth=0 name=node.scheduler_loop ts=7233512445394659 dur=51931 role=scheduler drained=0 dispatched=1 drain_ns=720 spins=128
+[mono_ns=7233512445455680][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=2 hid=17d60f85506650e3 depth=2 name=chip.run.bind.args ts=7233512445368289 dur=82391 
+[mono_ns=7233512445470140][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=2 hid=17d60f85506650e3 depth=2 name=chip.run.bind.prebuilt ts=7233512445464790 dur=3020 
+[mono_ns=7233512445474890][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=2 hid=17d60f85506650e3 depth=1 name=chip.run.bind ts=7233512445360409 dur=112221 
+[mono_ns=7233512445686062][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1485394 inv=2 hid=9c4985547c6e63f8 depth=0 name=node.submit ts=7233512445657791 dur=23681 run_id=2 task_slot=3 group_index=0 group_size=1 worker_id=3 role=facade
+[mono_ns=7233512445699582][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=2 hid=9c4985547c6e63f8 depth=0 name=node.frame_submit ts=7233512445692332 dur=3940 run_id=2 task_slot=3 group_index=0 worker_id=3 dispatch_id=2 endpoint_kind=local_mailbox prepare_only=0 role=worker
+[mono_ns=7233512445706432][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1485394 inv=2 hid=0 depth=0 name=node.graph_build ts=7233512444492052 dur=1207060 run_id=2 role=facade
+[mono_ns=7233512445709062][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=2 hid=9c4985547c6e63f8 depth=0 name=node.dispatch ts=7233512445689612 dur=14790 run_id=2 task_slot=3 group_index=0 worker_id=3 dispatch_id=2 endpoint_kind=local_mailbox prepare_only=0 role=scheduler slot_id=0 generation=2
+[mono_ns=7233512445716172][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=0 hid=0 depth=0 name=node.scheduler_loop ts=7233512445676762 dur=36070 role=scheduler drained=0 dispatched=1 drain_ns=790 spins=115
+[mono_ns=7233512445735452][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=2 hid=17d60f85506650e3 depth=2 name=chip.run.bind.args ts=7233512445652271 dur=78191 
+[mono_ns=7233512445755302][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=2 hid=17d60f85506650e3 depth=2 name=chip.run.bind.prebuilt ts=7233512445750732 dur=1910 
+[mono_ns=7233512445760202][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=2 hid=17d60f85506650e3 depth=1 name=chip.run.bind ts=7233512445646151 dur=111991 
+[mono_ns=7233512446039004][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=2 hid=17d60f85506650e3 depth=2 name=chip.run.bind.args ts=7233512445933894 dur=99460 
+[mono_ns=7233512446057775][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=2 hid=17d60f85506650e3 depth=2 name=chip.run.bind.prebuilt ts=7233512446053195 dur=2290 
+[mono_ns=7233512446063195][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=2 hid=17d60f85506650e3 depth=1 name=chip.run.bind ts=7233512445927144 dur=133751 
+[mono_ns=7233512446465348][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=2 hid=17d60f85506650e3 depth=1 name=chip.run.runner_run ts=7233512445391769 dur=1067789 
+[mono_ns=7233512446474798][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=2 hid=17d60f85506650e3 depth=1 name=chip.run.runner_run ts=7233512445903593 dur=565455 
+[mono_ns=7233512446472818][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=2 hid=17d60f85506650e3 depth=1 name=chip.run.runner_run ts=7233512445625841 dur=841317 
+[mono_ns=7233512446472888][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=2 hid=17d60f85506650e3 depth=1 name=chip.run.runner_run ts=7233512446215266 dur=251492 
+[mono_ns=7233512446529968][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=2 hid=17d60f85506650e3 depth=1 name=chip.run.validate ts=7233512446471508 dur=54090 
+[mono_ns=7233512446536709][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=2 hid=17d60f85506650e3 depth=2 name=chip.run.runner_run.device_wall ts=0 dur=883680 clk=dev
+[mono_ns=7233512446540389][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=2 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.preamble ts=0 dur=5360 clk=dev
+[mono_ns=7233512446543959][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=2 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.graph_build ts=1280 dur=871140 clk=dev
+[mono_ns=7233512446549539][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=2 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.config_validate ts=1480 dur=700 clk=dev
+[mono_ns=7233512446542509][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=2 hid=17d60f85506650e3 depth=1 name=chip.run.validate ts=7233512446481988 dur=57531 
+[mono_ns=7233512446551999][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=2 hid=17d60f85506650e3 depth=2 name=chip.run.runner_run.device_wall ts=0 dur=647640 clk=dev
+[mono_ns=7233512446553129][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=2 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.arena_wire ts=2200 dur=580 clk=dev
+[mono_ns=7233512446546069][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=2 hid=17d60f85506650e3 depth=1 name=chip.run.validate ts=7233512446485268 dur=57381 
+[mono_ns=7233512446556009][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=2 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.preamble ts=0 dur=5260 clk=dev
+[mono_ns=7233512446557219][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=2 hid=17d60f85506650e3 depth=2 name=chip.run.runner_run.device_wall ts=0 dur=374160 clk=dev
+[mono_ns=7233512446559639][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=2 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.graph_build ts=1440 dur=634959 clk=dev
+[mono_ns=7233512446558069][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=2 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.sm_reset ts=2820 dur=919 clk=dev
+[mono_ns=7233512446551159][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=2 hid=17d60f85506650e3 depth=1 name=chip.run.validate ts=7233512446487418 dur=60041 
+[mono_ns=7233512446562009][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=2 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.preamble ts=0 dur=6000 clk=dev
+[mono_ns=7233512446563189][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=2 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.config_validate ts=1640 dur=799 clk=dev
+[mono_ns=7233512446566379][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=2 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.graph_build ts=1480 dur=362060 clk=dev
+[mono_ns=7233512446561549][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=2 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.post_orch ts=872480 dur=11080 clk=dev
+[mono_ns=7233512446562819][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=2 hid=17d60f85506650e3 depth=2 name=chip.run.runner_run.device_wall ts=0 dur=55699 clk=dev
+[mono_ns=7233512446566349][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=2 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.arena_wire ts=2460 dur=540 clk=dev
+[mono_ns=7233512446570759][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=2 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.config_validate ts=1660 dur=780 clk=dev
+[mono_ns=7233512446564649][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=2 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.orch ts=3800 dur=4560 clk=dev
+[mono_ns=7233512446570609][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=2 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.sm_reset ts=3040 dur=1060 clk=dev
+[mono_ns=7233512446567289][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=2 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.preamble ts=0 dur=6640 clk=dev
+[mono_ns=7233512446568039][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=2 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.sched ts=5660 dur=858860 clk=dev
+[mono_ns=7233512446575459][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=2 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.arena_wire ts=2480 dur=459 clk=dev
+[mono_ns=7233512446571549][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=2 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.graph_build ts=1440 dur=43699 clk=dev
+[mono_ns=7233512446578829][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=2 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.sm_reset ts=2980 dur=840 clk=dev
+[mono_ns=7233512446573959][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=2 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.post_orch ts=636420 dur=10940 clk=dev
+[mono_ns=7233512446571909][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=2 hid=17d60f85506650e3 depth=1 name=chip.run.claim_release ts=7233512446569979 dur=200 
+[mono_ns=7233512446574989][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=2 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.config_validate ts=1680 dur=980 clk=dev
+[mono_ns=7233512446577319][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=2 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.orch ts=4140 dur=4580 clk=dev
+[mono_ns=7233512446605269][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=2 hid=9c4985547c6e63f8 depth=0 name=node.complete ts=7233512446601229 dur=720 run_id=2 task_slot=0 group_index=0 worker_id=0 dispatch_id=2 endpoint_kind=local_mailbox prepare_only=0 role=worker outcome=0
+[mono_ns=7233512446583999][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=2 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.post_orch ts=363660 dur=10360 clk=dev
+[mono_ns=7233512446575769][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=2 hid=17d60f85506650e3 depth=0 name=chip.run ts=7233512445125467 dur=1448302 run_id=2 dispatch_id=2 slot_id=0 generation=2 run_epoch=2
+[mono_ns=7233512446578389][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=2 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.arena_wire ts=2719 dur=780 clk=dev
+[mono_ns=7233512446615569][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=2 hid=9c4985547c6e63f8 depth=0 name=node.complete ts=7233512446612119 dur=350 run_id=2 task_slot=1 group_index=0 worker_id=1 dispatch_id=2 endpoint_kind=local_mailbox prepare_only=0 role=worker outcome=0
+[mono_ns=7233512446580249][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=2 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.sched ts=5400 dur=623660 clk=dev
+[mono_ns=7233512446587899][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=2 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.orch ts=3900 dur=5100 clk=dev
+[mono_ns=7233512446582619][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=2 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.sm_reset ts=3559 dur=1400 clk=dev
+[mono_ns=7233512446630309][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=0 hid=0 depth=0 name=node.scheduler_loop ts=7233512446596709 dur=30130 role=scheduler drained=2 dispatched=0 drain_ns=28820 spins=457
+[mono_ns=7233512446585199][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=2 hid=17d60f85506650e3 depth=1 name=chip.run.claim_release ts=7233512446583239 dur=180 
+[mono_ns=7233512446591809][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=2 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.sched ts=6180 dur=349440 clk=dev
+[mono_ns=7233512446585839][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=2 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.post_orch ts=45200 dur=10320 clk=dev
+[mono_ns=7233512446595929][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=2 hid=17d60f85506650e3 depth=1 name=chip.run.claim_release ts=7233512446593769 dur=280 
+[mono_ns=7233512446589269][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=2 hid=17d60f85506650e3 depth=0 name=chip.run ts=7233512445340869 dur=1246490 run_id=2 dispatch_id=2 slot_id=0 generation=2 run_epoch=2
+[mono_ns=7233512446589069][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=2 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.orch ts=5020 dur=5160 clk=dev
+[mono_ns=7233512446600879][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=2 hid=17d60f85506650e3 depth=0 name=chip.run ts=7233512445630581 dur=968288 run_id=2 dispatch_id=2 slot_id=0 generation=2 run_epoch=2
+[mono_ns=7233512446638399][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=2 hid=9c4985547c6e63f8 depth=0 name=node.complete ts=7233512446635169 dur=300 run_id=2 task_slot=2 group_index=0 worker_id=2 dispatch_id=2 endpoint_kind=local_mailbox prepare_only=0 role=worker outcome=0
+[mono_ns=7233512446593219][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=2 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.sched ts=6800 dur=29940 clk=dev
+[mono_ns=7233512446598499][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=2 hid=17d60f85506650e3 depth=1 name=chip.run.claim_release ts=7233512446595779 dur=310 
+[mono_ns=7233512446603699][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=2 hid=17d60f85506650e3 depth=0 name=chip.run ts=7233512445906883 dur=694796 run_id=2 dispatch_id=2 slot_id=0 generation=2 run_epoch=2
+[mono_ns=7233512446648409][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=2 hid=9c4985547c6e63f8 depth=0 name=node.complete ts=7233512446645169 dur=320 run_id=2 task_slot=3 group_index=0 worker_id=3 dispatch_id=2 endpoint_kind=local_mailbox prepare_only=0 role=worker outcome=0
+[mono_ns=7233512446665750][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=0 hid=0 depth=0 name=node.scheduler_loop ts=7233512446632329 dur=30151 role=scheduler drained=2 dispatched=0 drain_ns=30001 spins=0
+[mono_ns=7233512446740320][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1485394 inv=2 hid=0 depth=0 name=node.post_fence_retirement ts=7233512446658920 dur=76840 run_id=2 slot_id=0 generation=2 role=facade
+[mono_ns=7233512447351375][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1485394 inv=3 hid=9c4985547c6e63f8 depth=0 name=node.submit ts=7233512447329745 dur=16410 run_id=3 task_slot=0 group_index=0 group_size=1 worker_id=0 role=facade
+[mono_ns=7233512447362505][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=3 hid=9c4985547c6e63f8 depth=0 name=node.frame_submit ts=7233512447358205 dur=780 run_id=3 task_slot=0 group_index=0 worker_id=0 dispatch_id=3 endpoint_kind=local_mailbox prepare_only=0 role=worker
+[mono_ns=7233512447369345][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=3 hid=9c4985547c6e63f8 depth=0 name=node.dispatch ts=7233512447355255 dur=9570 run_id=3 task_slot=0 group_index=0 worker_id=0 dispatch_id=3 endpoint_kind=local_mailbox prepare_only=0 role=scheduler slot_id=0 generation=3
+[mono_ns=7233512447375325][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=0 hid=0 depth=0 name=node.scheduler_loop ts=7233512447352425 dur=19550 role=scheduler drained=0 dispatched=1 drain_ns=740 spins=1
+[mono_ns=7233512447580267][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=3 hid=17d60f85506650e3 depth=2 name=chip.run.bind.args ts=7233512447501036 dur=75081 
+[mono_ns=7233512447590377][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=3 hid=17d60f85506650e3 depth=2 name=chip.run.bind.prebuilt ts=7233512447586737 dur=1460 
+[mono_ns=7233512447594417][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=3 hid=17d60f85506650e3 depth=1 name=chip.run.bind ts=7233512447495996 dur=96471 
+[mono_ns=7233512447630647][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1485394 inv=3 hid=9c4985547c6e63f8 depth=0 name=node.submit ts=7233512447616097 dur=9090 run_id=3 task_slot=1 group_index=0 group_size=1 worker_id=1 role=facade
+[mono_ns=7233512447633227][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=3 hid=9c4985547c6e63f8 depth=0 name=node.frame_submit ts=7233512447629257 dur=810 run_id=3 task_slot=1 group_index=0 worker_id=1 dispatch_id=3 endpoint_kind=local_mailbox prepare_only=0 role=worker
+[mono_ns=7233512447639778][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=3 hid=9c4985547c6e63f8 depth=0 name=node.dispatch ts=7233512447626907 dur=8530 run_id=3 task_slot=1 group_index=0 worker_id=1 dispatch_id=3 endpoint_kind=local_mailbox prepare_only=0 role=scheduler slot_id=0 generation=3
+[mono_ns=7233512447645228][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=0 hid=0 depth=0 name=node.scheduler_loop ts=7233512447624557 dur=17551 role=scheduler drained=0 dispatched=1 drain_ns=700 spins=131
+[mono_ns=7233512447851299][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=3 hid=17d60f85506650e3 depth=2 name=chip.run.bind.args ts=7233512447773289 dur=74020 
+[mono_ns=7233512447864849][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=3 hid=17d60f85506650e3 depth=2 name=chip.run.bind.prebuilt ts=7233512447860969 dur=1620 
+[mono_ns=7233512447870079][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=3 hid=17d60f85506650e3 depth=1 name=chip.run.bind ts=7233512447768379 dur=98740 
+[mono_ns=7233512447888900][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1485394 inv=3 hid=9c4985547c6e63f8 depth=0 name=node.submit ts=7233512447862219 dur=21780 run_id=3 task_slot=2 group_index=0 group_size=1 worker_id=2 role=facade
+[mono_ns=7233512447899680][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=3 hid=9c4985547c6e63f8 depth=0 name=node.frame_submit ts=7233512447894010 dur=2360 run_id=3 task_slot=2 group_index=0 worker_id=2 dispatch_id=3 endpoint_kind=local_mailbox prepare_only=0 role=worker
+[mono_ns=7233512447907190][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=3 hid=9c4985547c6e63f8 depth=0 name=node.dispatch ts=7233512447891260 dur=11380 run_id=3 task_slot=2 group_index=0 worker_id=2 dispatch_id=3 endpoint_kind=local_mailbox prepare_only=0 role=scheduler slot_id=0 generation=3
+[mono_ns=7233512447913410][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=0 hid=0 depth=0 name=node.scheduler_loop ts=7233512447877909 dur=32301 role=scheduler drained=0 dispatched=1 drain_ns=720 spins=123
+[mono_ns=7233512448144062][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=3 hid=17d60f85506650e3 depth=2 name=chip.run.bind.args ts=7233512448061401 dur=77981 
+[mono_ns=7233512448158742][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=3 hid=17d60f85506650e3 depth=2 name=chip.run.bind.prebuilt ts=7233512448154442 dur=1940 
+[mono_ns=7233512448163682][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=3 hid=17d60f85506650e3 depth=1 name=chip.run.bind ts=7233512448055481 dur=106041 
+[mono_ns=7233512448171662][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1485394 inv=3 hid=9c4985547c6e63f8 depth=0 name=node.submit ts=7233512448144182 dur=22760 run_id=3 task_slot=3 group_index=0 group_size=1 worker_id=3 role=facade
+[mono_ns=7233512448181872][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=3 hid=9c4985547c6e63f8 depth=0 name=node.frame_submit ts=7233512448175012 dur=3260 run_id=3 task_slot=3 group_index=0 worker_id=3 dispatch_id=3 endpoint_kind=local_mailbox prepare_only=0 role=worker
+[mono_ns=7233512448187922][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=3 hid=9c4985547c6e63f8 depth=0 name=node.dispatch ts=7233512448172332 dur=11330 run_id=3 task_slot=3 group_index=0 worker_id=3 dispatch_id=3 endpoint_kind=local_mailbox prepare_only=0 role=scheduler slot_id=0 generation=3
+[mono_ns=7233512448190082][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1485394 inv=3 hid=0 depth=0 name=node.graph_build ts=7233512447029073 dur=1153759 run_id=3 role=facade
+[mono_ns=7233512448194462][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=0 hid=0 depth=0 name=node.scheduler_loop ts=7233512448158732 dur=32480 role=scheduler drained=0 dispatched=1 drain_ns=770 spins=122
+[mono_ns=7233512448430184][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=3 hid=17d60f85506650e3 depth=2 name=chip.run.bind.args ts=7233512448341843 dur=83491 
+[mono_ns=7233512448444184][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=3 hid=17d60f85506650e3 depth=2 name=chip.run.bind.prebuilt ts=7233512448440004 dur=1880 
+[mono_ns=7233512448449174][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=3 hid=17d60f85506650e3 depth=1 name=chip.run.bind ts=7233512448336083 dur=110971 
+[mono_ns=7233512448823177][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=3 hid=17d60f85506650e3 depth=1 name=chip.run.runner_run ts=7233512447726288 dur=1091579 
+[mono_ns=7233512448831247][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=3 hid=17d60f85506650e3 depth=1 name=chip.run.runner_run ts=7233512448590295 dur=234862 
+[mono_ns=7233512448830347][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=3 hid=17d60f85506650e3 depth=1 name=chip.run.runner_run ts=7233512448306653 dur=518124 
+[mono_ns=7233512448832247][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=3 hid=17d60f85506650e3 depth=1 name=chip.run.runner_run ts=7233512448023361 dur=802826 
+[mono_ns=7233512448886688][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=3 hid=17d60f85506650e3 depth=1 name=chip.run.validate ts=7233512448830427 dur=53271 
+[mono_ns=7233512448893138][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=3 hid=17d60f85506650e3 depth=2 name=chip.run.runner_run.device_wall ts=0 dur=919079 clk=dev
+[mono_ns=7233512448896788][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=3 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.preamble ts=0 dur=4920 clk=dev
+[mono_ns=7233512448900848][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=3 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.graph_build ts=1500 dur=906240 clk=dev
+[mono_ns=7233512448905858][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=3 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.config_validate ts=1619 dur=740 clk=dev
+[mono_ns=7233512448909458][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=3 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.arena_wire ts=2380 dur=339 clk=dev
+[mono_ns=7233512448900498][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=3 hid=17d60f85506650e3 depth=1 name=chip.run.validate ts=7233512448841557 dur=56011 
+[mono_ns=7233512448912578][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=3 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.sm_reset ts=2740 dur=500 clk=dev
+[mono_ns=7233512448902398][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=3 hid=17d60f85506650e3 depth=1 name=chip.run.validate ts=7233512448841017 dur=58401 
+[mono_ns=7233512448909138][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=3 hid=17d60f85506650e3 depth=2 name=chip.run.runner_run.device_wall ts=0 dur=610040 clk=dev
+[mono_ns=7233512448915918][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=3 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.post_orch ts=907780 dur=10680 clk=dev
+[mono_ns=7233512448904528][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=3 hid=17d60f85506650e3 depth=1 name=chip.run.validate ts=7233512448840887 dur=60281 
+[mono_ns=7233512448919768][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=3 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.orch ts=3280 dur=3480 clk=dev
+[mono_ns=7233512448913018][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=3 hid=17d60f85506650e3 depth=2 name=chip.run.runner_run.device_wall ts=0 dur=338380 clk=dev
+[mono_ns=7233512448914278][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=3 hid=17d60f85506650e3 depth=2 name=chip.run.runner_run.device_wall ts=0 dur=55900 clk=dev
+[mono_ns=7233512448922938][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=3 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.sched ts=5020 dur=895239 clk=dev
+[mono_ns=7233512448912898][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=3 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.preamble ts=0 dur=4480 clk=dev
+[mono_ns=7233512448926708][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=3 hid=17d60f85506650e3 depth=1 name=chip.run.claim_release ts=7233512448924678 dur=290 
+[mono_ns=7233512448917388][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=3 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.preamble ts=0 dur=5500 clk=dev
+[mono_ns=7233512448930658][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=3 hid=17d60f85506650e3 depth=0 name=chip.run ts=7233512447479666 dur=1449032 run_id=3 dispatch_id=3 slot_id=0 generation=3 run_epoch=3
+[mono_ns=7233512448918658][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=3 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.preamble ts=0 dur=6580 clk=dev
+[mono_ns=7233512448916418][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=3 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.graph_build ts=1100 dur=598300 clk=dev
+[mono_ns=7233512448921538][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=3 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.graph_build ts=1400 dur=326420 clk=dev
+[mono_ns=7233512448919558][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=3 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.config_validate ts=1359 dur=580 clk=dev
+[mono_ns=7233512448922968][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=3 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.graph_build ts=1599 dur=42640 clk=dev
+[mono_ns=7233512448924008][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=3 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.arena_wire ts=2099 dur=320 clk=dev
+[mono_ns=7233512448925698][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=3 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.config_validate ts=1700 dur=740 clk=dev
+[mono_ns=7233512448927288][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=3 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.sm_reset ts=2460 dur=760 clk=dev
+[mono_ns=7233512448930228][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=3 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.post_orch ts=599460 dur=10459 clk=dev
+[mono_ns=7233512448926478][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=3 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.config_validate ts=1779 dur=679 clk=dev
+[mono_ns=7233512448933128][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=3 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.orch ts=3260 dur=3840 clk=dev
+[mono_ns=7233512448928908][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=3 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.arena_wire ts=2460 dur=280 clk=dev
+[mono_ns=7233512448930858][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=3 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.arena_wire ts=2480 dur=380 clk=dev
+[mono_ns=7233512448954878][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=3 hid=9c4985547c6e63f8 depth=0 name=node.complete ts=7233512448951288 dur=450 run_id=3 task_slot=0 group_index=0 worker_id=0 dispatch_id=3 endpoint_kind=local_mailbox prepare_only=0 role=worker outcome=0
+[mono_ns=7233512448935988][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=3 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.sched ts=4580 dur=587460 clk=dev
+[mono_ns=7233512448933028][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=3 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.sm_reset ts=2760 dur=500 clk=dev
+[mono_ns=7233512448935898][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=3 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.sm_reset ts=2920 dur=660 clk=dev
+[mono_ns=7233512448966928][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=0 hid=0 depth=0 name=node.scheduler_loop ts=7233512448949008 dur=14570 role=scheduler drained=1 dispatched=0 drain_ns=13320 spins=400
+[mono_ns=7233512448939878][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=3 hid=17d60f85506650e3 depth=1 name=chip.run.claim_release ts=7233512448937918 dur=210 
+[mono_ns=7233512448975118][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=3 hid=9c4985547c6e63f8 depth=0 name=node.complete ts=7233512448970658 dur=1500 run_id=3 task_slot=1 group_index=0 worker_id=1 dispatch_id=3 endpoint_kind=local_mailbox prepare_only=0 role=worker outcome=0
+[mono_ns=7233512448939198][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=3 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.post_orch ts=44300 dur=11160 clk=dev
+[mono_ns=7233512448937118][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=3 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.post_orch ts=327860 dur=10440 clk=dev
+[mono_ns=7233512448943698][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=3 hid=17d60f85506650e3 depth=0 name=chip.run ts=7233512447752138 dur=1189600 run_id=3 dispatch_id=3 slot_id=0 generation=3 run_epoch=3
+[mono_ns=7233512448942448][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=3 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.orch ts=3620 dur=3599 clk=dev
+[mono_ns=7233512448981868][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=3 hid=9c4985547c6e63f8 depth=0 name=node.complete ts=7233512448978698 dur=320 run_id=3 task_slot=2 group_index=0 worker_id=2 dispatch_id=3 endpoint_kind=local_mailbox prepare_only=0 role=worker outcome=0
+[mono_ns=7233512448940298][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=3 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.orch ts=3300 dur=3700 clk=dev
+[mono_ns=7233512448946308][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=3 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.sched ts=6620 dur=29820 clk=dev
+[mono_ns=7233512448943418][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=3 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.sched ts=5600 dur=314580 clk=dev
+[mono_ns=7233512448990539][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=3 hid=9c4985547c6e63f8 depth=0 name=node.complete ts=7233512448987058 dur=580 run_id=3 task_slot=3 group_index=0 worker_id=3 dispatch_id=3 endpoint_kind=local_mailbox prepare_only=0 role=worker outcome=0
+[mono_ns=7233512448951308][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=3 hid=17d60f85506650e3 depth=1 name=chip.run.claim_release ts=7233512448949158 dur=260 
+[mono_ns=7233512448948328][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=3 hid=17d60f85506650e3 depth=1 name=chip.run.claim_release ts=7233512448946278 dur=290 
+[mono_ns=7233512448953198][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=3 hid=17d60f85506650e3 depth=0 name=chip.run ts=7233512448040291 dur=910987 run_id=3 dispatch_id=3 slot_id=0 generation=3 run_epoch=3
+[mono_ns=7233512448956338][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=3 hid=17d60f85506650e3 depth=0 name=chip.run ts=7233512448317773 dur=636605 run_id=3 dispatch_id=3 slot_id=0 generation=3 run_epoch=3
+[mono_ns=7233512449017969][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=0 hid=0 depth=0 name=node.scheduler_loop ts=7233512448968388 dur=46001 role=scheduler drained=3 dispatched=0 drain_ns=45821 spins=0
+[mono_ns=7233512449087989][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1485394 inv=3 hid=0 depth=0 name=node.post_fence_retirement ts=7233512448999149 dur=83540 run_id=3 slot_id=0 generation=3 role=facade
+[mono_ns=7233512449677604][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1485394 inv=4 hid=9c4985547c6e63f8 depth=0 name=node.submit ts=7233512449660884 dur=11390 run_id=4 task_slot=0 group_index=0 group_size=1 worker_id=0 role=facade
+[mono_ns=7233512449687474][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=4 hid=9c4985547c6e63f8 depth=0 name=node.frame_submit ts=7233512449682554 dur=920 run_id=4 task_slot=0 group_index=0 worker_id=0 dispatch_id=4 endpoint_kind=local_mailbox prepare_only=0 role=worker
+[mono_ns=7233512449694884][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=4 hid=9c4985547c6e63f8 depth=0 name=node.dispatch ts=7233512449678994 dur=11310 run_id=4 task_slot=0 group_index=0 worker_id=0 dispatch_id=4 endpoint_kind=local_mailbox prepare_only=0 role=scheduler slot_id=0 generation=4
+[mono_ns=7233512449702674][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=0 hid=0 depth=0 name=node.scheduler_loop ts=7233512449676054 dur=23140 role=scheduler drained=0 dispatched=1 drain_ns=770 spins=1
+[mono_ns=7233512449899156][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=4 hid=17d60f85506650e3 depth=2 name=chip.run.bind.args ts=7233512449821315 dur=73221 
+[mono_ns=7233512449909026][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=4 hid=17d60f85506650e3 depth=2 name=chip.run.bind.prebuilt ts=7233512449905556 dur=1270 
+[mono_ns=7233512449912766][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=4 hid=17d60f85506650e3 depth=1 name=chip.run.bind ts=7233512449816315 dur=94541 
+[mono_ns=7233512449932416][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1485394 inv=4 hid=9c4985547c6e63f8 depth=0 name=node.submit ts=7233512449914566 dur=12620 run_id=4 task_slot=1 group_index=0 group_size=1 worker_id=1 role=facade
+[mono_ns=7233512449939446][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=4 hid=9c4985547c6e63f8 depth=0 name=node.frame_submit ts=7233512449935496 dur=800 run_id=4 task_slot=1 group_index=0 worker_id=1 dispatch_id=4 endpoint_kind=local_mailbox prepare_only=0 role=worker
+[mono_ns=7233512449945266][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=4 hid=9c4985547c6e63f8 depth=0 name=node.dispatch ts=7233512449932776 dur=8280 run_id=4 task_slot=1 group_index=0 worker_id=1 dispatch_id=4 endpoint_kind=local_mailbox prepare_only=0 role=scheduler slot_id=0 generation=4
+[mono_ns=7233512449952026][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=0 hid=0 depth=0 name=node.scheduler_loop ts=7233512449921046 dur=27770 role=scheduler drained=0 dispatched=1 drain_ns=680 spins=114
+[mono_ns=7233512450170228][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=4 hid=17d60f85506650e3 depth=2 name=chip.run.bind.args ts=7233512450090257 dur=76101 
+[mono_ns=7233512450183258][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=4 hid=17d60f85506650e3 depth=2 name=chip.run.bind.prebuilt ts=7233512450178828 dur=1310 
+[mono_ns=7233512450187798][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=4 hid=17d60f85506650e3 depth=1 name=chip.run.bind ts=7233512450085407 dur=100151 
+[mono_ns=7233512450207658][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1485394 inv=4 hid=9c4985547c6e63f8 depth=0 name=node.submit ts=7233512450177408 dur=25300 run_id=4 task_slot=2 group_index=0 group_size=1 worker_id=2 role=facade
+[mono_ns=7233512450211228][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=4 hid=9c4985547c6e63f8 depth=0 name=node.frame_submit ts=7233512450205828 dur=2240 run_id=4 task_slot=2 group_index=0 worker_id=2 dispatch_id=4 endpoint_kind=local_mailbox prepare_only=0 role=worker
+[mono_ns=7233512450217798][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=4 hid=9c4985547c6e63f8 depth=0 name=node.dispatch ts=7233512450203388 dur=10170 run_id=4 task_slot=2 group_index=0 worker_id=2 dispatch_id=4 endpoint_kind=local_mailbox prepare_only=0 role=scheduler slot_id=0 generation=4
+[mono_ns=7233512450222619][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=0 hid=0 depth=0 name=node.scheduler_loop ts=7233512450200898 dur=18761 role=scheduler drained=0 dispatched=1 drain_ns=720 spins=126
+[mono_ns=7233512450442490][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=4 hid=17d60f85506650e3 depth=2 name=chip.run.bind.args ts=7233512450358400 dur=79200 
+[mono_ns=7233512450456630][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=4 hid=17d60f85506650e3 depth=2 name=chip.run.bind.prebuilt ts=7233512450452590 dur=1930 
+[mono_ns=7233512450461290][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=4 hid=17d60f85506650e3 depth=1 name=chip.run.bind ts=7233512450352540 dur=106750 
+[mono_ns=7233512450461860][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1485394 inv=4 hid=9c4985547c6e63f8 depth=0 name=node.submit ts=7233512450437670 dur=18580 run_id=4 task_slot=3 group_index=0 group_size=1 worker_id=3 role=facade
+[mono_ns=7233512450471461][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=4 hid=9c4985547c6e63f8 depth=0 name=node.frame_submit ts=7233512450464600 dur=3541 run_id=4 task_slot=3 group_index=0 worker_id=3 dispatch_id=4 endpoint_kind=local_mailbox prepare_only=0 role=worker
+[mono_ns=7233512450477181][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=4 hid=9c4985547c6e63f8 depth=0 name=node.dispatch ts=7233512450462070 dur=10961 run_id=4 task_slot=3 group_index=0 worker_id=3 dispatch_id=4 endpoint_kind=local_mailbox prepare_only=0 role=scheduler slot_id=0 generation=4
+[mono_ns=7233512450481051][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1485394 inv=4 hid=0 depth=0 name=node.graph_build ts=7233512449377322 dur=1096259 run_id=4 role=facade
+[mono_ns=7233512450484091][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=0 hid=0 depth=0 name=node.scheduler_loop ts=7233512450444870 dur=36021 role=scheduler drained=0 dispatched=1 drain_ns=770 spins=115
+[mono_ns=7233512450709282][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=4 hid=17d60f85506650e3 depth=2 name=chip.run.bind.args ts=7233512450624762 dur=79660 
+[mono_ns=7233512450723503][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=4 hid=17d60f85506650e3 depth=2 name=chip.run.bind.prebuilt ts=7233512450719413 dur=1840 
+[mono_ns=7233512450728353][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=4 hid=17d60f85506650e3 depth=1 name=chip.run.bind ts=7233512450618942 dur=107361 
+[mono_ns=7233512451104876][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=4 hid=17d60f85506650e3 depth=1 name=chip.run.runner_run ts=7233512450056727 dur=1043099 
+[mono_ns=7233512451109746][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=4 hid=17d60f85506650e3 depth=1 name=chip.run.runner_run ts=7233512450326539 dur=777557 
+[mono_ns=7233512451109856][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=4 hid=17d60f85506650e3 depth=1 name=chip.run.runner_run ts=7233512450601862 dur=501984 
+[mono_ns=7233512451115096][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=4 hid=17d60f85506650e3 depth=1 name=chip.run.runner_run ts=7233512450869274 dur=238702 
+[mono_ns=7233512451167626][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=4 hid=17d60f85506650e3 depth=1 name=chip.run.validate ts=7233512451110776 dur=53940 
+[mono_ns=7233512451173826][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=4 hid=17d60f85506650e3 depth=2 name=chip.run.runner_run.device_wall ts=0 dur=870840 clk=dev
+[mono_ns=7233512451178096][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=4 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.preamble ts=0 dur=5400 clk=dev
+[mono_ns=7233512451181476][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=4 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.graph_build ts=1819 dur=857880 clk=dev
+[mono_ns=7233512451184866][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=4 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.config_validate ts=1900 dur=700 clk=dev
+[mono_ns=7233512451180426][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=4 hid=17d60f85506650e3 depth=1 name=chip.run.validate ts=7233512451118926 dur=58400 
+[mono_ns=7233512451189266][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=4 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.arena_wire ts=2620 dur=320 clk=dev
+[mono_ns=7233512451182066][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=4 hid=17d60f85506650e3 depth=1 name=chip.run.validate ts=7233512451120016 dur=58770 
+[mono_ns=7233512451194246][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=4 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.sm_reset ts=2960 dur=480 clk=dev
+[mono_ns=7233512451192756][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=4 hid=17d60f85506650e3 depth=2 name=chip.run.runner_run.device_wall ts=0 dur=321780 clk=dev
+[mono_ns=7233512451189436][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=4 hid=17d60f85506650e3 depth=2 name=chip.run.runner_run.device_wall ts=0 dur=596780 clk=dev
+[mono_ns=7233512451196866][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=4 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.preamble ts=0 dur=6000 clk=dev
+[mono_ns=7233512451186446][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=4 hid=17d60f85506650e3 depth=1 name=chip.run.validate ts=7233512451124786 dur=58360 
+[mono_ns=7233512451198826][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=4 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.post_orch ts=859740 dur=11020 clk=dev
+[mono_ns=7233512451193346][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=4 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.preamble ts=0 dur=6180 clk=dev
+[mono_ns=7233512451200876][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=4 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.graph_build ts=1180 dur=309680 clk=dev
+[mono_ns=7233512451197076][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=4 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.graph_build ts=1579 dur=584320 clk=dev
+[mono_ns=7233512451196616][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=4 hid=17d60f85506650e3 depth=2 name=chip.run.runner_run.device_wall ts=0 dur=51339 clk=dev
+[mono_ns=7233512451202076][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=4 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.orch ts=3500 dur=3440 clk=dev
+[mono_ns=7233512451201406][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=4 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.config_validate ts=1859 dur=540 clk=dev
+[mono_ns=7233512451205077][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=4 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.sched ts=5460 dur=846120 clk=dev
+[mono_ns=7233512451204947][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=4 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.arena_wire ts=2440 dur=280 clk=dev
+[mono_ns=7233512451205187][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=4 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.config_validate ts=1480 dur=560 clk=dev
+[mono_ns=7233512451200826][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=4 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.preamble ts=0 dur=5080 clk=dev
+[mono_ns=7233512451207907][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=4 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.sm_reset ts=2740 dur=540 clk=dev
+[mono_ns=7233512451208667][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=4 hid=17d60f85506650e3 depth=1 name=chip.run.claim_release ts=7233512451206747 dur=170 
+[mono_ns=7233512451205027][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=4 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.graph_build ts=1340 dur=38540 clk=dev
+[mono_ns=7233512451211307][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=4 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.post_orch ts=585939 dur=10680 clk=dev
+[mono_ns=7233512451210887][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=4 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.arena_wire ts=2060 dur=260 clk=dev
+[mono_ns=7233512451214207][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=4 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.orch ts=3320 dur=3340 clk=dev
+[mono_ns=7233512451212547][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489936 tid=1489936 inv=4 hid=17d60f85506650e3 depth=0 name=chip.run ts=7233512449800555 dur=1410042 run_id=4 dispatch_id=4 slot_id=0 generation=4 run_epoch=4
+[mono_ns=7233512451217157][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=4 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.sched ts=6240 dur=572660 clk=dev
+[mono_ns=7233512451215147][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=4 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.sm_reset ts=2340 dur=500 clk=dev
+[mono_ns=7233512451208357][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=4 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.config_validate ts=1500 dur=780 clk=dev
+[mono_ns=7233512451218377][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=4 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.post_orch ts=310920 dur=10580 clk=dev
+[mono_ns=7233512451238187][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=4 hid=9c4985547c6e63f8 depth=0 name=node.complete ts=7233512451234497 dur=380 run_id=4 task_slot=0 group_index=0 worker_id=0 dispatch_id=4 endpoint_kind=local_mailbox prepare_only=0 role=worker outcome=0
+[mono_ns=7233512451220717][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=4 hid=17d60f85506650e3 depth=1 name=chip.run.claim_release ts=7233512451218597 dur=370 
+[mono_ns=7233512451211597][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=4 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.arena_wire ts=2300 dur=300 clk=dev
+[mono_ns=7233512451221647][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=4 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.orch ts=2880 dur=3460 clk=dev
+[mono_ns=7233512451250487][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=0 hid=0 depth=0 name=node.scheduler_loop ts=7233512451231917 dur=15250 role=scheduler drained=1 dispatched=0 drain_ns=14020 spins=393
+[mono_ns=7233512451225177][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489968 tid=1489968 inv=4 hid=17d60f85506650e3 depth=0 name=chip.run ts=7233512450069067 dur=1154200 run_id=4 dispatch_id=4 slot_id=0 generation=4 run_epoch=4
+[mono_ns=7233512451215897][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=4 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.sm_reset ts=2620 dur=500 clk=dev
+[mono_ns=7233512451225707][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=4 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.sched ts=6060 dur=296740 clk=dev
+[mono_ns=7233512451257457][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=4 hid=9c4985547c6e63f8 depth=0 name=node.complete ts=7233512451254247 dur=290 run_id=4 task_slot=1 group_index=0 worker_id=1 dispatch_id=4 endpoint_kind=local_mailbox prepare_only=0 role=worker outcome=0
+[mono_ns=7233512451229837][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=4 hid=17d60f85506650e3 depth=1 name=chip.run.claim_release ts=7233512451227877 dur=260 
+[mono_ns=7233512451219807][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=4 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.post_orch ts=39919 dur=11180 clk=dev
+[mono_ns=7233512451233827][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1489997 tid=1489997 inv=4 hid=17d60f85506650e3 depth=0 name=chip.run ts=7233512450337329 dur=894588 run_id=4 dispatch_id=4 slot_id=0 generation=4 run_epoch=4
+[mono_ns=7233512451264417][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=4 hid=9c4985547c6e63f8 depth=0 name=node.complete ts=7233512451260987 dur=610 run_id=4 task_slot=2 group_index=0 worker_id=2 dispatch_id=4 endpoint_kind=local_mailbox prepare_only=0 role=worker outcome=0
+[mono_ns=7233512451223737][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=4 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.orch ts=3159 dur=3500 clk=dev
+[mono_ns=7233512451271667][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=4 hid=9c4985547c6e63f8 depth=0 name=node.complete ts=7233512451268577 dur=310 run_id=4 task_slot=3 group_index=0 worker_id=3 dispatch_id=4 endpoint_kind=local_mailbox prepare_only=0 role=worker outcome=0
+[mono_ns=7233512451226997][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=4 hid=17d60f85506650e3 depth=3 name=chip.run.runner_run.device_wall.sched ts=5120 dur=27020 clk=dev
+[mono_ns=7233512451286477][T0xf4eba622cca0][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1490894 inv=0 hid=0 depth=0 name=node.scheduler_loop ts=7233512451251967 dur=31410 role=scheduler drained=3 dispatched=0 drain_ns=31250 spins=0
+[mono_ns=7233512451230887][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=4 hid=17d60f85506650e3 depth=1 name=chip.run.claim_release ts=7233512451228897 dur=250 
+[mono_ns=7233512451236097][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1490024 tid=1490024 inv=4 hid=17d60f85506650e3 depth=0 name=chip.run ts=7233512450599862 dur=634245 run_id=4 dispatch_id=4 slot_id=0 generation=4 run_epoch=4
+[mono_ns=7233512451360538][T0xf4ed0382b020][TIMING] emit_host_span: [STRACE] v=1 pid=1485394 tid=1485394 inv=4 hid=0 depth=0 name=node.post_fence_retirement ts=7233512451280527 dur=75681 run_id=4 slot_id=0 generation=4 role=facade
+

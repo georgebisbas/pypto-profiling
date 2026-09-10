@@ -1,0 +1,216 @@
+===== EP8 L2 vs HOST (known-good) start 2026-09-10T09:12:18+00:00 =====
+
+=== p8_managed-l2_uniform_32 devices=0,1,2,3,4,5,6,7 attempts=4 ===
+  OK attempt=1 metric=aicore_gang_span  kernel_p50=20.255000000000003  slot_p50=3174.387849867344  egress=0.08857036945508466
+
+=== p8_managed-l2_uniform_128 devices=0,1,2,3,4,5,6,7 attempts=4 ===
+  OK attempt=1 metric=aicore_gang_span  kernel_p50=20.09  slot_p50=3175.4528172314167  egress=0.05062549107891694
+
+=== p8_managed-l2_uniform_1024 devices=0,1,2,3,4,5,6,7 attempts=4 ===
+  OK attempt=1 metric=aicore_gang_span  kernel_p50=33.405  slot_p50=3391.9941633939743  egress=0.8188344489067381
+
+=== p8_managed-l2_uniform_4096 devices=0,1,2,3,4,5,6,7 attempts=4 ===
+  OK attempt=1 metric=aicore_gang_span  kernel_p50=88.39  slot_p50=3344.639204442501  egress=2.587251321818823
+
+=== p8_managed-l2_uniform_8192 devices=0,1,2,3,4,5,6,7 attempts=4 ===
+  FAIL attempt=1/4 rc=-11
+, line 9232, in release_claim
+    self._release_domain_claimed(handle)
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 9293, in _release_domain_claimed
+    _run_with_owned_shared_memory(
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 1643, in _run_with_owned_shared_memory
+    raise result.error
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 1339, in invoke
+    result.value = operation()
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 1636, in run_lifecycle
+    raise operation_error
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 1623, in run_lifecycle
+    value = operation(owner)
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 9281, in release
+    self._dispatch_control_domain(
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 9334, in _dispatch_control_domain
+    raise RuntimeError(
+RuntimeError: release_domain(allocation_id=0) failed on 8/8 chips; first error chip=7: control_release_domain failed on child: chip_process dev=7 ctrl=8: RuntimeError: comm_release_domain_windows failed with code -1
+[mono_ns=7236272715080145][T0xf8756ec0b020][WARN] comm_destroy: [comm_hccl.cpp:1747] [comm rank 0] comm_destroy: final barrier failed during departure wait for rank 2; releasing local state anyway
+[mono_ns=7236272789801378][T0xf8756ec0b020][WARN] comm_destroy: [comm_hccl.cpp:1800] [comm rank 6] comm_destroy: final release failed during release wait for rank 6
+[mono_ns=7236272831503389][T0xf8756ec0b020][WARN] comm_destroy: [comm_hccl.cpp:1800] [comm rank 4] comm_destroy: final release failed during release wait for rank 4
+[mono_ns=7236272845476770][T0xf8756ec0b020][WARN] comm_destroy: [comm_hccl.cpp:1800] [comm rank 1] comm_destroy: final release failed during release wait for rank 1
+[mono_ns=7236272856497104][T0xf8756ec0b020][WARN] comm_destroy: [comm_hccl.cpp:1800] [comm rank 3] comm_destroy: final release failed during release wait for rank 3
+[mono_ns=7236272882062712][T0xf8756ec0b020][WARN] comm_destroy: [comm_hccl.cpp:1800] [comm rank 7] comm_destroy: final release failed during release wait for rank 7
+[mono_ns=7236272964342419][T0xf8756ec0b020][WARN] comm_destroy: [comm_hccl.cpp:1800] [comm rank 5] comm_destroy: final release failed during release wait for rank 5
+/usr/lib/python3.10/multiprocessing/resource_tracker.py:224: UserWarning: resource_tracker: There appear to be 8 leaked shared_memory objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '
+
+  [heal] EP4 smoke on 0,1,2,3 ...
+  [heal] rc=0 OK
+  [cooldown] sleeping 25s before retry
+  OK attempt=2 metric=aicore_gang_span  kernel_p50=167.10500000000002  slot_p50=3504.214808344841  egress=2.77051341088724
+
+=== p8_managed-l2_uniform_16384 devices=0,1,2,3,4,5,6,7 attempts=4 ===
+  FAIL attempt=1/4 rc=-11
+, line 9232, in release_claim
+    self._release_domain_claimed(handle)
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 9293, in _release_domain_claimed
+    _run_with_owned_shared_memory(
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 1643, in _run_with_owned_shared_memory
+    raise result.error
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 1339, in invoke
+    result.value = operation()
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 1636, in run_lifecycle
+    raise operation_error
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 1623, in run_lifecycle
+    value = operation(owner)
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 9281, in release
+    self._dispatch_control_domain(
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 9334, in _dispatch_control_domain
+    raise RuntimeError(
+RuntimeError: release_domain(allocation_id=0) failed on 8/8 chips; first error chip=4: control_release_domain failed on child: chip_process dev=4 ctrl=8: RuntimeError: comm_release_domain_windows failed with code -1
+[mono_ns=7236712328334787][T0xef4d97a77020][WARN] comm_destroy: [comm_hccl.cpp:1747] [comm rank 0] comm_destroy: final barrier failed during departure wait for rank 5; releasing local state anyway
+[mono_ns=7236712453034436][T0xef4d97a77020][WARN] comm_destroy: [comm_hccl.cpp:1800] [comm rank 3] comm_destroy: final release failed during release wait for rank 3
+[mono_ns=7236712458139062][T0xef4d97a77020][WARN] comm_destroy: [comm_hccl.cpp:1800] [comm rank 1] comm_destroy: final release failed during release wait for rank 1
+[mono_ns=7236712489478592][T0xef4d97a77020][WARN] comm_destroy: [comm_hccl.cpp:1800] [comm rank 2] comm_destroy: final release failed during release wait for rank 2
+[mono_ns=7236712495293151][T0xef4d97a77020][WARN] comm_destroy: [comm_hccl.cpp:1800] [comm rank 7] comm_destroy: final release failed during release wait for rank 7
+[mono_ns=7236712524784451][T0xef4d97a77020][WARN] comm_destroy: [comm_hccl.cpp:1800] [comm rank 4] comm_destroy: final release failed during release wait for rank 4
+[mono_ns=7236712569498662][T0xef4d97a77020][WARN] comm_destroy: [comm_hccl.cpp:1800] [comm rank 6] comm_destroy: final release failed during release wait for rank 6
+/usr/lib/python3.10/multiprocessing/resource_tracker.py:224: UserWarning: resource_tracker: There appear to be 8 leaked shared_memory objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '
+
+  [heal] EP4 smoke on 0,1,2,3 ...
+  [heal] rc=0 OK
+  [cooldown] sleeping 25s before retry
+  FAIL attempt=2/4 rc=-11
+, line 9232, in release_claim
+    self._release_domain_claimed(handle)
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 9293, in _release_domain_claimed
+    _run_with_owned_shared_memory(
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 1643, in _run_with_owned_shared_memory
+    raise result.error
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 1339, in invoke
+    result.value = operation()
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 1636, in run_lifecycle
+    raise operation_error
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 1623, in run_lifecycle
+    value = operation(owner)
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 9281, in release
+    self._dispatch_control_domain(
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 9334, in _dispatch_control_domain
+    raise RuntimeError(
+RuntimeError: release_domain(allocation_id=0) failed on 8/8 chips; first error chip=0: control_release_domain failed on child: chip_process dev=0 ctrl=8: RuntimeError: comm_release_domain_windows failed with code -1
+[mono_ns=7237069710220703][T0xfcac6a79b020][WARN] comm_destroy: [comm_hccl.cpp:1747] [comm rank 0] comm_destroy: final barrier failed during departure wait for rank 2; releasing local state anyway
+[mono_ns=7237069842710021][T0xfcac6a79b020][WARN] comm_destroy: [comm_hccl.cpp:1800] [comm rank 6] comm_destroy: final release failed during release wait for rank 6
+[mono_ns=7237069866847761][T0xfcac6a79b020][WARN] comm_destroy: [comm_hccl.cpp:1800] [comm rank 1] comm_destroy: final release failed during release wait for rank 1
+[mono_ns=7237069908152118][T0xfcac6a79b020][WARN] comm_destroy: [comm_hccl.cpp:1800] [comm rank 4] comm_destroy: final release failed during release wait for rank 4
+[mono_ns=7237069921108659][T0xfcac6a79b020][WARN] comm_destroy: [comm_hccl.cpp:1800] [comm rank 3] comm_destroy: final release failed during release wait for rank 3
+[mono_ns=7237069965169776][T0xfcac6a79b020][WARN] comm_destroy: [comm_hccl.cpp:1800] [comm rank 7] comm_destroy: final release failed during release wait for rank 7
+[mono_ns=7237069976492264][T0xfcac6a79b020][WARN] comm_destroy: [comm_hccl.cpp:1800] [comm rank 5] comm_destroy: final release failed during release wait for rank 5
+/usr/lib/python3.10/multiprocessing/resource_tracker.py:224: UserWarning: resource_tracker: There appear to be 8 leaked shared_memory objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '
+
+  [heal] EP4 smoke on 0,1,2,3 ...
+  [heal] rc=0 OK
+  [cooldown] sleeping 25s before retry
+  FAIL attempt=3/4 rc=-11
+, line 9232, in release_claim
+    self._release_domain_claimed(handle)
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 9293, in _release_domain_claimed
+    _run_with_owned_shared_memory(
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 1643, in _run_with_owned_shared_memory
+    raise result.error
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 1339, in invoke
+    result.value = operation()
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 1636, in run_lifecycle
+    raise operation_error
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 1623, in run_lifecycle
+    value = operation(owner)
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 9281, in release
+    self._dispatch_control_domain(
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 9334, in _dispatch_control_domain
+    raise RuntimeError(
+RuntimeError: release_domain(allocation_id=0) failed on 8/8 chips; first error chip=7: control_release_domain failed on child: chip_process dev=7 ctrl=8: RuntimeError: comm_release_domain_windows failed with code -1
+[mono_ns=7237422398612949][T0xf8633c28b020][WARN] comm_destroy: [comm_hccl.cpp:1747] [comm rank 0] comm_destroy: final barrier failed during departure wait for rank 4; releasing local state anyway
+[mono_ns=7237422482800197][T0xf8633c28b020][WARN] comm_destroy: [comm_hccl.cpp:1800] [comm rank 3] comm_destroy: final release failed during release wait for rank 3
+[mono_ns=7237422581059280][T0xf8633c28b020][WARN] comm_destroy: [comm_hccl.cpp:1800] [comm rank 1] comm_destroy: final release failed during release wait for rank 1
+[mono_ns=7237422654577833][T0xf8633c28b020][WARN] comm_destroy: [comm_hccl.cpp:1800] [comm rank 7] comm_destroy: final release failed during release wait for rank 7
+[mono_ns=7237422659618641][T0xf8633c28b020][WARN] comm_destroy: [comm_hccl.cpp:1800] [comm rank 6] comm_destroy: final release failed during release wait for rank 6
+[mono_ns=7237422662351690][T0xf8633c28b020][WARN] comm_destroy: [comm_hccl.cpp:1800] [comm rank 5] comm_destroy: final release failed during release wait for rank 5
+[mono_ns=7237422706539363][T0xf8633c28b020][WARN] comm_destroy: [comm_hccl.cpp:1800] [comm rank 2] comm_destroy: final release failed during release wait for rank 2
+/usr/lib/python3.10/multiprocessing/resource_tracker.py:224: UserWarning: resource_tracker: There appear to be 8 leaked shared_memory objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '
+
+  [heal] EP4 smoke on 0,1,2,3 ...
+  [heal] rc=0 OK
+  [cooldown] sleeping 25s before retry
+  FAIL attempt=4/4 rc=-11
+, line 9232, in release_claim
+    self._release_domain_claimed(handle)
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 9293, in _release_domain_claimed
+    _run_with_owned_shared_memory(
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 1643, in _run_with_owned_shared_memory
+    raise result.error
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 1339, in invoke
+    result.value = operation()
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 1636, in run_lifecycle
+    raise operation_error
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 1623, in run_lifecycle
+    value = operation(owner)
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 9281, in release
+    self._dispatch_control_domain(
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 9334, in _dispatch_control_domain
+    raise RuntimeError(
+RuntimeError: release_domain(allocation_id=0) failed on 8/8 chips; first error chip=0: control_release_domain failed on child: chip_process dev=0 ctrl=8: RuntimeError: comm_release_domain_windows failed with code -1
+[mono_ns=7237779815665167][T0xeb77aeafb020][WARN] comm_destroy: [comm_hccl.cpp:1747] [comm rank 0] comm_destroy: final barrier failed during departure wait for rank 2; releasing local state anyway
+[mono_ns=7237779921546997][T0xeb77aeafb020][WARN] comm_destroy: [comm_hccl.cpp:1800] [comm rank 1] comm_destroy: final release failed during release wait for rank 1
+[mono_ns=7237779957375754][T0xeb77aeafb020][WARN] comm_destroy: [comm_hccl.cpp:1800] [comm rank 7] comm_destroy: final release failed during release wait for rank 7
+[mono_ns=7237779972386014][T0xeb77aeafb020][WARN] comm_destroy: [comm_hccl.cpp:1800] [comm rank 6] comm_destroy: final release failed during release wait for rank 6
+[mono_ns=7237780065976177][T0xeb77aeafb020][WARN] comm_destroy: [comm_hccl.cpp:1800] [comm rank 3] comm_destroy: final release failed during release wait for rank 3
+[mono_ns=7237780104086707][T0xeb77aeafb020][WARN] comm_destroy: [comm_hccl.cpp:1800] [comm rank 4] comm_destroy: final release failed during release wait for rank 4
+[mono_ns=7237780149879377][T0xeb77aeafb020][WARN] comm_destroy: [comm_hccl.cpp:1800] [comm rank 5] comm_destroy: final release failed during release wait for rank 5
+/usr/lib/python3.10/multiprocessing/resource_tracker.py:224: UserWarning: resource_tracker: There appear to be 8 leaked shared_memory objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '
+
+
+=== p8_managed-host_uniform_32 devices=0,1,2,3,4,5,6,7 attempts=4 ===
+  OK attempt=1 metric=timing_slot  kernel_p50=6341.1640003323555  slot_p50=6341.1640003323555  egress=0.0002797780870441454
+
+=== p8_managed-host_uniform_128 devices=0,1,2,3,4,5,6,7 attempts=4 ===
+  OK attempt=1 metric=timing_slot  kernel_p50=5846.091080456972  slot_p50=5846.091080456972  egress=0.0011588352552257331
+
+=== p8_managed-host_uniform_1024 devices=0,1,2,3,4,5,6,7 attempts=4 ===
+  OK attempt=1 metric=timing_slot  kernel_p50=5548.463668674231  slot_p50=5548.463668674231  egress=0.010094208130051423
+
+=== p8_managed-host_uniform_4096 devices=0,1,2,3,4,5,6,7 attempts=4 ===
+  OK attempt=1 metric=timing_slot  kernel_p50=5986.0702604055405  slot_p50=5986.0702604055405  egress=0.037996559676268936
+
+=== p8_managed-host_uniform_8192 devices=0,1,2,3,4,5,6,7 attempts=4 ===
+  OK attempt=1 metric=timing_slot  kernel_p50=6091.447081416845  slot_p50=6091.447081416845  egress=0.07170582497437879
+
+=== p8_managed-host_uniform_16384 devices=0,1,2,3,4,5,6,7 attempts=4 ===
+  FAIL attempt=1/4 rc=1
+spatch_id=4 endpoint_kind=local_mailbox prepare_only=0 role=worker outcome=0
+[mono_ns=7238937544883494][T0xf19d6badb020][TIMING] emit_host_span: [STRACE] v=1 pid=3584274 tid=3584274 inv=4 hid=affc5a0385d19141 depth=0 name=chip.run ts=7238937544193626 dur=687848 run_id=1 dispatch_id=4 slot_id=0 generation=1 run_epoch=4
+[mono_ns=7238937544898335][T0xf19c0e62cca0][TIMING] emit_host_span: [STRACE] v=1 pid=3566585 tid=3584423 inv=0 hid=0 depth=0 name=node.scheduler_loop ts=7238937544861124 dur=34341 role=scheduler drained=3 dispatched=0 drain_ns=32061 spins=5
+[mono_ns=7238937544908415][T0xf19c0e62cca0][TIMING] emit_host_span: [STRACE] v=1 pid=3566585 tid=3584423 inv=1 hid=7a2fe9a348a0aee3 depth=0 name=node.complete ts=7238937544905175 dur=370 run_id=1 task_slot=30 group_index=0 worker_id=6 dispatch_id=4 endpoint_kind=local_mailbox prepare_only=0 role=worker outcome=0
+[mono_ns=7238937544916965][T0xf19c0e62cca0][TIMING] emit_host_span: [STRACE] v=1 pid=3566585 tid=3584423 inv=1 hid=7a2fe9a348a0aee3 depth=0 name=node.complete ts=7238937544913765 dur=330 run_id=1 task_slot=31 group_index=0 worker_id=7 dispatch_id=4 endpoint_kind=local_mailbox prepare_only=0 role=worker outcome=0
+[mono_ns=7238937544931915][T0xf19c0e62cca0][TIMING] emit_host_span: [STRACE] v=1 pid=3566585 tid=3584423 inv=0 hid=0 depth=0 name=node.scheduler_loop ts=7238937544901925 dur=26990 role=scheduler drained=2 dispatched=0 drain_ns=26830 spins=0
+[mono_ns=7238937545117407][T0xf19d6badb020][TIMING] emit_host_span: [STRACE] v=1 pid=3566585 tid=3566585 inv=1 hid=0 depth=0 name=node.post_fence_retirement ts=7238937544925375 dur=186692 run_id=1 slot_id=0 generation=1 role=facade
+Traceback (most recent call last):
+  File "/opt/pypto/tests/st/distributed/collectives/all_to_all_v_benchmark.py", line 1202, in <module>
+    raise SystemExit(main())
+  File "/opt/pypto/tests/st/distributed/collectives/all_to_all_v_benchmark.py", line 1191, in main
+    doc = run_benchmark(args, shape)
+  File "/opt/pypto/tests/st/distributed/collectives/all_to_all_v_benchmark.py", line 1049, in run_benchmark
+    host_slots, slot_rank = _timed_session(
+  File "/opt/pypto/tests/st/distributed/collectives/all_to_all_v_benchmark.py", line 982, in _timed_session
+    check_correctness(shape, inputs, send_counts, outputs, recv_out)
+  File "/opt/pypto/tests/st/distributed/collectives/all_to_all_v_benchmark.py", line 874, in check_correctness
+    raise AssertionError(
+AssertionError: rank=7 src=4: recv_counts=0 != clamped send_counts=1
+
+  [heal] EP4 smoke on 0,1,2,3 ...
+  [heal] rc=0 OK
+  [cooldown] sleeping 25s before retry
+  OK attempt=2 metric=timing_slot  kernel_p50=5833.282601088285  slot_p50=5833.282601088285  egress=0.15474582011971574
+
+Wrote /opt/pypto-profiling/reports/issue-2521-a1-alltoallv-ep8-l2host-2026-09-10/summary.json
+n_ok=11 n_fail=1
+===== EP8 L2 vs HOST end 2026-09-10T10:11:35+00:00 rc=0 =====

@@ -1,0 +1,21 @@
+module attributes {pto.target_arch = "a2a3"} {
+  func.func @fill_counts_step(%arg0: !pto.ptr<i32>, %arg1: !pto.ptr<i32>, %arg2: !pto.ptr<i64>) attributes {pto.kernel_kind = #pto.kernel_kind<vector>} {
+  %c8_index = arith.constant 8 : index
+  %c1_index = arith.constant 1 : index
+  %c0_index = arith.constant 0 : index
+  %counts_row__ssa_v0_view = pto.make_tensor_view %arg0, shape = [%c8_index, %c1_index], strides = [%c1_index, %c8_index] {layout = #pto.layout<dn>} : !pto.tensor_view<?x?xi32> loc("/opt/pypto/tests/st/distributed/collectives/all_to_all_v_benchmark.py":635:13)
+  %counts__ssa_v0_view = pto.make_tensor_view %arg1, shape = [%c8_index, %c1_index], strides = [%c1_index, %c8_index] {layout = #pto.layout<dn>} : !pto.tensor_view<?x?xi32> loc("/opt/pypto/tests/st/distributed/collectives/all_to_all_v_benchmark.py":636:13)
+  scf.for %d__idx_v0 = %c0_index to %c8_index step %c1_index {
+    %flat_offset_mul = arith.muli %d__idx_v0, %c1_index : index loc("/opt/pypto/tests/st/distributed/collectives/all_to_all_v_benchmark.py":639:21)
+    %flat_offset = arith.addi %flat_offset_mul, %c0_index : index loc("/opt/pypto/tests/st/distributed/collectives/all_to_all_v_benchmark.py":639:21)
+    %v__tile = pto.load_scalar %arg0[%flat_offset] : !pto.ptr<i32> -> i32 loc("/opt/pypto/tests/st/distributed/collectives/all_to_all_v_benchmark.py":639:21)
+    %0 = arith.muli %d__idx_v0, %c1_index : index loc("/opt/pypto/tests/st/distributed/collectives/all_to_all_v_benchmark.py":640:17)
+    %1 = arith.addi %0, %c0_index : index loc("/opt/pypto/tests/st/distributed/collectives/all_to_all_v_benchmark.py":640:17)
+    pto.store_scalar %v__tile, %arg1[%1] : !pto.ptr<i32>, i32 loc("/opt/pypto/tests/st/distributed/collectives/all_to_all_v_benchmark.py":640:17)
+    %counts__ssa_v0_pview = pto.partition_view %counts__ssa_v0_view, offsets = [%c0_index, %c0_index], sizes = [%c8_index, %c1_index] : !pto.tensor_view<?x?xi32> -> !pto.partition_tensor_view<8x1xi32> loc("/opt/pypto/tests/st/distributed/collectives/all_to_all_v_benchmark.py":640:17)
+    pto.cmo.cacheinvalid %counts__ssa_v0_pview single_cache_line : !pto.partition_tensor_view<8x1xi32> loc("/opt/pypto/tests/st/distributed/collectives/all_to_all_v_benchmark.py":640:17)
+    pto.fence.barrier_all #pto.fence_scope<gm> loc("/opt/pypto/tests/st/distributed/collectives/all_to_all_v_benchmark.py":640:17)
+  }
+  return
+  }
+}

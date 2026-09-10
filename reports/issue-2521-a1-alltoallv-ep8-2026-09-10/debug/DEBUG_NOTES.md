@@ -2,79 +2,102 @@
 
 **Date:** 2026-09-10  
 **Campaign:** `issue-2521-a1-alltoallv-ep8-2026-09-10`  
-**Debug artifacts:** `debug/` under that report dir
+**Debug artifacts:** this `debug/` directory
 
-## Symptoms (campaign)
+## Verdict
 
-| Observation | Detail |
-|-------------|--------|
-| Fail rate | ~50% of early `managed-l2` uniform points |
-| Error | `release_domain` → `comm_release_domain_windows failed with code -1` → process `rc=-11` (SIGSEGV) |
-| Compile | Always OK (build dirs + kernels present) |
-| Result JSON | Absent on fail (crash before write) |
-| Swimlane on fail | No `chip_swimlane_records.json` |
-| Payload correlation | None (0/4096/16384 fail; 32/128/1024/8192 OK) |
+`release_domain` / `comm_release_domain_windows failed with code -1` / `rc=-11` are **teardown symptoms**, not the root fault.
 
-## Controlled repro matrix
+**Root fault (when DFX is preserved):** during an EP8 run, a chip hits Fabric V2 export failure:
+
+```text
+ACL_ERROR_RT_AICPU_EXCEPTION (507018)
+This device does not support cross-server communication
+  drv devId=<N> localServerId=1023 err:0x702001d
+rtMemExportToShareableHandleV2 ... feature not support
+→ SCHEDULER_TIMEOUT S1:running-stalled
+→ chip run lane poisoned (-100)
+→ prepare()/close → release_domain barriers time out → -1 → often SIGSEGV
+```
+
+Evidence:
+
+| Artifact | Root signal |
+|----------|-------------|
+| Campaign `builds/.../4096/dfx_outputs/host.3713532.log` | cross-server on **devId=7** |
+| `debug/campaign_exact/pb0/log.txt` | cross-server on **devId=5**, then release_domain -1, **rc=139** |
+| Successful campaign sizes (32/128/1024/8192) | **no** cross-server in DFX |
+
+a2a3 window path (`runtime/src/a2a3/.../comm_hccl.cpp`): Fabric V2 (`ACL_MEM_SHARE_HANDLE_TYPE_FABRIC`) with IPC shareable-handle fallback. The failing call is **ExportToShareableHandleV2** (Fabric), which this box sometimes rejects mid-run as “cross-server”.
+
+## Causal chain
+
+```text
+Fabric export fail (intermittent on EP8)
+  → AICPU exception / scheduler stall / poisoned lane
+  → release_domain barrier timeout → code -1
+  → process SIGSEGV (rc=-11/-139)
+  → next job: comm_init failed (poisoned HCCL/device state)
+  → after cooldown / lighter EP4 smoke, EP8 often works again
+```
+
+## Repro matrix (this session)
 
 | Case | Result |
 |------|--------|
-| EP8 L2 4096, `--profile timing-slot`, rounds=2 | **OK** |
-| EP8 L2 4096, `--profile swimlane`, rounds=2 | **OK** |
-| EP8 L2 4096, `--profile both`, rounds=2 | **OK** |
-| EP8 L2 1024, `--profile both`, rounds=2 | **OK** |
-| EP4 L2 4096, `--profile both`, rounds=2 | **OK** |
-| EP8 L2 4096, `--profile both`, rounds=100, warmup=5, swim=8 × **3 tries** | **OK ×3** |
+| 8× short EP8 L2 4096 `profile both` back-to-back | **8/8 OK** |
+| Isolated EP8 L2 4096 rounds=100 ×3 (earlier) | **OK** |
+| Campaign-exact EP8 L2 **peer_bytes=0** (100+both) | **FAIL** — cross-server → poison → release -1 → SIGSEGV |
+| Immediately after: EP8 4096 / 16384 | **FAIL** — `comm_init failed` (cascade) |
+| EP4 smoke after cascade | **OK** |
+| EP8 L2 4096 after recovery (20+both) | **OK** (rank_spread ≈ 3.9 ms) |
 
-**Conclusion so far:** the failure is **not** deterministic for peer_bytes=4096 or for `--profile both`. Isolated runs after a clean NPU state succeed. Campaign failures look like **intermittent teardown / HCCL domain-destroy flakes under sequential job churn**, possibly worsened by leftover state from a previous SIGSEGV.
+EP2/EP4 **peer_bytes=0** succeeded in the ubfix archive; EP8 zero-byte is the sharpest repro.
 
-## Swimlane rank skew (separate bug / measurement issue)
+## Swimlane rank skew (separate, on OK runs)
 
-Even on successful EP8 runs, per-rank `__builtin_all_to_all_v__int8` **task durations** form a smooth rank gradient (not a collector mix-up with stage/consume):
+Per-rank `__builtin_all_to_all_v__int8` durations form a smooth rank gradient (~4 ms → ~90 µs). Stage/consume stay ~3–6 µs. Not a collector mix-up. Roadmap fastest-rank still picks the short end; spread documents sync wait inside the AIV task.
 
-Example (`debug/ep8_l2_4096_swim_only`, last dispatch `d5`):
+Harness now logs session phase markers:
 
-| rank | builtin med (µs) | stage | consume |
-|-----:|-----------------:|------:|--------:|
-| 0 | 4061 | 5.8 | 4.1 |
-| 1 | 3582 | 6.3 | 3.0 |
-| 2 | 2924 | 6.0 | 3.2 |
-| 3 | 2172 | 6.1 | 3.4 |
-| 4 | 1256 | 6.5 | 4.1 |
-| 5 | 1113 | 6.2 | 3.1 |
-| 6 | 834 | 6.5 | 3.4 |
-| 7 | **88** | 6.2 | 3.1 |
-
-Stage/consume are fine (~3–6 µs). The **builtin task itself** is multi-ms on low ranks and ~90 µs on rank 7. Roadmap “fastest-rank” therefore picks rank 7 (~true gang completion for the last arriver’s wait-minimal view). Spread ~4 ms is **cross-rank sync wait inside the AIV task**, not wrong task naming.
-
-## Hypotheses (ordered)
-
-1. **H1 — Sequential campaign teardown race at EP8**  
-   Back-to-back `prepare()`/release across processes leaves HCCL windows wedged; next job or current release then SIGSEGVs.  
-   *Test:* rapid back-to-back jobs; add inter-job sleep / device reset.
-
-2. **H2 — Dual `prepare()` in `--profile both` under long sessions**  
-   Slot session release then swimlane session alloc/release; rare failure on first release.  
-   *Evidence against:* short and 100-round isolated `both` all OK after clean NPUs.
-
-3. **H3 — Rank-skew / long waits stress destroy**  
-   Multi-ms blocked AIV tasks + 100 rounds leave ranks in uneven state at destroy.  
-   *Test:* correlate fail with high host slot / hung rank (no JSON makes this hard).
-
-4. **H4 — Unrelated box load / prior zombie workers**  
-   Campaign kill left workers; subsequent jobs flaky until hard kill.  
-   *Mitigation:* ensure clean `npu-smi` before each EP8 job.
-
-## Next debug steps
-
-1. Finish rapid back-to-back churn test (campaign simulation).
-2. If H1 confirmed: insert cooldown / `npu-smi` drain between campaign jobs; optionally catch `release_domain` and retry once.
-3. For metrics: keep fastest-rank AIV; document EP8 rank-skew as sync-wait, not parser bug.
-4. Optional: log whether crash is on **first** or **second** `prepare()` exit when using `--profile both` (instrument harness).
-
-## How to re-run debug matrix
-
-```bash
-export LD_PRELOAD=/usr/local/Ascend/cann-9.0.0/aarch64-linux/lib64/libhccl.so
-# see commands in agent history / debug/ directories
+```text
+[a2av-bench] session=timing-slot enter|exit ok
+[a2av-bench] session=swimlane enter|exit ok
 ```
+
+## Fix for `peer_bytes=0` / EP8 Fabric flake
+
+**Not a zero-route kernel bug** — short EP8 `peer_bytes=0` can succeed; long sessions hit intermittent Fabric V2 export (“cross-server”).
+
+**Runtime escape hatch (local patch):** `SIMPLER_COMM_FORCE_IPC=1` skips Fabric and uses VMM IPC for base + domain windows (`comm_hccl.cpp`). Rebuilt into `libhost_runtime.so`.
+
+**Campaign:** set `A2AV_FORCE_IPC=1` (wired in `alltoallv_a1.py`).
+
+**Verified:** EP8 L2 `peer_bytes=0`, warmup=5 / rounds=100 / profile both → **OK** with FORCE_IPC (`ep8-l2host-…/zero_force_ipc/`, AIV p50 ≈ 14.7 µs).
+
+## Practical mitigations (campaign) — implemented
+
+Driver `collectives/alltoallv_a1.py` now supports:
+
+| Env | Role |
+|-----|------|
+| `A2AV_RETRIES` | Extra attempts after first fail (resume used **3** → 4 tries) |
+| `A2AV_COOLDOWN_S` | Sleep between tries (25s) |
+| `A2AV_HEAL_EP` | EP4 timing-slot smoke before retry |
+| `A2AV_RESUME=1` | Keep already-OK tags in `summary.json` |
+
+Resume (no-zero) so far: **4096 OK try1**; **16384 OK try4** after 3× cross-server/`release_domain` fails + heal. `peer_bytes=0` quarantined (poisons the box).
+
+## Open questions
+
+1. Why Fabric V2 export intermittently claims “cross-server” on this 8×910B2 topology (PCIe roots `C*`, `81*`, `01*`, `41*`) while many EP8 sizes succeed?
+2. Does zero-route AllToAllV take a worse window/handshake path?
+3. Can runtime force IPC fallback instead of Fabric when V2 returns feature-not-support earlier / more reliably?
+4. Is the ~4 ms EP8 rank gradient expected HCCL wait skew or a gang-launch ordering issue?
+
+## Key paths
+
+- Harness: `/opt/pypto/tests/st/distributed/collectives/all_to_all_v_benchmark.py`
+- Comm: `/opt/pypto/runtime/src/a2a3/platform/onboard/host/comm_hccl.cpp` (`export_fabric_window`)
+- Docs: `/opt/pypto/runtime/docs/comm-domain.md` §4
+- This debug tree: `debug/campaign_exact/`, `debug/back2back/`, `debug/post_poison_recovery/`

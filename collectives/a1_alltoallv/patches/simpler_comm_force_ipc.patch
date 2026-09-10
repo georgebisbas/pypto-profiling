@@ -1,0 +1,142 @@
+diff --git a/src/a2a3/platform/onboard/host/comm_hccl.cpp b/src/a2a3/platform/onboard/host/comm_hccl.cpp
+index ec85e275..ed668594 100644
+--- a/src/a2a3/platform/onboard/host/comm_hccl.cpp
++++ b/src/a2a3/platform/onboard/host/comm_hccl.cpp
+@@ -505,11 +505,48 @@ namespace {
+ // with win_size == 0. Picked to match the HCCL_BUFFSIZE default of the
+ // pre-Path-D backend so existing callers see no behavioural change.
+ constexpr uint64_t kDefaultWinSize = 200ULL * 1024 * 1024;
++
++// Escape hatch for boxes where Fabric V2 export intermittently fails with
++// "does not support cross-server communication" (seen on multi-root EP8
++// 910B2). When set to a non-empty value other than "0", skip Fabric and use
++// VMM IPC shareable handles for base + domain windows.
++static bool env_force_ipc_windows() {
++    static const int cached = []() {
++        const char *v = std::getenv("SIMPLER_COMM_FORCE_IPC");
++        const bool on = !(v == nullptr || v[0] == '\0' || (v[0] == '0' && v[1] == '\0'));
++        // stderr always visible in harness attempt logs (LOG_INFO may be filtered).
++        std::fprintf(
++            stderr, "[comm_hccl] SIMPLER_COMM_FORCE_IPC=%s -> %s\n", v == nullptr ? "<unset>" : v,
++            on ? "VMM IPC (skip Fabric)" : "Fabric-first"
++        );
++        return on ? 1 : 0;
++    }();
++    return cached != 0;
++}
+ constexpr uint64_t kFabricAnnounceMagic = 0x464142334c334d45ULL;  // "FAB3L3ME"
+ constexpr uint32_t kFabricAnnounceVersion = 1;
+ 
+ enum class FabricAttempt { kSuccess, kUnsupported, kError };
+ 
++// Cross-server / intermittent Fabric export often returns a non-FEATURE_NOT_SUPPORT
++// ACL code (or surfaces later as AICPU 507018). Treat any export failure as
++// "unsupported" so callers fall back to VMM IPC instead of hard-failing.
++static FabricAttempt fabric_export_result(aclError aret, int rank, const char *where) {
++    if (aret == ACL_SUCCESS) return FabricAttempt::kSuccess;
++    if (aret == ACL_ERROR_RT_FEATURE_NOT_SUPPORT) {
++        LOG_INFO("[comm rank %d] %s: Fabric export FEATURE_NOT_SUPPORT; will try IPC", rank, where);
++        return FabricAttempt::kUnsupported;
++    }
++    LOG_WARN(
++        "[comm rank %d] %s: Fabric export -> %d; treating as unsupported for IPC fallback", rank, where,
++        static_cast<int>(aret)
++    );
++    std::fprintf(
++        stderr, "[comm_hccl] rank %d %s: Fabric export acl=%d -> IPC fallback\n", rank, where, static_cast<int>(aret)
++    );
++    return FabricAttempt::kUnsupported;
++}
++
+ struct FabricAnnounceFile {
+     uint64_t magic = kFabricAnnounceMagic;
+     uint32_t version = kFabricAnnounceVersion;
+@@ -780,14 +817,12 @@ static FabricAttempt alloc_windows_via_fabric(CommHandle h, uint64_t win_size) {
+ 
+     aclrtMemFabricHandle fabric_handle{};
+     aret = export_fabric_window(local_window, &fabric_handle);
+-    if (aret != ACL_SUCCESS) {
+-        if (aret == ACL_ERROR_RT_FEATURE_NOT_SUPPORT) {
++    {
++        const FabricAttempt export_rc = fabric_export_result(aret, rank, "fabric base ExportToShareableHandleV2");
++        if (export_rc != FabricAttempt::kSuccess) {
+             release_vmm_window(&local_window);
+-            return FabricAttempt::kUnsupported;
++            return export_rc;
+         }
+-        LOG_ERROR("[comm rank %d] fabric: ExportToShareableHandleV2 -> %d", rank, static_cast<int>(aret));
+-        release_vmm_window(&local_window);
+-        return FabricAttempt::kError;
+     }
+ 
+     // Publish the full Fabric handle and mapped size before importing peers.
+@@ -1193,14 +1228,13 @@ static FabricAttempt domain_alloc_via_fabric(
+ 
+     aclrtMemFabricHandle fabric_handle{};
+     aret = export_fabric_window(out->local_window, &fabric_handle);
+-    if (aret != ACL_SUCCESS) {
+-        if (aret == ACL_ERROR_RT_FEATURE_NOT_SUPPORT) {
++    {
++        const FabricAttempt export_rc =
++            fabric_export_result(aret, h->rank, "alloc_domain ExportToShareableHandleV2");
++        if (export_rc != FabricAttempt::kSuccess) {
+             release_domain_windows(out);
+-            return FabricAttempt::kUnsupported;
++            return export_rc;
+         }
+-        LOG_ERROR("[comm rank %d] alloc_domain: ExportToShareableHandleV2 -> %d", h->rank, static_cast<int>(aret));
+-        release_domain_windows(out);
+-        return FabricAttempt::kError;
+     }
+ 
+     aret = zero_local_window(out->local_window);
+@@ -1304,11 +1338,17 @@ extern "C" int comm_alloc_windows(CommHandle h, size_t win_size, uint64_t *devic
+     }
+ 
+     const uint64_t effective_win_size = win_size != 0 ? static_cast<uint64_t>(win_size) : kDefaultWinSize;
+-    const FabricAttempt fabric_result = alloc_windows_via_fabric(h, effective_win_size);
+-    if (fabric_result == FabricAttempt::kError) return -1;
+-    if (fabric_result == FabricAttempt::kUnsupported) {
+-        LOG_INFO("[comm rank %d] Fabric V2 unsupported; using VMM IPC windows", h->rank);
++    if (env_force_ipc_windows()) {
++        LOG_INFO("[comm rank %d] SIMPLER_COMM_FORCE_IPC set; using VMM IPC windows", h->rank);
++        std::fprintf(stderr, "[comm_hccl] rank %d: FORCE_IPC base windows via VMM IPC\n", h->rank);
+         if (alloc_windows_via_ipc(h, effective_win_size) != 0) return -1;
++    } else {
++        const FabricAttempt fabric_result = alloc_windows_via_fabric(h, effective_win_size);
++        if (fabric_result == FabricAttempt::kError) return -1;
++        if (fabric_result == FabricAttempt::kUnsupported) {
++            LOG_INFO("[comm rank %d] Fabric V2 unsupported; using VMM IPC windows", h->rank);
++            if (alloc_windows_via_ipc(h, effective_win_size) != 0) return -1;
++        }
+     }
+ 
+     void *newDevMem = nullptr;
+@@ -1467,14 +1507,22 @@ extern "C" int comm_alloc_domain_windows(
+     }
+ 
+     auto alloc = std::make_unique<DomainAllocation>();
+-    const FabricAttempt fabric_result =
+-        domain_alloc_via_fabric(h, allocation_id, rank_ids, rank_count, domain_rank, window_size, alloc.get());
+-    if (fabric_result == FabricAttempt::kError) return -1;
+-    if (fabric_result == FabricAttempt::kUnsupported) {
+-        LOG_INFO("[comm rank %d] Fabric V2 unsupported; using VMM IPC domain windows", h->rank);
++    if (env_force_ipc_windows()) {
++        LOG_INFO("[comm rank %d] SIMPLER_COMM_FORCE_IPC set; using VMM IPC domain windows", h->rank);
++        std::fprintf(stderr, "[comm_hccl] rank %d: FORCE_IPC domain windows via VMM IPC\n", h->rank);
+         const int rc =
+             domain_alloc_via_ipc(h, allocation_id, rank_ids, rank_count, domain_rank, window_size, alloc.get());
+         if (rc != 0) return rc;
++    } else {
++        const FabricAttempt fabric_result =
++            domain_alloc_via_fabric(h, allocation_id, rank_ids, rank_count, domain_rank, window_size, alloc.get());
++        if (fabric_result == FabricAttempt::kError) return -1;
++        if (fabric_result == FabricAttempt::kUnsupported) {
++            LOG_INFO("[comm rank %d] Fabric V2 unsupported; using VMM IPC domain windows", h->rank);
++            const int rc =
++                domain_alloc_via_ipc(h, allocation_id, rank_ids, rank_count, domain_rank, window_size, alloc.get());
++            if (rc != 0) return rc;
++        }
+     }
+ 
+     *device_ctx_out = reinterpret_cast<uint64_t>(alloc->device_ctx);
