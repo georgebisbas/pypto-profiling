@@ -9,9 +9,22 @@
 **Roadmap (YunjiQin, 2026-09-01):**
 [Part 1 — design & §8 benchmark](https://github.com/hw-native-sys/pypto/issues/2521#issuecomment-5495422542) ·
 [Part 2 — work items A1–A3](https://github.com/hw-native-sys/pypto/issues/2521#issuecomment-5495424411)  
-**Artifacts:** `/opt/pypto-profiling/reports/issue-2521-a1-alltoallv-ubfix-2026-09-09/` (EP2/EP4) · EP8 dirs above  
-**Scripts (in this repo):** [`collectives/a1_alltoallv/`](../../collectives/a1_alltoallv/) — harness snapshot, FORCE_IPC patch, Fabric MFE; driver [`collectives/alltoallv_a1.py`](../../collectives/alltoallv_a1.py).  
-**Reproduce:** see **§10** (code paths, commits, exact commands, Fabric MFE).
+**Artifacts:** this report dir (EP2/EP4) · EP8 dirs above under `reports/`  
+**Scripts (same repo — clone `pypto-profiling` to get them):** see box below · details **§10**.
+
+### Script access (colleague checklist)
+
+Everything needed to **inspect** what ran is in **this** repository (not upstream pypto/simpler `main`). Relative to the `pypto-profiling` root:
+
+| Need | Path |
+|------|------|
+| Campaign driver | [`collectives/alltoallv_a1.py`](../../collectives/alltoallv_a1.py) |
+| Measured harness | [`collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py`](../../collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py) |
+| FORCE_IPC patch | [`collectives/a1_alltoallv/patches/simpler_comm_force_ipc.patch`](../../collectives/a1_alltoallv/patches/simpler_comm_force_ipc.patch) |
+| Fabric MFE | [`collectives/a1_alltoallv/mfe/`](../../collectives/a1_alltoallv/mfe/) |
+| Bundle README | [`collectives/a1_alltoallv/README.md`](../../collectives/a1_alltoallv/README.md) |
+
+**To re-run** (not just read): also need a pypto + simpler tree, Ascend box, and (for EP8) apply the FORCE_IPC patch then rebuild `libhost_runtime.so` — §10. INT8 builtin: [PR #2714](https://github.com/hw-native-sys/pypto/pull/2714).
 
 ---
 
@@ -61,7 +74,7 @@ Legend: **Yes** = done as specified · **Partial** = same idea, incomplete cover
 
 | Roadmap clause | Required | What we executed | Status |
 |----------------|----------|------------------|--------|
-| **§8.1** harness file | `tests/st/distributed/collectives/all_to_all_v_benchmark.py` | Present (local; used by `alltoallv_a1.py`) | **Yes** |
+| **§8.1** harness file | `tests/st/.../all_to_all_v_benchmark.py` (roadmap path) | **Colleague copy:** `collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py` (used by `alltoallv_a1.py`) | **Yes** |
 | **§8.1** `--impl` | `managed-host` \| `managed-l2` | Both, full uniform curve each | **Yes** |
 | **§8.1** `--profile` | `swimlane` \| `timing-slot` | `--profile both` (100 slot + 8 swimlane rounds) | **Yes** |
 | **§8.1** stage/consume vs slot | Stage/consume **out of** measured timing slot | Stage/consume **in** slot; **out of** official AIV metric | **Partial** |
@@ -436,13 +449,13 @@ This section is the colleague entry point: **what ran**, **where it lives**, and
 
 ### 10.1 What code executes
 
-Colleague-facing copies live under **`pypto-profiling/collectives/a1_alltoallv/`** (see that README). Original edit trees may still be under `/opt/pypto` on the measurement box.
+**All measurement scripts for this report ship in `pypto-profiling`** under `collectives/` (see header “Script access”). You do **not** need the measurement box’s `/opt/pypto` tree to *read* them. Re-running still needs a pypto/simpler install.
 
 | Layer | Path in `pypto-profiling` | Role |
 |-------|---------------------------|------|
 | Campaign driver | `collectives/alltoallv_a1.py` | Loops EP × impl × payloads; retries / heal / `A2AV_FORCE_IPC` |
 | Harness (measured program) | `collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py` | Builds managed-host / managed-l2 graphs, `prepare(persistent=True)`, timing-slot + swimlane sessions, JSON |
-| INT8 builtin (codegen) | pypto tree — `pld.tensor.all_to_all_v` → `__builtin_all_to_all_v__int8` ([PR #2714](https://github.com/hw-native-sys/pypto/pull/2714)) | Collective kernel under test |
+| INT8 builtin (codegen) | pypto tree — `pld.tensor.all_to_all_v` → `__builtin_all_to_all_v__int8` ([PR #2714](https://github.com/hw-native-sys/pypto/pull/2714)) | Collective kernel under test (not vendored here) |
 | Swimlane metric | Same harness (`collect_swimlane_spans_us` / name_map + `chip_swimlane_records`) | Official L2 AIV = fastest-rank gang span |
 | Comm windows (EP8 flake) | Apply `collectives/a1_alltoallv/patches/simpler_comm_force_ipc.patch` onto simpler `comm_hccl.cpp` | Fabric V2 vs VMM IPC; `SIMPLER_COMM_FORCE_IPC` |
 | Fabric MFE (simpler-only) | `collectives/a1_alltoallv/mfe/repro_domain_churn.py` | Empty `allocate_domain` churn — **no AllToAllV**; flake is intermittent (not a guaranteed repro) |
@@ -454,7 +467,7 @@ Colleague-facing copies live under **`pypto-profiling/collectives/a1_alltoallv/`
 - `managed-host`: host orch — stage-all → fill counts → collective → consume-all (**3** outer L3→L2 dispatches).
 - `--profile both`: (1) timing-slot session, swimlane off, 5 warmup + 100 measured; (2) swimlane session, 8 AIV rounds. Official L2 kernel column = swimlane AIV; fair HOST vs L2 = **slot vs slot**.
 
-**Note:** this bundle is checked into **`pypto-profiling`** for access; it is **not** assumed to be on `hw-native-sys/pypto` / `simpler` `main`. INT8 builtin is PR #2714. Rebuild host runtime after applying the FORCE_IPC patch.
+**Note:** harness + FORCE_IPC patch are **in this repo** as a snapshot; they are **not** assumed on `hw-native-sys/pypto` / `simpler` `main`. INT8 builtin is PR #2714. Rebuild host runtime after applying the FORCE_IPC patch.
 
 ### 10.2 Versions we used
 
@@ -471,24 +484,28 @@ Colleague-facing copies live under **`pypto-profiling/collectives/a1_alltoallv/`
 
 ```bash
 export LD_PRELOAD=/usr/local/Ascend/cann-9.0.0/aarch64-linux/lib64/libhccl.so
-cd /opt/pypto-profiling
-A2AV_OUT=/opt/pypto-profiling/reports/issue-2521-a1-alltoallv-ubfix-REPRO \
+export PYPTO_ROOT=/path/to/pypto   # needed to import/compile
+REPO=/path/to/pypto-profiling      # this repo (has harness + driver)
+cd "$REPO"
+A2AV_OUT="$REPO/reports/issue-2521-a1-alltoallv-ubfix-REPRO" \
 A2AV_EPS=2,4 A2AV_IMPLS=managed-l2,managed-host \
 A2AV_ROUNDS=100 A2AV_WARMUP=5 A2AV_SWIMLANE_ROUNDS=8 \
 python3 -u collectives/alltoallv_a1.py
 ```
 
-Artifacts to compare: `…/issue-2521-a1-alltoallv-ubfix-2026-09-09/{summary.json,json/,sweep.log}`.
+Artifacts to compare: `reports/issue-2521-a1-alltoallv-ubfix-2026-09-09/{summary.json,json/,sweep.log}`.
 
 ### 10.4 Re-run EP8 mid-curve L2 + HOST (this insight)
 
 ```bash
 export LD_PRELOAD=/usr/local/Ascend/cann-9.0.0/aarch64-linux/lib64/libhccl.so
-cd /opt/pypto-profiling
+export PYPTO_ROOT=/path/to/pypto
+REPO=/path/to/pypto-profiling
+cd "$REPO"
 # Optional but recommended on this box:
 export A2AV_FORCE_IPC=1          # → SIMPLER_COMM_FORCE_IPC=1 in child
 # Known-good payloads only (full §8.3 still flaky without IPC / retries):
-A2AV_OUT=/opt/pypto-profiling/reports/issue-2521-a1-alltoallv-ep8-l2host-REPRO \
+A2AV_OUT="$REPO/reports/issue-2521-a1-alltoallv-ep8-l2host-REPRO" \
 A2AV_EPS=8 A2AV_IMPLS=managed-l2,managed-host \
 A2AV_PAYLOADS=32,128,1024,4096,8192,16384 A2AV_EXTRA_PATTERNS= \
 A2AV_RETRIES=3 A2AV_COOLDOWN_S=25 A2AV_HEAL_EP=4 \
@@ -500,8 +517,10 @@ Single-point harness example (same code path as one campaign cell):
 
 ```bash
 export LD_PRELOAD=/usr/local/Ascend/cann-9.0.0/aarch64-linux/lib64/libhccl.so
+export PYPTO_ROOT=/path/to/pypto
 # export SIMPLER_COMM_FORCE_IPC=1   # if Fabric flakes
-HARNESS=/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py
+REPO=/path/to/pypto-profiling
+HARNESS="$REPO/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py"
 python3 "$HARNESS" \
   --ep 8 --peer-bytes 4096 --impl managed-l2 --devices 0,1,2,3,4,5,6,7 \
   --rounds 100 --warmup 5 --profile both --swimlane-rounds 8 --platform a2a3 \
@@ -512,25 +531,28 @@ python3 "$HARNESS" \
 
 ```bash
 export LD_PRELOAD=/usr/local/Ascend/cann-9.0.0/aarch64-linux/lib64/libhccl.so
+export PYPTO_ROOT=/path/to/pypto
 export SIMPLER_COMM_FORCE_IPC=1   # requires patch applied + host runtime rebuilt
-HARNESS=/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py
+REPO=/path/to/pypto-profiling
+HARNESS="$REPO/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py"
 python3 "$HARNESS" \
   --ep 8 --peer-bytes 0 --impl managed-l2 --devices 0,1,2,3,4,5,6,7 \
   --rounds 100 --warmup 5 --profile both --swimlane-rounds 8 --platform a2a3 \
   --output-json /tmp/p8_l2_0.json --output-dir /tmp/p8_l2_0_build
 ```
 
-Reference OK artifact: `…/ep8-l2host-2026-09-10/zero_force_ipc/`.
+Reference OK artifact: `reports/issue-2521-a1-alltoallv-ep8-l2host-2026-09-10/zero_force_ipc/`.
 
 ### 10.6 Attempt Fabric flake in simpler alone (no AllToAllV)
 
 Intermittent; this MFE did **not** always hit the failure in short runs. Prefer A1 harness logs / issue #2192 for evidence.
 
 ```bash
-cd /opt/pypto/runtime    # simpler checkout (needs its Python bindings)
+cd /path/to/simpler    # or "$PYPTO_ROOT/runtime"
 export LD_PRELOAD=/usr/local/Ascend/cann-9.0.0/aarch64-linux/lib64/libhccl.so
 unset SIMPLER_COMM_FORCE_IPC
-python3 /opt/pypto-profiling/collectives/a1_alltoallv/mfe/repro_domain_churn.py \
+REPO=/path/to/pypto-profiling
+python3 "$REPO/collectives/a1_alltoallv/mfe/repro_domain_churn.py" \
   --iters 30 --devices 0-7 --dual-alloc
 ```
 

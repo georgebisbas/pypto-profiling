@@ -1,9 +1,11 @@
-# RFC #2521 A1 AllToAllV — local measurement bundle
+# RFC #2521 A1 AllToAllV — measurement bundle (in this repo)
 
-Self-contained copies of the **scripts and patches** that produced the A1
-analytic report, so colleagues with only `pypto-profiling` can inspect (and
-re-run against a pypto/simpler tree) without hunting untracked files under
-`/opt/pypto`.
+**If you opened the analytic report:** every script it refers to for *inspection*
+is here (or next to it as `../alltoallv_a1.py`). Clone / pull **`pypto-profiling`**;
+you do not need `/opt/pypto` untracked files to read the harness or patch.
+
+Self-contained copies of what produced the A1 report, so colleagues with only
+this repo can inspect (and re-run against a pypto/simpler tree).
 
 | Path | Role |
 |------|------|
@@ -13,13 +15,9 @@ re-run against a pypto/simpler tree) without hunting untracked files under
 | [`mfe/`](mfe/) | Fabric domain-churn MFE + issue draft ([simpler#2192](https://github.com/hw-native-sys/simpler/issues/2192)) |
 | [`PROVENANCE.json`](PROVENANCE.json) | Snapshot tip SHAs / harness hash |
 
-**Reports (already in this repo):**
+**Report:** [`../../reports/issue-2521-a1-alltoallv-ubfix-2026-09-09/ANALYTIC_REPORT_FOR_COLLEAGUES.md`](../../reports/issue-2521-a1-alltoallv-ubfix-2026-09-09/ANALYTIC_REPORT_FOR_COLLEAGUES.md)
 
-- `reports/issue-2521-a1-alltoallv-ubfix-2026-09-09/ANALYTIC_REPORT_FOR_COLLEAGUES.md` — main write-up
-- `reports/issue-2521-a1-alltoallv-ubfix-2026-09-09/` — EP2/EP4 full curve
-- `reports/issue-2521-a1-alltoallv-ep8-2026-09-10/` — EP8 L2 resume + debug
-- `reports/issue-2521-a1-alltoallv-ep8-l2host-2026-09-10/` — EP8 L2 vs HOST + `zero_force_ipc/`
-- `reports/issue-2521-a1-alltoallv-ep8-forceipc-2026-09-10/` — FORCE_IPC probes (L2 24576 + 24960 OK)
+**Other report dirs:** `reports/issue-2521-a1-alltoallv-{ubfix,ep8,ep8-l2host,ep8-forceipc}-2026-09-*/`
 
 ## What is timed
 
@@ -31,13 +29,14 @@ re-run against a pypto/simpler tree) without hunting untracked files under
 
 ```bash
 export LD_PRELOAD=/usr/local/Ascend/cann-9.0.0/aarch64-linux/lib64/libhccl.so
-export PYPTO_ROOT=/path/to/pypto          # import / compile cwd
-# optional EP8 Fabric workaround (apply patch to simpler, rebuild host runtime):
-#   cd "$PYPTO_ROOT/runtime" && git apply \
-#     /path/to/pypto-profiling/collectives/a1_alltoallv/patches/simpler_comm_force_ipc.patch
+export PYPTO_ROOT=/path/to/pypto
+REPO=/path/to/pypto-profiling
+# optional EP8:
+#   cd "$PYPTO_ROOT/runtime" && git apply "$REPO/collectives/a1_alltoallv/patches/simpler_comm_force_ipc.patch"
+#   # rebuild libhost_runtime.so, then:
 #   export A2AV_FORCE_IPC=1
 
-cd /path/to/pypto-profiling
+cd "$REPO"
 A2AV_OUT=reports/issue-2521-a1-REPRO \
 A2AV_EPS=2,4 A2AV_IMPLS=managed-l2,managed-host \
 python3 -u collectives/alltoallv_a1.py
@@ -48,8 +47,9 @@ The driver defaults to this bundle’s harness. Override with `A2AV_HARNESS=...`
 ## Apply FORCE_IPC patch
 
 ```bash
+REPO=/path/to/pypto-profiling
 cd "$PYPTO_ROOT/runtime"   # or standalone simpler checkout
-git apply /path/to/pypto-profiling/collectives/a1_alltoallv/patches/simpler_comm_force_ipc.patch
+git apply "$REPO/collectives/a1_alltoallv/patches/simpler_comm_force_ipc.patch"
 # rebuild libhost_runtime.so (tensormap / host_build_graph) as usual for this tree
 ```
 
@@ -57,6 +57,6 @@ Then set `SIMPLER_COMM_FORCE_IPC=1` or `A2AV_FORCE_IPC=1` (driver sets the forme
 
 ## Note on upstream status
 
-These files are a **snapshot for profiling/colleagues**. The harness and FORCE_IPC
+These files are a **snapshot in pypto-profiling**. The harness and FORCE_IPC
 patch are **not** assumed to be on `hw-native-sys/pypto` / `simpler` `main`.
 INT8 builtin itself is pypto [PR #2714](https://github.com/hw-native-sys/pypto/pull/2714).
