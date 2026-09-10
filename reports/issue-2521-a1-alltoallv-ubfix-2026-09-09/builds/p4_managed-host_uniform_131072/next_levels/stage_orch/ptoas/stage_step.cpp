@@ -1,0 +1,733 @@
+#include "pto/pto-inst.hpp"
+using namespace pto;
+
+template <typename Tensor>
+static AICORE inline auto PTOAS__GLOBAL_TENSOR_DATA(Tensor &tensor)
+    -> decltype(tensor.data()) {
+  return tensor.data();
+}
+
+
+enum class PTOAutoSyncTailMode : int {
+  kBarrierAll = 0,
+  kSetWaitMte3ToSEvent0 = 1,
+};
+
+static AICORE inline void ptoas_auto_sync_tail(
+    PTOAutoSyncTailMode mode = PTOAutoSyncTailMode::kBarrierAll) {
+  switch (mode) {
+  case PTOAutoSyncTailMode::kSetWaitMte3ToSEvent0:
+    set_flag(PIPE_MTE3, PIPE_S, EVENT_ID0);
+    wait_flag(PIPE_MTE3, PIPE_S, EVENT_ID0);
+    break;
+  case PTOAutoSyncTailMode::kBarrierAll:
+  default:
+    pipe_barrier(PIPE_ALL);
+    break;
+  }
+}
+
+template <typename Ptr>
+static AICORE inline void PTOAS__DCCI_SINGLE_CACHE_LINE(Ptr ptr) {
+  dcci((__gm__ void*)ptr, cache_line_t::SINGLE_CACHE_LINE);
+}
+
+AICORE void stage_step(__gm__ int8_t* v1, __gm__ int8_t* v2, __gm__ int64_t* v3) {
+  using T = float;
+
+  #if defined(__DAV_VEC__)
+  set_mask_norm();
+  set_vector_mask(-1, -1);
+  // pto: %c0_i64
+  const int64_t v4 = 0;
+  // pto: %c4_index
+  const int64_t v5 = 4;
+  // pto: %c131072_index
+  const int64_t v6 = 131072;
+  // pto: %c1_index
+  const int64_t v7 = 1;
+  // pto: %c0_index
+  const int64_t v8 = 0;
+  // pto: %c16384_index
+  const int64_t v9 = 16384;
+  // pto: %c32768_index
+  const int64_t v10 = 32768;
+  // pto: %c49152_index
+  const int64_t v11 = 49152;
+  // pto: %c65536_index
+  const int64_t v12 = 65536;
+  // pto: %c81920_index
+  const int64_t v13 = 81920;
+  // pto: %c98304_index
+  const int64_t v14 = 98304;
+  // pto: %c114688_index
+  const int64_t v15 = 114688;
+  // pto: %inp__ssa_v0_view
+  const int64_t v16 = 1;
+  // pto: %inp__ssa_v0_view
+  const int64_t v17 = 1;
+  // pto: %inp__ssa_v0_view
+  const int64_t v18 = 1;
+  // pto: %inp__ssa_v0_view
+  int64_t v19 = v5 * v6;
+  // pto: %inp__ssa_v0_view
+  int64_t v20 = v18 * v19;
+  // pto: %inp__ssa_v0_view
+  pto::Shape<1, 1, 1, -1, -1> v21 = pto::Shape<1, 1, 1, -1, -1>(v16, v17, v18, v5, v6);
+  // pto: %inp__ssa_v0_view
+  pto::Stride<-1, -1, -1, -1, -1> v22 = pto::Stride<-1, -1, -1, -1, -1>(v17 * v20, v20, v19, v6, v7);
+  // pto: %inp__ssa_v0_view
+  GlobalTensor<int8_t, pto::Shape<1, 1, 1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v23 = GlobalTensor<int8_t, pto::Shape<1, 1, 1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v1, v21, v22);
+  // pto: %stage__ssa_v0_view
+  const int64_t v24 = 1;
+  // pto: %stage__ssa_v0_view
+  const int64_t v25 = 1;
+  // pto: %stage__ssa_v0_view
+  const int64_t v26 = 1;
+  // pto: %stage__ssa_v0_view
+  int64_t v27 = v5 * v6;
+  // pto: %stage__ssa_v0_view
+  int64_t v28 = v26 * v27;
+  // pto: %stage__ssa_v0_view
+  pto::Shape<1, 1, 1, -1, -1> v29 = pto::Shape<1, 1, 1, -1, -1>(v24, v25, v26, v5, v6);
+  // pto: %stage__ssa_v0_view
+  pto::Stride<-1, -1, -1, -1, -1> v30 = pto::Stride<-1, -1, -1, -1, -1>(v25 * v28, v28, v27, v6, v7);
+  // pto: %stage__ssa_v0_view
+  GlobalTensor<int8_t, pto::Shape<1, 1, 1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v31 = GlobalTensor<int8_t, pto::Shape<1, 1, 1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v2, v29, v30);
+  set_flag(PIPE_MTE3, PIPE_MTE2, EVENT_ID0);
+  for (int64_t v32 = v8; v32 < v5; v32 += v7) {
+    // pto: %tile__ssa_v0
+    ;
+    Tile<TileType::Vec, int8_t, 1, 16384, BLayout::RowMajor, -1, -1, SLayout::NoneBox, 512, PadValue::Null, CompactMode::Null> v33 = Tile<TileType::Vec, int8_t, 1, 16384, BLayout::RowMajor, -1, -1, SLayout::NoneBox, 512, PadValue::Null, CompactMode::Null>(v7, v9);
+    // pto: %tile__ssa_v0
+    ;
+    uint64_t v34 = (uint64_t) v4;
+    TASSIGN(v33, v34);
+    // pto: %0
+    ;
+    int64_t v35 = v32 < v8 ? v8 : v32;
+    // pto: %inp__ssa_v0_pview
+    ;
+    const int64_t v36 = 0;
+    // pto: %inp__ssa_v0_pview
+    ;
+    __gm__ int8_t* v37 = PTOAS__GLOBAL_TENSOR_DATA(v23);
+    // pto: %inp__ssa_v0_pview
+    ;
+    const int64_t v38 = 1;
+    // pto: %inp__ssa_v0_pview
+    ;
+    const int64_t v39 = 1;
+    // pto: %inp__ssa_v0_pview
+    ;
+    const int64_t v40 = 1;
+    // pto: %inp__ssa_v0_pview
+    ;
+    int64_t v41 = v7 * v6;
+    // pto: %inp__ssa_v0_pview
+    ;
+    int64_t v42 = v40 * v41;
+    // pto: %inp__ssa_v0_pview
+    ;
+    pto::Shape<1, 1, 1, 1, -1> v43 = pto::Shape<1, 1, 1, 1, -1>(v38, v39, v40, v7, v9);
+    // pto: %inp__ssa_v0_pview
+    ;
+    pto::Stride<-1, -1, -1, -1, -1> v44 = pto::Stride<-1, -1, -1, -1, -1>(v39 * v42, v42, v41, v6, v7);
+    // pto: %inp__ssa_v0_pview
+    ;
+    GlobalTensor<int8_t, pto::Shape<1, 1, 1, 1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v45 = GlobalTensor<int8_t, pto::Shape<1, 1, 1, 1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v37 + (v36 + v35 * v6 + v8 * v7), v43, v44);
+    wait_flag(PIPE_MTE3, PIPE_MTE2, EVENT_ID0);
+    TLOAD(v33, v45);
+    set_flag(PIPE_MTE2, PIPE_MTE3, EVENT_ID0);
+    // pto: %stage__iter_v1_pview
+    ;
+    const int64_t v46 = 0;
+    // pto: %stage__iter_v1_pview
+    ;
+    __gm__ int8_t* v47 = PTOAS__GLOBAL_TENSOR_DATA(v31);
+    // pto: %stage__iter_v1_pview
+    ;
+    const int64_t v48 = 1;
+    // pto: %stage__iter_v1_pview
+    ;
+    const int64_t v49 = 1;
+    // pto: %stage__iter_v1_pview
+    ;
+    const int64_t v50 = 1;
+    // pto: %stage__iter_v1_pview
+    ;
+    int64_t v51 = v7 * v6;
+    // pto: %stage__iter_v1_pview
+    ;
+    int64_t v52 = v50 * v51;
+    // pto: %stage__iter_v1_pview
+    ;
+    pto::Shape<1, 1, 1, 1, -1> v53 = pto::Shape<1, 1, 1, 1, -1>(v48, v49, v50, v7, v9);
+    // pto: %stage__iter_v1_pview
+    ;
+    pto::Stride<-1, -1, -1, -1, -1> v54 = pto::Stride<-1, -1, -1, -1, -1>(v49 * v52, v52, v51, v6, v7);
+    // pto: %stage__iter_v1_pview
+    ;
+    GlobalTensor<int8_t, pto::Shape<1, 1, 1, 1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v55 = GlobalTensor<int8_t, pto::Shape<1, 1, 1, 1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v47 + (v46 + v35 * v6 + v8 * v7), v53, v54);
+    wait_flag(PIPE_MTE2, PIPE_MTE3, EVENT_ID0);
+    TSTORE(v55, v33);
+    set_flag(PIPE_MTE3, PIPE_MTE2, EVENT_ID1);
+    // pto: %2
+    ;
+    pto::Shape<1, 1, 1, 4, 131072> v56 = pto::Shape<1, 1, 1, 4, 131072>();
+    // pto: %2
+    ;
+    pto::Stride<524288, 524288, 524288, 131072, 1> v57 = pto::Stride<524288, 524288, 524288, 131072, 1>();
+    // pto: %2
+    ;
+    GlobalTensor<int8_t, pto::Shape<1, 1, 1, 4, 131072>, pto::Stride<524288, 524288, 524288, 131072, 1>, pto::Layout::ND> v58 = GlobalTensor<int8_t, pto::Shape<1, 1, 1, 4, 131072>, pto::Stride<524288, 524288, 524288, 131072, 1>, pto::Layout::ND>((__gm__ int8_t*) v2, v56, v57);
+    __gm__ int8_t* v59 = PTOAS__GLOBAL_TENSOR_DATA(v58);
+    PTOAS__DCCI_SINGLE_CACHE_LINE(v59);
+    pipe_barrier(PIPE_ALL);
+    dsb(DSB_DDR);
+    // pto: %tile__ssa_v1
+    ;
+    Tile<TileType::Vec, int8_t, 1, 16384, BLayout::RowMajor, -1, -1, SLayout::NoneBox, 512, PadValue::Null, CompactMode::Null> v60 = Tile<TileType::Vec, int8_t, 1, 16384, BLayout::RowMajor, -1, -1, SLayout::NoneBox, 512, PadValue::Null, CompactMode::Null>(v7, v9);
+    // pto: %tile__ssa_v1
+    ;
+    uint64_t v61 = (uint64_t) v4;
+    TASSIGN(v60, v61);
+    // pto: %4
+    ;
+    const int64_t v62 = 0;
+    // pto: %4
+    ;
+    __gm__ int8_t* v63 = PTOAS__GLOBAL_TENSOR_DATA(v23);
+    // pto: %4
+    ;
+    const int64_t v64 = 1;
+    // pto: %4
+    ;
+    const int64_t v65 = 1;
+    // pto: %4
+    ;
+    const int64_t v66 = 1;
+    // pto: %4
+    ;
+    int64_t v67 = v7 * v6;
+    // pto: %4
+    ;
+    int64_t v68 = v66 * v67;
+    // pto: %4
+    ;
+    pto::Shape<1, 1, 1, 1, -1> v69 = pto::Shape<1, 1, 1, 1, -1>(v64, v65, v66, v7, v9);
+    // pto: %4
+    ;
+    pto::Stride<-1, -1, -1, -1, -1> v70 = pto::Stride<-1, -1, -1, -1, -1>(v65 * v68, v68, v67, v6, v7);
+    // pto: %4
+    ;
+    GlobalTensor<int8_t, pto::Shape<1, 1, 1, 1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v71 = GlobalTensor<int8_t, pto::Shape<1, 1, 1, 1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v63 + (v62 + v35 * v6 + v9 * v7), v69, v70);
+    wait_flag(PIPE_MTE3, PIPE_MTE2, EVENT_ID1);
+    TLOAD(v60, v71);
+    set_flag(PIPE_MTE2, PIPE_MTE3, EVENT_ID1);
+    // pto: %stage__ssa_v3_pview
+    ;
+    const int64_t v72 = 0;
+    // pto: %stage__ssa_v3_pview
+    ;
+    __gm__ int8_t* v73 = PTOAS__GLOBAL_TENSOR_DATA(v31);
+    // pto: %stage__ssa_v3_pview
+    ;
+    const int64_t v74 = 1;
+    // pto: %stage__ssa_v3_pview
+    ;
+    const int64_t v75 = 1;
+    // pto: %stage__ssa_v3_pview
+    ;
+    const int64_t v76 = 1;
+    // pto: %stage__ssa_v3_pview
+    ;
+    int64_t v77 = v7 * v6;
+    // pto: %stage__ssa_v3_pview
+    ;
+    int64_t v78 = v76 * v77;
+    // pto: %stage__ssa_v3_pview
+    ;
+    pto::Shape<1, 1, 1, 1, -1> v79 = pto::Shape<1, 1, 1, 1, -1>(v74, v75, v76, v7, v9);
+    // pto: %stage__ssa_v3_pview
+    ;
+    pto::Stride<-1, -1, -1, -1, -1> v80 = pto::Stride<-1, -1, -1, -1, -1>(v75 * v78, v78, v77, v6, v7);
+    // pto: %stage__ssa_v3_pview
+    ;
+    GlobalTensor<int8_t, pto::Shape<1, 1, 1, 1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v81 = GlobalTensor<int8_t, pto::Shape<1, 1, 1, 1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v73 + (v72 + v35 * v6 + v9 * v7), v79, v80);
+    wait_flag(PIPE_MTE2, PIPE_MTE3, EVENT_ID1);
+    TSTORE(v81, v60);
+    set_flag(PIPE_MTE3, PIPE_MTE2, EVENT_ID2);
+    __gm__ int8_t* v82 = PTOAS__GLOBAL_TENSOR_DATA(v58);
+    PTOAS__DCCI_SINGLE_CACHE_LINE(v82);
+    pipe_barrier(PIPE_ALL);
+    dsb(DSB_DDR);
+    // pto: %tile__ssa_v2
+    ;
+    Tile<TileType::Vec, int8_t, 1, 16384, BLayout::RowMajor, -1, -1, SLayout::NoneBox, 512, PadValue::Null, CompactMode::Null> v83 = Tile<TileType::Vec, int8_t, 1, 16384, BLayout::RowMajor, -1, -1, SLayout::NoneBox, 512, PadValue::Null, CompactMode::Null>(v7, v9);
+    // pto: %tile__ssa_v2
+    ;
+    uint64_t v84 = (uint64_t) v4;
+    TASSIGN(v83, v84);
+    // pto: %8
+    ;
+    const int64_t v85 = 0;
+    // pto: %8
+    ;
+    __gm__ int8_t* v86 = PTOAS__GLOBAL_TENSOR_DATA(v23);
+    // pto: %8
+    ;
+    const int64_t v87 = 1;
+    // pto: %8
+    ;
+    const int64_t v88 = 1;
+    // pto: %8
+    ;
+    const int64_t v89 = 1;
+    // pto: %8
+    ;
+    int64_t v90 = v7 * v6;
+    // pto: %8
+    ;
+    int64_t v91 = v89 * v90;
+    // pto: %8
+    ;
+    pto::Shape<1, 1, 1, 1, -1> v92 = pto::Shape<1, 1, 1, 1, -1>(v87, v88, v89, v7, v9);
+    // pto: %8
+    ;
+    pto::Stride<-1, -1, -1, -1, -1> v93 = pto::Stride<-1, -1, -1, -1, -1>(v88 * v91, v91, v90, v6, v7);
+    // pto: %8
+    ;
+    GlobalTensor<int8_t, pto::Shape<1, 1, 1, 1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v94 = GlobalTensor<int8_t, pto::Shape<1, 1, 1, 1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v86 + (v85 + v35 * v6 + v10 * v7), v92, v93);
+    wait_flag(PIPE_MTE3, PIPE_MTE2, EVENT_ID2);
+    TLOAD(v83, v94);
+    set_flag(PIPE_MTE2, PIPE_MTE3, EVENT_ID2);
+    // pto: %stage__ssa_v4_pview
+    ;
+    const int64_t v95 = 0;
+    // pto: %stage__ssa_v4_pview
+    ;
+    __gm__ int8_t* v96 = PTOAS__GLOBAL_TENSOR_DATA(v31);
+    // pto: %stage__ssa_v4_pview
+    ;
+    const int64_t v97 = 1;
+    // pto: %stage__ssa_v4_pview
+    ;
+    const int64_t v98 = 1;
+    // pto: %stage__ssa_v4_pview
+    ;
+    const int64_t v99 = 1;
+    // pto: %stage__ssa_v4_pview
+    ;
+    int64_t v100 = v7 * v6;
+    // pto: %stage__ssa_v4_pview
+    ;
+    int64_t v101 = v99 * v100;
+    // pto: %stage__ssa_v4_pview
+    ;
+    pto::Shape<1, 1, 1, 1, -1> v102 = pto::Shape<1, 1, 1, 1, -1>(v97, v98, v99, v7, v9);
+    // pto: %stage__ssa_v4_pview
+    ;
+    pto::Stride<-1, -1, -1, -1, -1> v103 = pto::Stride<-1, -1, -1, -1, -1>(v98 * v101, v101, v100, v6, v7);
+    // pto: %stage__ssa_v4_pview
+    ;
+    GlobalTensor<int8_t, pto::Shape<1, 1, 1, 1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v104 = GlobalTensor<int8_t, pto::Shape<1, 1, 1, 1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v96 + (v95 + v35 * v6 + v10 * v7), v102, v103);
+    wait_flag(PIPE_MTE2, PIPE_MTE3, EVENT_ID2);
+    TSTORE(v104, v83);
+    set_flag(PIPE_MTE3, PIPE_MTE2, EVENT_ID3);
+    __gm__ int8_t* v105 = PTOAS__GLOBAL_TENSOR_DATA(v58);
+    PTOAS__DCCI_SINGLE_CACHE_LINE(v105);
+    pipe_barrier(PIPE_ALL);
+    dsb(DSB_DDR);
+    // pto: %tile__ssa_v3
+    ;
+    Tile<TileType::Vec, int8_t, 1, 16384, BLayout::RowMajor, -1, -1, SLayout::NoneBox, 512, PadValue::Null, CompactMode::Null> v106 = Tile<TileType::Vec, int8_t, 1, 16384, BLayout::RowMajor, -1, -1, SLayout::NoneBox, 512, PadValue::Null, CompactMode::Null>(v7, v9);
+    // pto: %tile__ssa_v3
+    ;
+    uint64_t v107 = (uint64_t) v4;
+    TASSIGN(v106, v107);
+    // pto: %12
+    ;
+    const int64_t v108 = 0;
+    // pto: %12
+    ;
+    __gm__ int8_t* v109 = PTOAS__GLOBAL_TENSOR_DATA(v23);
+    // pto: %12
+    ;
+    const int64_t v110 = 1;
+    // pto: %12
+    ;
+    const int64_t v111 = 1;
+    // pto: %12
+    ;
+    const int64_t v112 = 1;
+    // pto: %12
+    ;
+    int64_t v113 = v7 * v6;
+    // pto: %12
+    ;
+    int64_t v114 = v112 * v113;
+    // pto: %12
+    ;
+    pto::Shape<1, 1, 1, 1, -1> v115 = pto::Shape<1, 1, 1, 1, -1>(v110, v111, v112, v7, v9);
+    // pto: %12
+    ;
+    pto::Stride<-1, -1, -1, -1, -1> v116 = pto::Stride<-1, -1, -1, -1, -1>(v111 * v114, v114, v113, v6, v7);
+    // pto: %12
+    ;
+    GlobalTensor<int8_t, pto::Shape<1, 1, 1, 1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v117 = GlobalTensor<int8_t, pto::Shape<1, 1, 1, 1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v109 + (v108 + v35 * v6 + v11 * v7), v115, v116);
+    wait_flag(PIPE_MTE3, PIPE_MTE2, EVENT_ID3);
+    TLOAD(v106, v117);
+    set_flag(PIPE_MTE2, PIPE_MTE3, EVENT_ID3);
+    // pto: %stage__ssa_v5_pview
+    ;
+    const int64_t v118 = 0;
+    // pto: %stage__ssa_v5_pview
+    ;
+    __gm__ int8_t* v119 = PTOAS__GLOBAL_TENSOR_DATA(v31);
+    // pto: %stage__ssa_v5_pview
+    ;
+    const int64_t v120 = 1;
+    // pto: %stage__ssa_v5_pview
+    ;
+    const int64_t v121 = 1;
+    // pto: %stage__ssa_v5_pview
+    ;
+    const int64_t v122 = 1;
+    // pto: %stage__ssa_v5_pview
+    ;
+    int64_t v123 = v7 * v6;
+    // pto: %stage__ssa_v5_pview
+    ;
+    int64_t v124 = v122 * v123;
+    // pto: %stage__ssa_v5_pview
+    ;
+    pto::Shape<1, 1, 1, 1, -1> v125 = pto::Shape<1, 1, 1, 1, -1>(v120, v121, v122, v7, v9);
+    // pto: %stage__ssa_v5_pview
+    ;
+    pto::Stride<-1, -1, -1, -1, -1> v126 = pto::Stride<-1, -1, -1, -1, -1>(v121 * v124, v124, v123, v6, v7);
+    // pto: %stage__ssa_v5_pview
+    ;
+    GlobalTensor<int8_t, pto::Shape<1, 1, 1, 1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v127 = GlobalTensor<int8_t, pto::Shape<1, 1, 1, 1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v119 + (v118 + v35 * v6 + v11 * v7), v125, v126);
+    wait_flag(PIPE_MTE2, PIPE_MTE3, EVENT_ID3);
+    TSTORE(v127, v106);
+    set_flag(PIPE_MTE3, PIPE_MTE2, EVENT_ID4);
+    __gm__ int8_t* v128 = PTOAS__GLOBAL_TENSOR_DATA(v58);
+    PTOAS__DCCI_SINGLE_CACHE_LINE(v128);
+    pipe_barrier(PIPE_ALL);
+    dsb(DSB_DDR);
+    // pto: %tile__ssa_v4
+    ;
+    Tile<TileType::Vec, int8_t, 1, 16384, BLayout::RowMajor, -1, -1, SLayout::NoneBox, 512, PadValue::Null, CompactMode::Null> v129 = Tile<TileType::Vec, int8_t, 1, 16384, BLayout::RowMajor, -1, -1, SLayout::NoneBox, 512, PadValue::Null, CompactMode::Null>(v7, v9);
+    // pto: %tile__ssa_v4
+    ;
+    uint64_t v130 = (uint64_t) v4;
+    TASSIGN(v129, v130);
+    // pto: %16
+    ;
+    const int64_t v131 = 0;
+    // pto: %16
+    ;
+    __gm__ int8_t* v132 = PTOAS__GLOBAL_TENSOR_DATA(v23);
+    // pto: %16
+    ;
+    const int64_t v133 = 1;
+    // pto: %16
+    ;
+    const int64_t v134 = 1;
+    // pto: %16
+    ;
+    const int64_t v135 = 1;
+    // pto: %16
+    ;
+    int64_t v136 = v7 * v6;
+    // pto: %16
+    ;
+    int64_t v137 = v135 * v136;
+    // pto: %16
+    ;
+    pto::Shape<1, 1, 1, 1, -1> v138 = pto::Shape<1, 1, 1, 1, -1>(v133, v134, v135, v7, v9);
+    // pto: %16
+    ;
+    pto::Stride<-1, -1, -1, -1, -1> v139 = pto::Stride<-1, -1, -1, -1, -1>(v134 * v137, v137, v136, v6, v7);
+    // pto: %16
+    ;
+    GlobalTensor<int8_t, pto::Shape<1, 1, 1, 1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v140 = GlobalTensor<int8_t, pto::Shape<1, 1, 1, 1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v132 + (v131 + v35 * v6 + v12 * v7), v138, v139);
+    wait_flag(PIPE_MTE3, PIPE_MTE2, EVENT_ID4);
+    TLOAD(v129, v140);
+    set_flag(PIPE_MTE2, PIPE_MTE3, EVENT_ID4);
+    // pto: %stage__ssa_v6_pview
+    ;
+    const int64_t v141 = 0;
+    // pto: %stage__ssa_v6_pview
+    ;
+    __gm__ int8_t* v142 = PTOAS__GLOBAL_TENSOR_DATA(v31);
+    // pto: %stage__ssa_v6_pview
+    ;
+    const int64_t v143 = 1;
+    // pto: %stage__ssa_v6_pview
+    ;
+    const int64_t v144 = 1;
+    // pto: %stage__ssa_v6_pview
+    ;
+    const int64_t v145 = 1;
+    // pto: %stage__ssa_v6_pview
+    ;
+    int64_t v146 = v7 * v6;
+    // pto: %stage__ssa_v6_pview
+    ;
+    int64_t v147 = v145 * v146;
+    // pto: %stage__ssa_v6_pview
+    ;
+    pto::Shape<1, 1, 1, 1, -1> v148 = pto::Shape<1, 1, 1, 1, -1>(v143, v144, v145, v7, v9);
+    // pto: %stage__ssa_v6_pview
+    ;
+    pto::Stride<-1, -1, -1, -1, -1> v149 = pto::Stride<-1, -1, -1, -1, -1>(v144 * v147, v147, v146, v6, v7);
+    // pto: %stage__ssa_v6_pview
+    ;
+    GlobalTensor<int8_t, pto::Shape<1, 1, 1, 1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v150 = GlobalTensor<int8_t, pto::Shape<1, 1, 1, 1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v142 + (v141 + v35 * v6 + v12 * v7), v148, v149);
+    wait_flag(PIPE_MTE2, PIPE_MTE3, EVENT_ID4);
+    TSTORE(v150, v129);
+    set_flag(PIPE_MTE3, PIPE_MTE2, EVENT_ID5);
+    __gm__ int8_t* v151 = PTOAS__GLOBAL_TENSOR_DATA(v58);
+    PTOAS__DCCI_SINGLE_CACHE_LINE(v151);
+    pipe_barrier(PIPE_ALL);
+    dsb(DSB_DDR);
+    // pto: %tile__ssa_v5
+    ;
+    Tile<TileType::Vec, int8_t, 1, 16384, BLayout::RowMajor, -1, -1, SLayout::NoneBox, 512, PadValue::Null, CompactMode::Null> v152 = Tile<TileType::Vec, int8_t, 1, 16384, BLayout::RowMajor, -1, -1, SLayout::NoneBox, 512, PadValue::Null, CompactMode::Null>(v7, v9);
+    // pto: %tile__ssa_v5
+    ;
+    uint64_t v153 = (uint64_t) v4;
+    TASSIGN(v152, v153);
+    // pto: %20
+    ;
+    const int64_t v154 = 0;
+    // pto: %20
+    ;
+    __gm__ int8_t* v155 = PTOAS__GLOBAL_TENSOR_DATA(v23);
+    // pto: %20
+    ;
+    const int64_t v156 = 1;
+    // pto: %20
+    ;
+    const int64_t v157 = 1;
+    // pto: %20
+    ;
+    const int64_t v158 = 1;
+    // pto: %20
+    ;
+    int64_t v159 = v7 * v6;
+    // pto: %20
+    ;
+    int64_t v160 = v158 * v159;
+    // pto: %20
+    ;
+    pto::Shape<1, 1, 1, 1, -1> v161 = pto::Shape<1, 1, 1, 1, -1>(v156, v157, v158, v7, v9);
+    // pto: %20
+    ;
+    pto::Stride<-1, -1, -1, -1, -1> v162 = pto::Stride<-1, -1, -1, -1, -1>(v157 * v160, v160, v159, v6, v7);
+    // pto: %20
+    ;
+    GlobalTensor<int8_t, pto::Shape<1, 1, 1, 1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v163 = GlobalTensor<int8_t, pto::Shape<1, 1, 1, 1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v155 + (v154 + v35 * v6 + v13 * v7), v161, v162);
+    wait_flag(PIPE_MTE3, PIPE_MTE2, EVENT_ID5);
+    TLOAD(v152, v163);
+    set_flag(PIPE_MTE2, PIPE_MTE3, EVENT_ID5);
+    // pto: %stage__ssa_v7_pview
+    ;
+    const int64_t v164 = 0;
+    // pto: %stage__ssa_v7_pview
+    ;
+    __gm__ int8_t* v165 = PTOAS__GLOBAL_TENSOR_DATA(v31);
+    // pto: %stage__ssa_v7_pview
+    ;
+    const int64_t v166 = 1;
+    // pto: %stage__ssa_v7_pview
+    ;
+    const int64_t v167 = 1;
+    // pto: %stage__ssa_v7_pview
+    ;
+    const int64_t v168 = 1;
+    // pto: %stage__ssa_v7_pview
+    ;
+    int64_t v169 = v7 * v6;
+    // pto: %stage__ssa_v7_pview
+    ;
+    int64_t v170 = v168 * v169;
+    // pto: %stage__ssa_v7_pview
+    ;
+    pto::Shape<1, 1, 1, 1, -1> v171 = pto::Shape<1, 1, 1, 1, -1>(v166, v167, v168, v7, v9);
+    // pto: %stage__ssa_v7_pview
+    ;
+    pto::Stride<-1, -1, -1, -1, -1> v172 = pto::Stride<-1, -1, -1, -1, -1>(v167 * v170, v170, v169, v6, v7);
+    // pto: %stage__ssa_v7_pview
+    ;
+    GlobalTensor<int8_t, pto::Shape<1, 1, 1, 1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v173 = GlobalTensor<int8_t, pto::Shape<1, 1, 1, 1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v165 + (v164 + v35 * v6 + v13 * v7), v171, v172);
+    wait_flag(PIPE_MTE2, PIPE_MTE3, EVENT_ID5);
+    TSTORE(v173, v152);
+    set_flag(PIPE_MTE3, PIPE_MTE2, EVENT_ID6);
+    __gm__ int8_t* v174 = PTOAS__GLOBAL_TENSOR_DATA(v58);
+    PTOAS__DCCI_SINGLE_CACHE_LINE(v174);
+    pipe_barrier(PIPE_ALL);
+    dsb(DSB_DDR);
+    // pto: %tile__ssa_v6
+    ;
+    Tile<TileType::Vec, int8_t, 1, 16384, BLayout::RowMajor, -1, -1, SLayout::NoneBox, 512, PadValue::Null, CompactMode::Null> v175 = Tile<TileType::Vec, int8_t, 1, 16384, BLayout::RowMajor, -1, -1, SLayout::NoneBox, 512, PadValue::Null, CompactMode::Null>(v7, v9);
+    // pto: %tile__ssa_v6
+    ;
+    uint64_t v176 = (uint64_t) v4;
+    TASSIGN(v175, v176);
+    // pto: %24
+    ;
+    const int64_t v177 = 0;
+    // pto: %24
+    ;
+    __gm__ int8_t* v178 = PTOAS__GLOBAL_TENSOR_DATA(v23);
+    // pto: %24
+    ;
+    const int64_t v179 = 1;
+    // pto: %24
+    ;
+    const int64_t v180 = 1;
+    // pto: %24
+    ;
+    const int64_t v181 = 1;
+    // pto: %24
+    ;
+    int64_t v182 = v7 * v6;
+    // pto: %24
+    ;
+    int64_t v183 = v181 * v182;
+    // pto: %24
+    ;
+    pto::Shape<1, 1, 1, 1, -1> v184 = pto::Shape<1, 1, 1, 1, -1>(v179, v180, v181, v7, v9);
+    // pto: %24
+    ;
+    pto::Stride<-1, -1, -1, -1, -1> v185 = pto::Stride<-1, -1, -1, -1, -1>(v180 * v183, v183, v182, v6, v7);
+    // pto: %24
+    ;
+    GlobalTensor<int8_t, pto::Shape<1, 1, 1, 1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v186 = GlobalTensor<int8_t, pto::Shape<1, 1, 1, 1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v178 + (v177 + v35 * v6 + v14 * v7), v184, v185);
+    wait_flag(PIPE_MTE3, PIPE_MTE2, EVENT_ID6);
+    TLOAD(v175, v186);
+    set_flag(PIPE_MTE2, PIPE_MTE3, EVENT_ID6);
+    // pto: %stage__ssa_v8_pview
+    ;
+    const int64_t v187 = 0;
+    // pto: %stage__ssa_v8_pview
+    ;
+    __gm__ int8_t* v188 = PTOAS__GLOBAL_TENSOR_DATA(v31);
+    // pto: %stage__ssa_v8_pview
+    ;
+    const int64_t v189 = 1;
+    // pto: %stage__ssa_v8_pview
+    ;
+    const int64_t v190 = 1;
+    // pto: %stage__ssa_v8_pview
+    ;
+    const int64_t v191 = 1;
+    // pto: %stage__ssa_v8_pview
+    ;
+    int64_t v192 = v7 * v6;
+    // pto: %stage__ssa_v8_pview
+    ;
+    int64_t v193 = v191 * v192;
+    // pto: %stage__ssa_v8_pview
+    ;
+    pto::Shape<1, 1, 1, 1, -1> v194 = pto::Shape<1, 1, 1, 1, -1>(v189, v190, v191, v7, v9);
+    // pto: %stage__ssa_v8_pview
+    ;
+    pto::Stride<-1, -1, -1, -1, -1> v195 = pto::Stride<-1, -1, -1, -1, -1>(v190 * v193, v193, v192, v6, v7);
+    // pto: %stage__ssa_v8_pview
+    ;
+    GlobalTensor<int8_t, pto::Shape<1, 1, 1, 1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v196 = GlobalTensor<int8_t, pto::Shape<1, 1, 1, 1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v188 + (v187 + v35 * v6 + v14 * v7), v194, v195);
+    wait_flag(PIPE_MTE2, PIPE_MTE3, EVENT_ID6);
+    TSTORE(v196, v175);
+    set_flag(PIPE_MTE3, PIPE_MTE2, EVENT_ID7);
+    __gm__ int8_t* v197 = PTOAS__GLOBAL_TENSOR_DATA(v58);
+    PTOAS__DCCI_SINGLE_CACHE_LINE(v197);
+    pipe_barrier(PIPE_ALL);
+    dsb(DSB_DDR);
+    // pto: %tile__ssa_v7
+    ;
+    Tile<TileType::Vec, int8_t, 1, 16384, BLayout::RowMajor, -1, -1, SLayout::NoneBox, 512, PadValue::Null, CompactMode::Null> v198 = Tile<TileType::Vec, int8_t, 1, 16384, BLayout::RowMajor, -1, -1, SLayout::NoneBox, 512, PadValue::Null, CompactMode::Null>(v7, v9);
+    // pto: %tile__ssa_v7
+    ;
+    uint64_t v199 = (uint64_t) v4;
+    TASSIGN(v198, v199);
+    // pto: %28
+    ;
+    const int64_t v200 = 0;
+    // pto: %28
+    ;
+    __gm__ int8_t* v201 = PTOAS__GLOBAL_TENSOR_DATA(v23);
+    // pto: %28
+    ;
+    const int64_t v202 = 1;
+    // pto: %28
+    ;
+    const int64_t v203 = 1;
+    // pto: %28
+    ;
+    const int64_t v204 = 1;
+    // pto: %28
+    ;
+    int64_t v205 = v7 * v6;
+    // pto: %28
+    ;
+    int64_t v206 = v204 * v205;
+    // pto: %28
+    ;
+    pto::Shape<1, 1, 1, 1, -1> v207 = pto::Shape<1, 1, 1, 1, -1>(v202, v203, v204, v7, v9);
+    // pto: %28
+    ;
+    pto::Stride<-1, -1, -1, -1, -1> v208 = pto::Stride<-1, -1, -1, -1, -1>(v203 * v206, v206, v205, v6, v7);
+    // pto: %28
+    ;
+    GlobalTensor<int8_t, pto::Shape<1, 1, 1, 1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v209 = GlobalTensor<int8_t, pto::Shape<1, 1, 1, 1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v201 + (v200 + v35 * v6 + v15 * v7), v207, v208);
+    wait_flag(PIPE_MTE3, PIPE_MTE2, EVENT_ID7);
+    TLOAD(v198, v209);
+    set_flag(PIPE_MTE2, PIPE_MTE3, EVENT_ID7);
+    // pto: %stage__ssa_v9_pview
+    ;
+    const int64_t v210 = 0;
+    // pto: %stage__ssa_v9_pview
+    ;
+    __gm__ int8_t* v211 = PTOAS__GLOBAL_TENSOR_DATA(v31);
+    // pto: %stage__ssa_v9_pview
+    ;
+    const int64_t v212 = 1;
+    // pto: %stage__ssa_v9_pview
+    ;
+    const int64_t v213 = 1;
+    // pto: %stage__ssa_v9_pview
+    ;
+    const int64_t v214 = 1;
+    // pto: %stage__ssa_v9_pview
+    ;
+    int64_t v215 = v7 * v6;
+    // pto: %stage__ssa_v9_pview
+    ;
+    int64_t v216 = v214 * v215;
+    // pto: %stage__ssa_v9_pview
+    ;
+    pto::Shape<1, 1, 1, 1, -1> v217 = pto::Shape<1, 1, 1, 1, -1>(v212, v213, v214, v7, v9);
+    // pto: %stage__ssa_v9_pview
+    ;
+    pto::Stride<-1, -1, -1, -1, -1> v218 = pto::Stride<-1, -1, -1, -1, -1>(v213 * v216, v216, v215, v6, v7);
+    // pto: %stage__ssa_v9_pview
+    ;
+    GlobalTensor<int8_t, pto::Shape<1, 1, 1, 1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v219 = GlobalTensor<int8_t, pto::Shape<1, 1, 1, 1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v211 + (v210 + v35 * v6 + v15 * v7), v217, v218);
+    wait_flag(PIPE_MTE2, PIPE_MTE3, EVENT_ID7);
+    TSTORE(v219, v198);
+    set_flag(PIPE_MTE3, PIPE_MTE2, EVENT_ID0);
+    __gm__ int8_t* v220 = PTOAS__GLOBAL_TENSOR_DATA(v58);
+    PTOAS__DCCI_SINGLE_CACHE_LINE(v220);
+    pipe_barrier(PIPE_ALL);
+    dsb(DSB_DDR);
+  }
+  wait_flag(PIPE_MTE3, PIPE_MTE2, EVENT_ID0);
+  #endif // __DAV_VEC__
+
+  ptoas_auto_sync_tail(PTOAutoSyncTailMode::kBarrierAll);
+  return;
+}

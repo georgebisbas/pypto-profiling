@@ -1,0 +1,64 @@
+/*
+ * Copyright (c) PyPTO Contributors.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ * -----------------------------------------------------------------------------------------------------------
+ */
+
+// Generated from pypto.runtime.builtins.collectives.all_to_all_v.
+
+#include <cstdint>
+
+#include "orchestration_api.h"
+
+namespace {
+
+template <typename DType>
+void submit_all_to_all_v_kernel(const ChipTaskArgs &orch_args) {
+  const Tensor &input = orch_args.tensor(0).ref();
+  const Tensor &target = orch_args.tensor(1).ref();
+  const Tensor &signal = orch_args.tensor(2).ref();
+  const Tensor &send_counts = orch_args.tensor(3).ref();
+  const Tensor &recv_counts = orch_args.tensor(4).ref();
+
+  CoreTaskArgs params;
+  params.add_input(input);
+  params.add_inout(target);
+  params.add_inout(signal);
+  params.add_input(send_counts);
+  params.add_inout(recv_counts);
+  // No rank-count scalar: the kernel reads CommContext::rankNum, which is the
+  // same number (the context is per comm domain, so its rankNum *is* the
+  // domain size). Dropping it makes this rail's kernel argument layout
+  // identical to the managed CHIP/L2 rail's, so both render one byte-identical
+  // kernel source from the shared template.
+  params.add_scalar(orch_args.scalar(0));  // CommContext device pointer
+  rt_submit_aiv_task(0, params);
+}
+
+}  // namespace
+
+extern "C" {
+
+__attribute__((visibility("default"))) OrchestrationConfig aicpu_orchestration_config(
+    const ChipTaskArgs &orch_args) {
+  (void)orch_args;
+  return OrchestrationConfig{
+      // 5 window tensors + 1 CommContext scalar.
+      .expected_arg_count = 6,
+  };
+}
+
+__attribute__((visibility("default"))) void aicpu_orchestration_entry(const ChipTaskArgs &orch_args) {
+  submit_all_to_all_v_kernel<int8_t>(orch_args);
+}
+
+__attribute__((visibility("default"))) void builtin_tensor_all_to_all_v__int8(const ChipTaskArgs &orch_args) {
+  aicpu_orchestration_entry(orch_args);
+}
+
+}  // extern "C"

@@ -1,0 +1,24 @@
+module attributes {pto.target_arch = "a2a3"} {
+  func.func @stage_step(%arg0: !pto.ptr<i8>, %arg1: !pto.ptr<i8>, %arg2: !pto.ptr<i64>) attributes {pto.kernel_kind = #pto.kernel_kind<vector>} {
+  %c0_i64 = arith.constant 0 : i64
+  %c2_index = arith.constant 2 : index
+  %c1024_index = arith.constant 1024 : index
+  %c1_index = arith.constant 1 : index
+  %c0_index = arith.constant 0 : index
+  %inp__ssa_v0_view = pto.make_tensor_view %arg0, shape = [%c2_index, %c1024_index], strides = [%c1024_index, %c1_index] {layout = #pto.layout<nd>} : !pto.tensor_view<?x?xi8> loc("/opt/pypto/tests/st/distributed/collectives/all_to_all_v_benchmark.py":601:13)
+  %stage__ssa_v0_view = pto.make_tensor_view %arg1, shape = [%c2_index, %c1024_index], strides = [%c1024_index, %c1_index] {layout = #pto.layout<nd>} : !pto.tensor_view<?x?xi8> loc("/opt/pypto/tests/st/distributed/collectives/all_to_all_v_benchmark.py":602:13)
+  scf.for %row__idx_v0 = %c0_index to %c2_index step %c1_index {
+    %chunk__ssa_v0 = pto.alloc_tile addr = %c0_i64 valid_row = %c1_index valid_col = %c1024_index : !pto.tile_buf<loc=vec, dtype=i8, rows=1, cols=1024, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0> loc("/opt/pypto/tests/st/distributed/collectives/all_to_all_v_benchmark.py":605:17)
+    %0 = arith.maxsi %row__idx_v0, %c0_index : index loc("/opt/pypto/tests/st/distributed/collectives/all_to_all_v_benchmark.py":605:25)
+    %inp__ssa_v0_pview = pto.partition_view %inp__ssa_v0_view, offsets = [%0, %c0_index], sizes = [%c1_index, %c1024_index] : !pto.tensor_view<?x?xi8> -> !pto.partition_tensor_view<1x1024xi8> loc("/opt/pypto/tests/st/distributed/collectives/all_to_all_v_benchmark.py":605:25)
+    pto.tload ins(%inp__ssa_v0_pview : !pto.partition_tensor_view<1x1024xi8>) outs(%chunk__ssa_v0 : !pto.tile_buf<loc=vec, dtype=i8, rows=1, cols=1024, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0>) loc("/opt/pypto/tests/st/distributed/collectives/all_to_all_v_benchmark.py":605:25)
+    %1 = arith.maxsi %row__idx_v0, %c0_index : index loc("/opt/pypto/tests/st/distributed/collectives/all_to_all_v_benchmark.py":606:25)
+    %stage__iter_v1_pview = pto.partition_view %stage__ssa_v0_view, offsets = [%1, %c0_index], sizes = [%c1_index, %c1024_index] : !pto.tensor_view<?x?xi8> -> !pto.partition_tensor_view<1x1024xi8> loc("/opt/pypto/tests/st/distributed/collectives/all_to_all_v_benchmark.py":606:25)
+    pto.tstore ins(%chunk__ssa_v0 : !pto.tile_buf<loc=vec, dtype=i8, rows=1, cols=1024, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0>) outs(%stage__iter_v1_pview : !pto.partition_tensor_view<1x1024xi8>) loc("/opt/pypto/tests/st/distributed/collectives/all_to_all_v_benchmark.py":606:25)
+    %2 = pto.partition_view %stage__ssa_v0_view, offsets = [%c0_index, %c0_index], sizes = [%c2_index, %c1024_index] : !pto.tensor_view<?x?xi8> -> !pto.partition_tensor_view<2x1024xi8> loc("/opt/pypto/tests/st/distributed/collectives/all_to_all_v_benchmark.py":606:17)
+    pto.cmo.cacheinvalid %2 single_cache_line : !pto.partition_tensor_view<2x1024xi8> loc("/opt/pypto/tests/st/distributed/collectives/all_to_all_v_benchmark.py":606:17)
+    pto.fence.barrier_all #pto.fence_scope<gm> loc("/opt/pypto/tests/st/distributed/collectives/all_to_all_v_benchmark.py":606:17)
+  }
+  return
+  }
+}
