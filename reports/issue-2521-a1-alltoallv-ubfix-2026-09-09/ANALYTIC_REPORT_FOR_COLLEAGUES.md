@@ -5,7 +5,8 @@
 - **EP2/EP4 full curve:** `issue-2521-a1-alltoallv-ubfix-2026-09-09` (72/72 OK)
 - **EP8 mid-curve + L2 vs HOST:** `issue-2521-a1-alltoallv-ep8-2026-09-10`, `issue-2521-a1-alltoallv-ep8-l2host-2026-09-10` (+ `zero_force_ipc/`)
 - **EP8 continuation (FORCE_IPC):** `issue-2521-a1-alltoallv-ep8-forceipc-2026-09-10` (L2 `24576` + `24960` OK)
-- **EP8 gap-fill (stopped):** `issue-2521-a1-alltoallv-ep8-gapfill-2026-09-10` — only L2 `32768` completed; remaining §4 EP8 holes **not yet done**
+- **EP8 gap-fill (retry):** `issue-2521-a1-alltoallv-ep8-gapfill-2026-09-10` — L2 full curve through 1 MiB + HOST through 32 KiB / patterns; HOST ≥48 KiB still **not yet done**
+
 
 **When (UTC):** EP2/EP4 2026-09-09; EP8 insight + FORCE_IPC probes 2026-09-10  
 **Roadmap (YunjiQin, 2026-09-01):**
@@ -103,7 +104,7 @@ Legend: **Yes** = done as specified · **Partial** = same idea, incomplete cover
 | Question | Answer |
 |----------|--------|
 | Can these numbers be used as a **methodology-correct A1-style baseline**? | **Yes**, for EP2/EP4 full curve; **Yes for EP8 mid-curve insight** (not full §8.3). |
-| Is this the **immutable EP8 pre-change archive** Yunji wants before K1? | **Not yet** — EP8 L2 ≥48 KiB, HOST holes, and most §8.4 patterns **not yet done**; Fabric IPC workaround is local. |
+| Is this the **immutable EP8 pre-change archive** Yunji wants before K1? | **Almost for L2** — full L2 §8.3 curve archived; HOST ≥48 KiB and L2 patterns still **not yet done**; Fabric IPC workaround is local. |
 | Does skipping §8.5 (`L>1`) invalidate A1? | **No for single-AIV pre-change baseline** — A1 is explicitly the current single-AIV kernel; multi-AIV is K2/K3/A3 and needs O2. |
 | Did we run A2/A3? | **No** — DSV4 demo and recommended-`core_num` table are later milestones. |
 
@@ -162,7 +163,7 @@ Multiples of canonical `C=4160` (and 0 B) share a fixed window with `MAX_RECV=Ce
 For L2 rows, **AIV/kernel p50** is the official AIV gang; **full-program slot** is always the host wall clock.  
 For HOST rows, both columns are the **same timing slot** (no AIV gang captured).
 
-**EP8 note:** tables use the same peer list as EP2/EP4. Cells marked **`not yet done`** were not archived (gap-fill stopped 2026-09-10). EP8 mid-curve / DSV4 / L2 `32768` used `SIMPLER_COMM_FORCE_IPC=1` where noted in §9; raw JSON under the `ep8*` report dirs in §8.
+**EP8 note:** tables use the same peer list as EP2/EP4. Cells marked **`not yet done`** were not archived (HOST ≥48 KiB and L2 patterns after box poison). L2 full curve and HOST through 32 KiB used `SIMPLER_COMM_FORCE_IPC=1` where noted in §9; raw JSON under the `ep8*` report dirs in §8.
 
 ### EP=2 · `managed-l2` · uniform
 
@@ -262,27 +263,27 @@ For HOST rows, both columns are the **same timing slot** (no AIV gang captured).
 | 24576 | `aicore_gang_span` | 456.1 | 3691.8 | 3.01 | 6.02 | 24576 |
 | 24960 | `aicore_gang_span` | 589.2 | 11672.3 | 2.26 | 4.52 | 4160 |
 | 32768 | `aicore_gang_span` | 608.7 | 4034.1 | 3.01 | 6.02 | 32768 |
-| 49152 | not yet done | | | | | |
-| 65536 | not yet done | | | | | |
-| 131072 | not yet done | | | | | |
-| 262144 | not yet done | | | | | |
-| 524288 | not yet done | | | | | |
-| 1048576 | not yet done | | | | | |
+| 49152 | `aicore_gang_span` | 850.2 | 4426.5 | 3.23 | 6.46 | 49152 |
+| 65536 | `aicore_gang_span` | 1163.9 | 4776.8 | 3.08 | 6.16 | 65536 |
+| 131072 | `aicore_gang_span` | 2274.6 | 6498.4 | 2.80 | 5.60 | 131072 |
+| 262144 | `aicore_gang_span` | 4570.8 | 9622.9 | 3.22 | 6.45 | 262144 |
+| 524288 | `aicore_gang_span` | 8993.5 | 14278.7 | 3.25 | 6.51 | 524288 |
+| 1048576 | `aicore_gang_span` | 17979.3 | 27197.6 | 3.05 | 6.09 | 1048576 |
 
 ### EP=8 · `managed-host` · uniform
 
 | peer_B | official metric | AIV/kernel p50 (µs) | full-program slot p50 (µs) | egress Gbps | duplex Gbps | row_width |
 |---:|---|---:|---:|---:|---:|---:|
-| 0 | not yet done | | | | | |
+| 0 | `timing_slot` | 11027.0 | 11027.0 | 0.00 | 0.00 | 4160 |
 | 32 | `timing_slot` | 6341.2 | 6341.2 | 0.00 | 0.00 | 32 |
 | 128 | `timing_slot` | 5846.1 | 5846.1 | 0.00 | 0.00 | 128 |
 | 1024 | `timing_slot` | 5548.5 | 5548.5 | 0.01 | 0.02 | 1024 |
 | 4096 | `timing_slot` | 5986.1 | 5986.1 | 0.04 | 0.08 | 4096 |
 | 8192 | `timing_slot` | 6091.4 | 6091.4 | 0.07 | 0.14 | 8192 |
 | 16384 | `timing_slot` | 5833.3 | 5833.3 | 0.15 | 0.31 | 16384 |
-| 24576 | not yet done | | | | | |
-| 24960 | not yet done | | | | | |
-| 32768 | not yet done | | | | | |
+| 24576 | `timing_slot` | 6204.4 | 6204.4 | 0.21 | 0.43 | 24576 |
+| 24960 | `timing_slot` | 12914.2 | 12914.2 | 0.11 | 0.22 | 4160 |
+| 32768 | `timing_slot` | 6349.2 | 6349.2 | 0.28 | 0.55 | 32768 |
 | 49152 | not yet done | | | | | |
 | 65536 | not yet done | | | | | |
 | 131072 | not yet done | | | | | |
@@ -304,8 +305,8 @@ For HOST rows, both columns are the **same timing slot** (no AIV gang captured).
 | `p4_managed-host_single-hot_24960` | 4 | `managed-host` | `single-hot` | `timing_slot` | 7869.6 | 7869.6 | 0.021 |
 | `p8_managed-l2_zero_24960` | 8 | `managed-l2` | `zero` | not yet done | | | |
 | `p8_managed-l2_single-hot_24960` | 8 | `managed-l2` | `single-hot` | not yet done | | | |
-| `p8_managed-host_zero_24960` | 8 | `managed-host` | `zero` | not yet done | | | |
-| `p8_managed-host_single-hot_24960` | 8 | `managed-host` | `single-hot` | not yet done | | | |
+| `p8_managed-host_zero_24960` | 8 | `managed-host` | `zero` | `timing_slot` | 12961.1 | 12961.1 | 0.000 |
+| `p8_managed-host_single-hot_24960` | 8 | `managed-host` | `single-hot` | `timing_slot` | 11017.3 | 11017.3 | 0.017 |
 
 ---
 
@@ -357,21 +358,22 @@ Where HOST is **not yet done**, only L2 AIV / L2 slot are shown. Mid-curve HOST/
 
 | peer_B | L2 AIV p50 (µs) | L2 full slot (µs) | HOST full slot (µs) | HOST/L2 slot | L2 slot / L2 AIV |
 |---:|---:|---:|---:|---:|---:|
+| 0 | 14.7 | 10719.9 | 11027.0 | 1.03× | 729.2× |
 | 32 | 20.3 | 3174.4 | 6341.2 | 2.00× | 156.6× |
 | 128 | 20.1 | 3175.5 | 5846.1 | 1.84× | 158.0× |
 | 1024 | 33.4 | 3392.0 | 5548.5 | 1.64× | 101.6× |
 | 4096 | 88.4 | 3344.6 | 5986.1 | 1.79× | 37.8× |
 | 8192 | 167.1 | 3504.2 | 6091.4 | 1.74× | 21.0× |
 | 16384 | 313.1 | 3716.2 | 5833.3 | 1.57× | 11.9× |
-| 24576 | 456.1 | 3691.8 | not yet done | | 8.1× |
-| 24960 | 589.2 | 11672.3 | not yet done | | 19.8× |
-| 32768 | 608.7 | 4034.1 | not yet done | | 6.6× |
-| 49152 | not yet done | | | | |
-| 65536 | not yet done | | | | |
-| 131072 | not yet done | | | | |
-| 262144 | not yet done | | | | |
-| 524288 | not yet done | | | | |
-| 1048576 | not yet done | | | | |
+| 24576 | 456.1 | 3691.8 | 6204.4 | 1.68× | 8.1× |
+| 24960 | 589.2 | 11672.3 | 12914.2 | 1.11× | 19.8× |
+| 32768 | 608.7 | 4034.1 | 6349.2 | 1.57× | 6.6× |
+| 49152 | 850.2 | 4426.5 | not yet done | | 5.2× |
+| 65536 | 1163.9 | 4776.8 | not yet done | | 4.1× |
+| 131072 | 2274.6 | 6498.4 | not yet done | | 2.9× |
+| 262144 | 4570.8 | 9622.9 | not yet done | | 2.1× |
+| 524288 | 8993.5 | 14278.7 | not yet done | | 1.6× |
+| 1048576 | 17979.3 | 27197.6 | not yet done | | 1.5× |
 
 ### 5.1 Reading guide
 
@@ -415,8 +417,14 @@ AIV time scales roughly with peer count (more remote traffic), while egress Gbps
 | 24576 | 456.1 | 204.9 | 2.2× |
 | 24960 | 589.2 | 268.2 | 2.2× |
 | 32768 | 608.7 | 268.9 | 2.3× |
+| 49152 | 850.2 | 410.2 | 2.1× |
+| 65536 | 1163.9 | 534.7 | 2.2× |
+| 131072 | 2274.6 | 1067.3 | 2.1× |
+| 262144 | 4570.8 | 2402.3 | 1.9× |
+| 524288 | 8993.5 | 4231.0 | 2.1× |
+| 1048576 | 17979.3 | 8564.4 | 2.1× |
 
-EP8 gang AIV is ~**2.1–2.3×** EP4 at matched sizes; egress stays in a similar ~2.3–3.0 Gbps plateau (through 32 KiB so far).
+EP8 gang AIV is ~**1.9–2.3×** EP4 at matched sizes; egress stays in a similar ~2.3–3.3 Gbps plateau through 1 MiB.
 
 ---
 
@@ -424,8 +432,8 @@ EP8 gang AIV is ~**2.1–2.3×** EP4 at matched sizes; egress stays in a similar
 
 1. **HOST AIV not captured** — swimlane name_map does not yet attribute the HOST-rail builtin collective; HOST official metric remains timing_slot only (§2 checklist: Partial vs §8.7).
 2. **Harness overhead vs §8.1** — roadmap wants stage/consume out of the timing slot; our slot includes them. Official **AIV** column still excludes them. Prefer AIV for kernel claims; prefer slot-vs-slot for HOST/L2 end-to-end.
-3. **Box limits** — 8× 910B2, no `task-submit`; EP8 in §4 is **partial** (L2 through 32 KiB + DSV4 24960; HOST through 16 KiB); larger / pattern cells **not yet done**; **EP16 not run**. `core_num>1` rejected (O2).
-4. **Pattern coverage** — uniform / zero / single-hot on EP2/EP4; EP8 patterns **not yet done**; self-only, mixed, asymmetric, random still open.
+3. **Box limits** — 8× 910B2, no `task-submit`; EP8 L2 uniform **full §8.3 curve** archived; HOST through 32 KiB (+ mid-curve holes); HOST ≥48 KiB and L2 patterns **not yet done**; **EP16 not run**. `core_num>1` rejected (O2).
+4. **Pattern coverage** — uniform / zero / single-hot on EP2/EP4; EP8 HOST zero/single-hot @24960 **done**; EP8 L2 patterns **not yet done**; self-only, mixed, asymmetric, random still open.
 5. **Flakes** — EP2/EP4: 3× `release_domain` + 1× HOST mismatch, cleared on retry (72/72). EP8: Fabric “cross-server” → poison / `release_domain`; mitigated with **`SIMPLER_COMM_FORCE_IPC=1`**, widened Fabric→IPC fallback, retries + EP4 heal.
 6. **24960 / 0 B slots** can look inflated vs neighbors (setup / pattern effects); prefer L2 AIV column for kernel trends. EP8 zero slot (~10.7 ms) and EP8 **24960** slot (~11.7 ms) are high vs mid-curve (~3.2–3.7 ms).
 7. **PR #2690** (InCore composite staging tile cap) does **not** explain these numbers; this campaign is managed HOST/L2 builtins. The UB fix was harness stage/consume tiling only.
@@ -435,11 +443,11 @@ EP8 gang AIV is ~**2.1–2.3×** EP4 at matched sizes; egress stays in a similar
 
 ## 7. Bottom line for planning
 
-- **Roadmap:** EP2/EP4 = methodology-complete A1-style baseline; EP8 numbers live in **§4** / **§5** (partial; incomplete cells labeled **not yet done**). Fabric notes in **§9**.
+- **Roadmap:** EP2/EP4 = methodology-complete A1-style baseline; EP8 L2 full curve + HOST through 32 KiB in **§4** / **§5** (HOST ≥48 KiB labeled **not yet done**). Fabric notes in **§9**.
 - Use **L2 AIV gang** as the A1 “collective performance” number (roadmap official column).
-- Use **full-program slot** when comparing HOST vs L2 end-to-end on this harness (~1.1–2× on EP2/EP4; **~1.6–2.0× on EP8** mid-curve).
+- Use **full-program slot** when comparing HOST vs L2 end-to-end on this harness (~1.1–2× on EP2/EP4; **~1.1–2.0× on EP8** where both rails exist).
 - Treat large-payload success (≥256 KiB) as a **harness correctness/capacity** win, not a transport redesign.
-- **Not yet done (EP8):** L2 ≥48 KiB; HOST `0` / `24576` / `24960` / ≥32 KiB; EP8 zero/single-hot @24960; remaining §8.4 patterns; EP16; HOST AIV attribution; upstream Fabric/IPC fix.
+- **Not yet done (EP8):** HOST ≥48 KiB; L2 zero/single-hot @24960; remaining §8.4 patterns; EP16; HOST AIV attribution; upstream Fabric/IPC fix.
 
 ---
 
@@ -459,7 +467,7 @@ EP8 gang AIV is ~**2.1–2.3×** EP4 at matched sizes; egress stays in a similar
 | `../issue-2521-a1-alltoallv-ep8-2026-09-10/` | EP8 L2 resume + debug |
 | `../issue-2521-a1-alltoallv-ep8-l2host-2026-09-10/` | EP8 L2 vs HOST + `zero_force_ipc/` |
 | `../issue-2521-a1-alltoallv-ep8-forceipc-2026-09-10/` | FORCE_IPC continuation (L2 `24576`, `24960` OK) |
-| `../issue-2521-a1-alltoallv-ep8-gapfill-2026-09-10/` | Gap-fill **stopped**; only L2 `32768` OK; other attempted sizes failed or not run |
+| `../issue-2521-a1-alltoallv-ep8-gapfill-2026-09-10/` | Gap-fill retry: L2 full curve + HOST through 32 KiB / HOST patterns; see §9.1 |
 
 ---
 
@@ -467,22 +475,21 @@ EP8 gang AIV is ~**2.1–2.3×** EP4 at matched sizes; egress stays in a similar
 
 **Numbers:** EP8 result tables and comparisons are in **§4** and **§5** (same layout as EP2/EP4). This section is only the EP8 measurement story and local IPC workaround.
 
-Devices `0–7`, `L=1`, INT8, §8.6 persistent, `--profile both` (100 slot + 8 swimlane). Mid-curve + FORCE_IPC probes archived; **gap-fill experiments were stopped** (2026-09-10) — incomplete cells are labeled **not yet done** in §4/§5.
+Devices `0–7`, `L=1`, INT8, §8.6 persistent, `--profile both` (100 slot + 8 swimlane). Mid-curve + FORCE_IPC + **gap-fill retry** archived. Incomplete cells remain labeled **not yet done** in §4/§5.
 
-### 9.1 Not yet done (EP8)
+### 9.1 Status after gap-fill retry (2026-09-10)
 
 | Item | Status |
 |------|--------|
-| L2 uniform `0…32768` + `24576`/`24960` | **Done** (see §4) |
-| L2 uniform `49152` | **Not yet done** — attempted 4/4 FAIL (correctness / SIGSEGV under FORCE_IPC) |
-| L2 uniform `65536…1048576` | **Not yet done** — not completed (`65536` started failing; campaign stopped) |
-| HOST uniform `32…16384` | **Done** (see §4) |
-| HOST uniform `0`, `24576`, `24960`, `32768…1048576` | **Not yet done** (HOST `0` attempt aborted when experiments stopped) |
-| EP8 zero / single-hot @ `24960` | **Not yet done** |
+| L2 uniform `0…1048576` (full §8.3 list) | **Done** (see §4) |
+| HOST uniform `0…32768` (+ mid-curve 32…16 KiB) | **Done** (see §4) |
+| HOST uniform `49152…1048576` | **Not yet done** — `49152` FAIL 5/5 after box poison; heal `rc=-11`; campaign stopped |
+| EP8 HOST zero / single-hot @ `24960` | **Done** |
+| EP8 L2 zero / single-hot @ `24960` | **Not yet done** — SIGSEGV thrash after long L2 curve; aborted |
 | Remaining §8.4 patterns; EP16 | **Not yet done** |
 | Upstream Fabric/IPC fix | Local FORCE_IPC only |
 
-Logs: `../issue-2521-a1-alltoallv-ep8-gapfill-2026-09-10/{sweep,sweep_host}.log`.
+Logs: `../issue-2521-a1-alltoallv-ep8-gapfill-2026-09-10/{sweep_retry,sweep_host_large}.log`.
 
 ### 9.2 FORCE_IPC probe notes (2026-09-10)
 
@@ -622,4 +629,4 @@ Per-point files under `json/*.json` / harness `--output-json`:
 
 Campaign rollup: each report dir’s `summary.json` + `campaign_meta.json` + `sweep.log`.
 
-*Updated 2026-09-10: EP8 in §4/§5; gap-fill **stopped**; incomplete cells marked **not yet done**; FORCE_IPC notes in §9; scripts under `collectives/a1_alltoallv/`.*
+*Updated 2026-09-10: EP8 L2 full curve + HOST through 32 KiB in §4/§5; HOST ≥48 KiB / L2 patterns still **not yet done**; FORCE_IPC notes in §9.*

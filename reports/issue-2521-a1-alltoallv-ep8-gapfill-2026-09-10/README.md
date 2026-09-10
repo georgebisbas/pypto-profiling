@@ -1,21 +1,18 @@
-# EP8 gap-fill (2026-09-10) — STOPPED
+# EP8 gap-fill (2026-09-10) — retry results
 
-Experiments **stopped** by request. Incomplete sizes remain **not yet done** in the
-analytic report §4 / §5 / §9.1.
-
-## Completed here
+## Done
 
 | Tag | Result |
 |-----|--------|
-| `p8_managed-l2_uniform_32768` | **OK** |
+| L2 uniform `32768…1048576` | **OK** (full large curve) |
+| HOST uniform `0`, `24576`, `24960`, `32768` | **OK** |
+| HOST zero / single-hot @ `24960` | **OK** |
 
-## Attempted, not completed
+## Not yet done
 
-| Tag | Result |
+| Tag | Notes |
 |-----|--------|
-| `p8_managed-l2_uniform_49152` | FAIL 4/4 (correctness / SIGSEGV) |
-| `p8_managed-l2_uniform_65536` | FAIL (campaign aborted mid-retries) |
-| `p8_managed-host_uniform_0` | aborted when experiments stopped |
-| L2 `131072…1048576`, HOST holes, patterns | **not yet done** (not run) |
+| HOST uniform `49152…1048576` | `49152` FAIL 5/5; heal poisoned (`rc=-11`); stopped |
+| L2 zero / single-hot @ `24960` | SIGSEGV thrash after long L2 curve; aborted |
 
-See `sweep.log`, `sweep_host.log`, `json/`, `attempt_logs/`.
+Logs: `sweep_retry.log`, `sweep_host_large.log`, `json/`, `attempt_logs/`.
