@@ -112,3 +112,102 @@ RuntimeError: release_domain(allocation_id=0) failed on 8/8 chips; first error c
 
 
 === p8_managed-l2_uniform_65536 devices=0,1,2,3,4,5,6,7 attempts=4 ===
+  FAIL attempt=1/4 rc=-11
+w(handle)
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 9215, in _release_domain_now
+    raise failure
+  File "/opt/pypto/python/pypto/runtime/distributed_runner.py", line 3019, in close
+    self._release_persistent_domains(self._persistent_domains_by_program)
+  File "/opt/pypto/python/pypto/runtime/distributed_runner.py", line 2069, in _release_persistent_domains
+    handle.release()
+  File "/opt/pypto/runtime/python/simpler/task_interface.py", line 1121, in release
+    self._release_fn(self)
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 8970, in <lambda>
+    _release_fn=lambda released, owner=resources: self._release_domain_handle(released, owner),
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 9107, in _release_domain_handle
+    self._free_domain_after_fence(handle)
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 9176, in _free_domain_after_fence
+    self._release_domain_now(handle)
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 9248, in _release_domain_now
+    raise result.error
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 1339, in invoke
+    result.value = operation()
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 9232, in release_claim
+    self._release_domain_claimed(handle)
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 9293, in _release_domain_claimed
+    _run_with_owned_shared_memory(
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 1643, in _run_with_owned_shared_memory
+    raise result.error
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 1339, in invoke
+    result.value = operation()
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 1636, in run_lifecycle
+    raise operation_error
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 1623, in run_lifecycle
+    value = operation(owner)
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 9281, in release
+    self._dispatch_control_domain(
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 9334, in _dispatch_control_domain
+    raise RuntimeError(
+RuntimeError: release_domain(allocation_id=0) failed on 8/8 chips; first error chip=2: control_release_domain: child process pid=2008017 exited before mailbox completion (exit_status=0)
+/usr/lib/python3.10/multiprocessing/resource_tracker.py:224: UserWarning: resource_tracker: There appear to be 8 leaked shared_memory objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '
+
+  [heal] EP4 smoke on 0,1,2,3 ...
+  [heal] rc=-11 FAIL
+ 1636, in run_lifecycle
+    raise operation_error
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 1623, in run_lifecycle
+    value = operation(owner)
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 9281, in release
+    self._dispatch_control_domain(
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 9334, in _dispatch_control_domain
+    raise RuntimeError(
+RuntimeError: release_domain(allocation_id=0) failed on 4/4 chips; first error chip=1: control_release_domain: child process pid=2053191 exited before mailbox completion (exit_status=0)
+/usr/lib/python3.10/multiprocessing/resource_tracker.py:224: UserWarning: resource_tracker: There appear to be 4 leaked shared_memory objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '
+
+  [cooldown] sleeping 25s before retry
+  FAIL attempt=2/4 rc=-11
+ close
+    raise result
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 12056, in close
+    self._teardown_ready_tree()
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 12469, in _teardown_ready_tree
+    self._teardown_worker_tree(startup_abort=False)
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 12352, in _teardown_worker_tree
+    raise journal_err
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 3882, in drive
+    cleanup_fn()
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 10252, in _release_all_live_domains
+    _raise_first(_release, list(live_domains.values())[::-1])
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 1107, in _raise_first
+    raise first_error
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 1102, in _raise_first
+    step(item)
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 10247, in _release
+    self._release_domain_now(handle)
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 9248, in _release_domain_now
+    raise result.error
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 1339, in invoke
+    result.value = operation()
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 9232, in release_claim
+    self._release_domain_claimed(handle)
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 9293, in _release_domain_claimed
+    _run_with_owned_shared_memory(
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 1643, in _run_with_owned_shared_memory
+    raise result.error
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 1339, in invoke
+    result.value = operation()
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 1636, in run_lifecycle
+    raise operation_error
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 1623, in run_lifecycle
+    value = operation(owner)
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 9281, in release
+    self._dispatch_control_domain(
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 9334, in _dispatch_control_domain
+    raise RuntimeError(
+RuntimeError: release_domain(allocation_id=0) failed on 8/8 chips; first error chip=2: control_release_domain: child process pid=2091936 exited before mailbox completion (exit_status=0)
+/usr/lib/python3.10/multiprocessing/resource_tracker.py:224: UserWarning: resource_tracker: There appear to be 8 leaked shared_memory objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '
+
+  [heal] EP4 smoke on 0,1,2,3 ...

@@ -1,9 +1,21 @@
-# EP8 gap-fill (2026-09-10)
+# EP8 gap-fill (2026-09-10) — STOPPED
 
-Fills remaining `—` cells in the analytic report §4 EP8 tables.
+Experiments **stopped** by request. Incomplete sizes remain **not yet done** in the
+analytic report §4 / §5 / §9.1.
 
-**Phase 1 (running):** L2 uniform `32768…1048576` with `A2AV_FORCE_IPC=1`.
+## Completed here
 
-**Later:** HOST `0,24576,24960` + large sizes; zero/single-hot @ 24960.
+| Tag | Result |
+|-----|--------|
+| `p8_managed-l2_uniform_32768` | **OK** |
 
-See `sweep.log` / `summary.json` / `json/`.
+## Attempted, not completed
+
+| Tag | Result |
+|-----|--------|
+| `p8_managed-l2_uniform_49152` | FAIL 4/4 (correctness / SIGSEGV) |
+| `p8_managed-l2_uniform_65536` | FAIL (campaign aborted mid-retries) |
+| `p8_managed-host_uniform_0` | aborted when experiments stopped |
+| L2 `131072…1048576`, HOST holes, patterns | **not yet done** (not run) |
+
+See `sweep.log`, `sweep_host.log`, `json/`, `attempt_logs/`.
