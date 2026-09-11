@@ -5,7 +5,7 @@
 - **EP2/EP4 full curve:** `issue-2521-a1-alltoallv-ubfix-2026-09-09` (72/72 OK)
 - **EP8 mid-curve + L2 vs HOST:** `issue-2521-a1-alltoallv-ep8-2026-09-10`, `issue-2521-a1-alltoallv-ep8-l2host-2026-09-10` (+ `zero_force_ipc/`)
 - **EP8 continuation (FORCE_IPC):** `issue-2521-a1-alltoallv-ep8-forceipc-2026-09-10` (L2 `24576` + `24960` OK)
-- **EP8 gap-fill / open-items:** `issue-2521-a1-alltoallv-ep8-gapfill-2026-09-10` — L2 full curve + all L2 patterns; HOST nearly full (missing `65536` + HOST `self-only`)
+- **EP8 gap-fill / open-items:** `issue-2521-a1-alltoallv-ep8-gapfill-2026-09-10` — L2 + HOST full §8.3 uniform through 1 MiB; all seven EP8 patterns @24960 on both rails
 
 
 **When (UTC):** EP2/EP4 2026-09-09; EP8 insight + FORCE_IPC probes 2026-09-10  
@@ -45,18 +45,18 @@ Everything needed to **inspect** what ran is in **this** repository (not upstrea
 
 ## 1. Executive summary
 
-We measured managed **CHIP/L2** and managed **HOST/L3** `pld.tensor.all_to_all_v` (INT8 builtin, `core_num=1`) on a local 8× Ascend 910B2 box for **EP=2**, **EP=4**, and **EP=8** (devices 0–7). EP2/EP4 cover the full §8.3 payload curve (0 B…1 MiB) plus zero / single-hot @ 24960. EP8 now has the **full L2 uniform §8.3 curve through 1 MiB**, HOST through **32 KiB** (including `0` / `24576` / `24960`), and HOST zero/single-hot @ 24960 — under `SIMPLER_COMM_FORCE_IPC=1` where needed. HOST ≥48 KiB and L2 patterns remain **not yet done** (§9.1).
+We measured managed **CHIP/L2** and managed **HOST/L3** `pld.tensor.all_to_all_v` (INT8 builtin, `core_num=1`) on a local 8× Ascend 910B2 box for **EP=2**, **EP=4**, and **EP=8** (devices 0–7). EP2/EP4 cover the full §8.3 payload curve (0 B…1 MiB) plus zero / single-hot @ 24960. EP8 now has the **full L2 and HOST uniform §8.3 curves through 1 MiB** and **all seven §8.4 patterns @24960 on both rails** — under `SIMPLER_COMM_FORCE_IPC=1` where needed. Remaining gaps are EP16 / HOST AIV / upstream Fabric (§9.1).
 
-**Roadmap accordance (short):** EP2/EP4 follow Yunji’s **A1 measurement contract** (§8.2–§8.7) as far as this box allows. EP8 L2 §8.3 is **archived**; HOST rail is still partial. See **§2** and **§9**.
+**Roadmap accordance (short):** EP2/EP4 follow Yunji’s **A1 measurement contract** (§8.2–§8.7) as far as this box allows. EP8 L2+HOST §8.3/§8.4 are **archived** on this box. See **§2** and **§9**.
 
 **Main findings:**
 
 1. **Large C′ payloads (≥256 KiB) are now runnable** after a harness fix that chunks stage/consume `pl.load` tiles to 16 KiB (VEC UB ≈ 184 KiB). Earlier campaigns failed compile with `Vec buffer usage exceeds platform limit`.
 2. **L2 collective AIV time is small and scales ~linearly with payload** once past ~8–16 KiB, with remote egress plateauing around **~2.3–2.5 Gbps (EP2)**, **~2.6–2.9 Gbps (EP4)**, and **~2.3–3.3 Gbps (EP8 through 1 MiB)**.
 3. **L2 full-program wall time is much larger than AIV time at small/mid sizes** (often ~10–60×), because the timed program includes stage + consume + runtime dispatch—not only the collective kernel. At EP8 1 MiB, slot/AIV shrinks to ~1.5×.
-4. **Fair HOST vs L2 comparison (full-program slot vs slot):** L2 is faster by about **~1.1–2.0×** on EP2/EP4, and **~1.1–2.0×** on EP8 where both rails exist (mid-curve + through 32 KiB) — not orders of magnitude. The gap shrinks as payload grows (EP2/EP4 at 1 MiB: ~1.1–1.2×; EP8 @24960: ~1.1×).
+4. **Fair HOST vs L2 comparison (full-program slot vs slot):** L2 is faster by about **~1.1–2.0×** on EP2/EP4/EP8 — not orders of magnitude. The gap shrinks as payload grows (EP2/EP4 at 1 MiB: ~1.1–1.2×; EP8 @64 KiB–1 MiB: ~1.1–1.4×; EP8 @24960: ~1.1×).
 5. **Do not compare L2 “kernel_p50” (AIV gang) to HOST “kernel_p50” (timing slot).** HOST has no AIV swimlane attribution yet; its reported kernel column *is* the full-program slot.
-6. **EP8 Fabric flake:** intermittent `ExportToShareableHandleV2` “cross-server” poisoned long EP8 jobs (often surfaced as `release_domain -1`). Local `SIMPLER_COMM_FORCE_IPC=1` plus a **hardened Fabric→IPC fallback** made the L2 full curve and HOST mid-curve runnable; HOST ≥48 KiB still hit box poison after long runs.
+6. **EP8 Fabric flake:** intermittent `ExportToShareableHandleV2` “cross-server” poisoned long EP8 jobs (often surfaced as `release_domain -1`). Local `SIMPLER_COMM_FORCE_IPC=1` plus a **hardened Fabric→IPC fallback**, retries, and EP4 heal made the full EP8 L2+HOST archive runnable.
 
 ---
 
@@ -86,7 +86,7 @@ Legend: **Yes** = done as specified · **Partial** = same idea, incomplete cover
 | **§8.3** main payload curve | 0, 32, 128, 1K…24K, **24960**, 32K, **48K**, 64K…**1024K** | Exact same list | **Yes** |
 | **§8.3** C′ non-multiples of C | Separate `[P·MAX_RECV, C']` instance | Used for non-multiples of 4160 (e.g. 256K+) | **Yes** |
 | **§8.3** tail cases | 1/15/31/33/4159/4161 B, etc. | Not swept (many rejected by INT8 32-byte row align) | **No** |
-| **§8.4** count patterns | All seven: uniform, zero, self-only, single-hot, mixed, asymmetric, random | Campaign archived **uniform + zero + single-hot** only (harness implements all seven) | **Partial** |
+| **§8.4** count patterns | All seven: uniform, zero, self-only, single-hot, mixed, asymmetric, random | EP2/EP4: uniform + zero + single-hot; **EP8: all seven on L2 and HOST** | **Partial** (EP2/EP4) / **Yes** (EP8) |
 | **§8.5** core / `L` sweep | EP8 `L∈{1,2,4,7,8,10,15,16}`; EP16 `L∈{1,4,8,15,16}` | **`L=1` only**; `core_num>1` rejected (O2 not implemented) | **N/A** for single-AIV A1; **No** for full §8.5 |
 | **§8.6** persistent | `persistent=True`, `reset_persistent_windows=False` | Same | **Yes** |
 | **§8.6** rounds | 5 warmup + **100** measured | Same | **Yes** |
@@ -94,17 +94,17 @@ Legend: **Yes** = done as specified · **Partial** = same idea, incomplete cover
 | **§8.6** EP8/16 open probe | Probe before blaming code under test | N/A at EP2/4 | **N/A** |
 | **§8.7** primary metric | Swimlane AIV gang span, fastest-rank mean (uniform) | L2 → `aicore_gang_span`; HOST → slot only (no AIV name) | **Yes** (L2) / **Partial** (HOST) |
 | **§8.8** JSON | Schema with peer_bytes, persistent, ranks, BW, … | Emitted per point under `json/` | **Yes** (aligned) |
-| **A1 completion** | “0–1024 KiB curve, DSV4 24.375 KiB, combine 48 KiB, uniform/zero/single-hot archived with env record” | Full on **EP2+EP4**; **EP8 L2** full §8.3; **EP8 HOST** through 32 KiB + HOST patterns @24960; HOST ≥48 KiB / L2 patterns open | **Partial** |
-| **A1 completion** | “every count pattern runs without touching any kernel” | Harness can; campaign did not archive all seven | **Partial** |
-| **Official EP priority** | EP8 first (roadmap intro); EP16 in A3 | EP2+EP4 full; **EP8 L2 full**, HOST partial (see §9) | **Partial** |
+| **A1 completion** | “0–1024 KiB curve, DSV4 24.375 KiB, combine 48 KiB, uniform/zero/single-hot archived with env record” | Full on **EP2+EP4**; **EP8 L2+HOST** full §8.3 + all seven patterns @24960 | **Yes** (this box; EP16 N/A) |
+| **A1 completion** | “every count pattern runs without touching any kernel” | Harness can; EP8 archived all seven on both rails | **Yes** (EP8) / **Partial** (EP2/EP4) |
+| **Official EP priority** | EP8 first (roadmap intro); EP16 in A3 | EP2+EP4 full; **EP8 L2+HOST full** on 8-device box; EP16 not run | **Partial** |
 | Plan 110 swimlane helper | Prefer `harness.swimlane.read_swimlane()` | Custom `name_map` + `chip_swimlane_records` parser | **Partial** |
 
 ### 2.2 What “done” means for a colleague
 
 | Question | Answer |
 |----------|--------|
-| Can these numbers be used as a **methodology-correct A1-style baseline**? | **Yes**, for EP2/EP4 full curve; **Yes for EP8 L2 full §8.3**; HOST EP8 only through 32 KiB. |
-| Is this the **immutable EP8 pre-change archive** Yunji wants before K1? | **Almost for L2** — full L2 §8.3 curve archived; HOST ≥48 KiB and L2 patterns still **not yet done**; Fabric IPC workaround is local. |
+| Can these numbers be used as a **methodology-correct A1-style baseline**? | **Yes**, for EP2/EP4 full curve; **Yes for EP8 L2+HOST full §8.3 and §8.4** (FORCE_IPC local). |
+| Is this the **immutable EP8 pre-change archive** Yunji wants before K1? | **Yes on this box** for L2+HOST §8.3/§8.4; Fabric IPC workaround is local; EP16 still N/A. |
 | Does skipping §8.5 (`L>1`) invalidate A1? | **No for single-AIV pre-change baseline** — A1 is explicitly the current single-AIV kernel; multi-AIV is K2/K3/A3 and needs O2. |
 | Did we run A2/A3? | **No** — DSV4 demo and recommended-`core_num` table are later milestones. |
 
@@ -163,7 +163,7 @@ Multiples of canonical `C=4160` (and 0 B) share a fixed window with `MAX_RECV=Ce
 For L2 rows, **AIV/kernel p50** is the official AIV gang; **full-program slot** is always the host wall clock.  
 For HOST rows, both columns are the **same timing slot** (no AIV gang captured).
 
-**EP8 note:** tables use the same peer list as EP2/EP4. Cells marked **`not yet done`** were not archived (HOST ≥48 KiB and L2 patterns after box poison). L2 full curve and HOST through 32 KiB used `SIMPLER_COMM_FORCE_IPC=1` where noted in §9; raw JSON under the `ep8*` report dirs in §8.
+**EP8 note:** tables use the same peer list as EP2/EP4. Full L2+HOST §8.3 and all EP8 patterns used `SIMPLER_COMM_FORCE_IPC=1` where noted in §9; raw JSON under the `ep8*` report dirs in §8.
 
 ### EP=2 · `managed-l2` · uniform
 
@@ -285,7 +285,7 @@ For HOST rows, both columns are the **same timing slot** (no AIV gang captured).
 | 24960 | `timing_slot` | 12914.2 | 12914.2 | 0.11 | 0.22 | 4160 |
 | 32768 | `timing_slot` | 6349.2 | 6349.2 | 0.28 | 0.55 | 32768 |
 | 49152 | `timing_slot` | 6814.1 | 6814.1 | 0.38 | 0.76 | 49152 |
-| 65536 | not yet done | | | | | |
+| 65536 | `timing_slot` | 6586.4 | 6586.4 | 0.55 | 1.10 | 65536 |
 | 131072 | `timing_slot` | 8055.2 | 8055.2 | 0.86 | 1.73 | 131072 |
 | 262144 | `timing_slot` | 11211.2 | 11211.2 | 1.30 | 2.59 | 262144 |
 | 524288 | `timing_slot` | 17766.2 | 17766.2 | 1.65 | 3.29 | 524288 |
@@ -311,7 +311,7 @@ For HOST rows, both columns are the **same timing slot** (no AIV gang captured).
 | `p8_managed-l2_random_24960` | 8 | `managed-l2` | `random` | `aicore_gang_span` | 288.0 | 11186.8 | 2.103 |
 | `p8_managed-host_zero_24960` | 8 | `managed-host` | `zero` | `timing_slot` | 12961.1 | 12961.1 | 0.000 |
 | `p8_managed-host_single-hot_24960` | 8 | `managed-host` | `single-hot` | `timing_slot` | 11017.3 | 11017.3 | 0.017 |
-| `p8_managed-host_self-only_24960` | 8 | `managed-host` | `self-only` | not yet done | | | |
+| `p8_managed-host_self-only_24960` | 8 | `managed-host` | `self-only` | `timing_slot` | 12127.4 | 12127.4 | 0.000 |
 | `p8_managed-host_mixed_24960` | 8 | `managed-host` | `mixed` | `timing_slot` | 12859.7 | 12859.7 | 0.038 |
 | `p8_managed-host_asymmetric_24960` | 8 | `managed-host` | `asymmetric` | `timing_slot` | 12366.1 | 12366.1 | 0.056 |
 | `p8_managed-host_random_24960` | 8 | `managed-host` | `random` | `timing_slot` | 12445.7 | 12445.7 | 0.037 |
@@ -362,7 +362,7 @@ For HOST rows, both columns are the **same timing slot** (no AIV gang captured).
 
 ### EP=8 — fair full-program comparison (slot vs slot) + L2 AIV
 
-Where HOST is **not yet done**, only L2 AIV / L2 slot are shown. Mid-curve HOST/L2 ≈ **1.6–2.0×**.
+Full EP8 HOST+L2 slot comparison. Mid-curve HOST/L2 ≈ **1.5–2.0×**; large sizes ≈ **1.1–1.4×**.
 
 | peer_B | L2 AIV p50 (µs) | L2 full slot (µs) | HOST full slot (µs) | HOST/L2 slot | L2 slot / L2 AIV |
 |---:|---:|---:|---:|---:|---:|
@@ -377,7 +377,7 @@ Where HOST is **not yet done**, only L2 AIV / L2 slot are shown. Mid-curve HOST/
 | 24960 | 589.2 | 11672.3 | 12914.2 | 1.11× | 19.8× |
 | 32768 | 608.7 | 4034.1 | 6349.2 | 1.57× | 6.6× |
 | 49152 | 850.2 | 4426.5 | 6814.1 | 1.54× | 5.2× |
-| 65536 | 1163.9 | 4776.8 | not yet done | | 4.1× |
+| 65536 | 1163.9 | 4776.8 | 6586.4 | 1.38× | 4.1× |
 | 131072 | 2274.6 | 6498.4 | 8055.2 | 1.24× | 2.9× |
 | 262144 | 4570.8 | 9622.9 | 11211.2 | 1.17× | 2.1× |
 | 524288 | 8993.5 | 14278.7 | 17766.2 | 1.24× | 1.6× |
@@ -440,8 +440,8 @@ EP8 gang AIV is ~**1.9–2.3×** EP4 at matched sizes; egress stays in a similar
 
 1. **HOST AIV not captured** — swimlane name_map does not yet attribute the HOST-rail builtin collective; HOST official metric remains timing_slot only (§2 checklist: Partial vs §8.7).
 2. **Harness overhead vs §8.1** — roadmap wants stage/consume out of the timing slot; our slot includes them. Official **AIV** column still excludes them. Prefer AIV for kernel claims; prefer slot-vs-slot for HOST/L2 end-to-end.
-3. **Box limits** — 8× 910B2, no `task-submit`; EP8 L2 uniform **full §8.3 curve** archived; HOST through 32 KiB (+ mid-curve holes); HOST ≥48 KiB and L2 patterns **not yet done**; **EP16 not run**. `core_num>1` rejected (O2).
-4. **Pattern coverage** — uniform / zero / single-hot on EP2/EP4; EP8 HOST zero/single-hot @24960 **done**; EP8 L2 patterns **not yet done**; self-only, mixed, asymmetric, random still open.
+3. **Box limits** — 8× 910B2, no `task-submit`; EP8 L2+HOST uniform **full §8.3** and all seven patterns @24960 archived; **EP16 not run**. `core_num>1` rejected (O2).
+4. **Pattern coverage** — uniform / zero / single-hot on EP2/EP4; **EP8 all seven patterns on L2 and HOST** @24960.
 5. **Flakes** — EP2/EP4: 3× `release_domain` + 1× HOST mismatch, cleared on retry (72/72). EP8: Fabric “cross-server” → poison / `release_domain`; mitigated with **`SIMPLER_COMM_FORCE_IPC=1`**, widened Fabric→IPC fallback, retries + EP4 heal.
 6. **24960 / 0 B slots** can look inflated vs neighbors (setup / pattern effects); prefer L2 AIV column for kernel trends. EP8 zero slot (~10.7 ms) and EP8 **24960** slot (~11.7 ms) are high vs mid-curve (~3.2–3.7 ms).
 7. **PR #2690** (InCore composite staging tile cap) does **not** explain these numbers; this campaign is managed HOST/L2 builtins. The UB fix was harness stage/consume tiling only.
@@ -451,11 +451,11 @@ EP8 gang AIV is ~**1.9–2.3×** EP4 at matched sizes; egress stays in a similar
 
 ## 7. Bottom line for planning
 
-- **Roadmap:** EP2/EP4 complete; EP8 L2 full curve + all §8.4 patterns; HOST almost full (§4/§5). Remaining: HOST `65536`, HOST `self-only` @24960, EP16, upstream Fabric.
+- **Roadmap:** EP2/EP4 complete; EP8 L2+HOST full §8.3 + all §8.4 patterns archived (§4/§5). Remaining: EP16, HOST AIV attribution, upstream Fabric.
 - Use **L2 AIV gang** as the A1 “collective performance” number (roadmap official column).
-- Use **full-program slot** when comparing HOST vs L2 end-to-end (~1.1–2× where both rails exist; ~1.1× at EP8 1 MiB).
+- Use **full-program slot** when comparing HOST vs L2 end-to-end (~1.1–2×; ~1.1× at EP8 1 MiB; ~1.4× at EP8 64 KiB).
 - Treat large-payload success (≥256 KiB) as a **harness correctness/capacity** win, not a transport redesign.
-- **Not yet done:** HOST `65536`; HOST `self-only` @24960; EP16; HOST AIV attribution; upstream Fabric/IPC fix.
+- **Not yet done:** EP16; HOST AIV attribution; upstream Fabric/IPC fix.
 
 ---
 
@@ -475,7 +475,7 @@ EP8 gang AIV is ~**1.9–2.3×** EP4 at matched sizes; egress stays in a similar
 | `../issue-2521-a1-alltoallv-ep8-2026-09-10/` | EP8 L2 resume + debug |
 | `../issue-2521-a1-alltoallv-ep8-l2host-2026-09-10/` | EP8 L2 vs HOST + `zero_force_ipc/` |
 | `../issue-2521-a1-alltoallv-ep8-forceipc-2026-09-10/` | FORCE_IPC continuation (L2 `24576`, `24960` OK) |
-| `../issue-2521-a1-alltoallv-ep8-gapfill-2026-09-10/` | Gap-fill retry: L2 full curve + HOST through 32 KiB / HOST patterns; see §9.1 |
+| `../issue-2521-a1-alltoallv-ep8-gapfill-2026-09-10/` | Gap-fill: L2+HOST full §8.3 + all EP8 patterns; see §9.1 |
 
 ---
 
@@ -483,21 +483,20 @@ EP8 gang AIV is ~**1.9–2.3×** EP4 at matched sizes; egress stays in a similar
 
 **Numbers:** EP8 result tables and comparisons are in **§4** and **§5** (same layout as EP2/EP4). This section is only the EP8 measurement story and local IPC workaround.
 
-Devices `0–7`, `L=1`, INT8, §8.6 persistent, `--profile both` (100 slot + 8 swimlane). Mid-curve + FORCE_IPC + **gap-fill retry** archived. Incomplete cells remain labeled **not yet done** in §4/§5.
+Devices `0–7`, `L=1`, INT8, §8.6 persistent, `--profile both` (100 slot + 8 swimlane). Mid-curve + FORCE_IPC + **gap-fill / last-gaps** archived. Measurable EP8 cells on this box are complete in §4/§5.
 
-### 9.1 Status after open-items retry (2026-09-11)
+### 9.1 Status after last-gaps retry (2026-09-11)
 
 | Item | Status |
 |------|--------|
 | L2 uniform `0…1048576` | **Done** |
-| HOST uniform (all §8.3 except `65536`) | **Done** |
-| HOST uniform `65536` | **Not yet done** — FAIL 5/5 |
+| HOST uniform `0…1048576` (incl. `65536`) | **Done** — `65536` OK attempt=1 (slot **6586.4 µs**, egress **0.55 Gbps**) |
 | EP8 L2 all seven §8.4 patterns @24960 | **Done** |
-| EP8 HOST patterns @24960 | **Done** except `self-only` (FAIL 5/5) |
+| EP8 HOST all seven patterns @24960 | **Done** — `self-only` OK attempt=2 after heal (slot **12127.4 µs**) |
 | EP16 | **Not yet done** (8-device box) |
 | Upstream Fabric/IPC fix | Local FORCE_IPC only |
 
-Logs: `../issue-2521-a1-alltoallv-ep8-gapfill-2026-09-10/sweep_open_2026-09-11.log`.
+Logs: `../issue-2521-a1-alltoallv-ep8-gapfill-2026-09-10/sweep_open_2026-09-11.log`, `sweep_last_gaps_2026-09-11.log`.
 
 ### 9.2 FORCE_IPC probe notes (2026-09-10)
 
@@ -637,4 +636,4 @@ Per-point files under `json/*.json` / harness `--output-json`:
 
 Campaign rollup: each report dir’s `summary.json` + `campaign_meta.json` + `sweep.log`.
 
-*Updated 2026-09-11: open-items campaign done — EP8 L2 all patterns; HOST large sizes except 65536; HOST patterns except self-only.*
+*Updated 2026-09-11: last-gaps filled — EP8 HOST `65536` + HOST `self-only` OK; L2+HOST full §8.3 and all §8.4 patterns archived on this box.*
