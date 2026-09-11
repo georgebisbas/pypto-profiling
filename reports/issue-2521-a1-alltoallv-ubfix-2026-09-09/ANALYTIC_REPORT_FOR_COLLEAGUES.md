@@ -5,7 +5,7 @@
 - **EP2/EP4 full curve:** `issue-2521-a1-alltoallv-ubfix-2026-09-09` (72/72 OK)
 - **EP8 mid-curve + L2 vs HOST:** `issue-2521-a1-alltoallv-ep8-2026-09-10`, `issue-2521-a1-alltoallv-ep8-l2host-2026-09-10` (+ `zero_force_ipc/`)
 - **EP8 continuation (FORCE_IPC):** `issue-2521-a1-alltoallv-ep8-forceipc-2026-09-10` (L2 `24576` + `24960` OK)
-- **EP8 gap-fill (retry):** `issue-2521-a1-alltoallv-ep8-gapfill-2026-09-10` — L2 full curve through 1 MiB + HOST through 32 KiB / patterns; HOST ≥48 KiB still **not yet done**
+- **EP8 gap-fill / open-items:** `issue-2521-a1-alltoallv-ep8-gapfill-2026-09-10` — L2 full curve + all L2 patterns; HOST nearly full (missing `65536` + HOST `self-only`)
 
 
 **When (UTC):** EP2/EP4 2026-09-09; EP8 insight + FORCE_IPC probes 2026-09-10  
@@ -284,12 +284,12 @@ For HOST rows, both columns are the **same timing slot** (no AIV gang captured).
 | 24576 | `timing_slot` | 6204.4 | 6204.4 | 0.21 | 0.43 | 24576 |
 | 24960 | `timing_slot` | 12914.2 | 12914.2 | 0.11 | 0.22 | 4160 |
 | 32768 | `timing_slot` | 6349.2 | 6349.2 | 0.28 | 0.55 | 32768 |
-| 49152 | not yet done | | | | | |
+| 49152 | `timing_slot` | 6814.1 | 6814.1 | 0.38 | 0.76 | 49152 |
 | 65536 | not yet done | | | | | |
-| 131072 | not yet done | | | | | |
-| 262144 | not yet done | | | | | |
-| 524288 | not yet done | | | | | |
-| 1048576 | not yet done | | | | | |
+| 131072 | `timing_slot` | 8055.2 | 8055.2 | 0.86 | 1.73 | 131072 |
+| 262144 | `timing_slot` | 11211.2 | 11211.2 | 1.30 | 2.59 | 262144 |
+| 524288 | `timing_slot` | 17766.2 | 17766.2 | 1.65 | 3.29 | 524288 |
+| 1048576 | `timing_slot` | 29966.7 | 29966.7 | 1.95 | 3.90 | 1048576 |
 
 ### Extra count patterns @ peer_bytes = 24960
 
@@ -303,10 +303,18 @@ For HOST rows, both columns are the **same timing slot** (no AIV gang captured).
 | `p4_managed-l2_single-hot_24960` | 4 | `managed-l2` | `single-hot` | `aicore_gang_span` | 79.5 | 6227.3 | 2.339 |
 | `p4_managed-host_zero_24960` | 4 | `managed-host` | `zero` | `timing_slot` | 7505.6 | 7505.6 | 0.000 |
 | `p4_managed-host_single-hot_24960` | 4 | `managed-host` | `single-hot` | `timing_slot` | 7869.6 | 7869.6 | 0.021 |
-| `p8_managed-l2_zero_24960` | 8 | `managed-l2` | `zero` | not yet done | | | |
-| `p8_managed-l2_single-hot_24960` | 8 | `managed-l2` | `single-hot` | not yet done | | | |
+| `p8_managed-l2_zero_24960` | 8 | `managed-l2` | `zero` | `aicore_gang_span` | 15.2 | 10519.2 | 0.000 |
+| `p8_managed-l2_single-hot_24960` | 8 | `managed-l2` | `single-hot` | `aicore_gang_span` | 88.7 | 10743.8 | 1.342 |
+| `p8_managed-l2_self-only_24960` | 8 | `managed-l2` | `self-only` | `aicore_gang_span` | 42.6 | 10366.4 | 0.000 |
+| `p8_managed-l2_mixed_24960` | 8 | `managed-l2` | `mixed` | `aicore_gang_span` | 244.0 | 12057.4 | 2.054 |
+| `p8_managed-l2_asymmetric_24960` | 8 | `managed-l2` | `asymmetric` | `aicore_gang_span` | 318.0 | 11027.2 | 2.198 |
+| `p8_managed-l2_random_24960` | 8 | `managed-l2` | `random` | `aicore_gang_span` | 288.0 | 11186.8 | 2.103 |
 | `p8_managed-host_zero_24960` | 8 | `managed-host` | `zero` | `timing_slot` | 12961.1 | 12961.1 | 0.000 |
 | `p8_managed-host_single-hot_24960` | 8 | `managed-host` | `single-hot` | `timing_slot` | 11017.3 | 11017.3 | 0.017 |
+| `p8_managed-host_self-only_24960` | 8 | `managed-host` | `self-only` | not yet done | | | |
+| `p8_managed-host_mixed_24960` | 8 | `managed-host` | `mixed` | `timing_slot` | 12859.7 | 12859.7 | 0.038 |
+| `p8_managed-host_asymmetric_24960` | 8 | `managed-host` | `asymmetric` | `timing_slot` | 12366.1 | 12366.1 | 0.056 |
+| `p8_managed-host_random_24960` | 8 | `managed-host` | `random` | `timing_slot` | 12445.7 | 12445.7 | 0.037 |
 
 ---
 
@@ -368,12 +376,12 @@ Where HOST is **not yet done**, only L2 AIV / L2 slot are shown. Mid-curve HOST/
 | 24576 | 456.1 | 3691.8 | 6204.4 | 1.68× | 8.1× |
 | 24960 | 589.2 | 11672.3 | 12914.2 | 1.11× | 19.8× |
 | 32768 | 608.7 | 4034.1 | 6349.2 | 1.57× | 6.6× |
-| 49152 | 850.2 | 4426.5 | not yet done | | 5.2× |
+| 49152 | 850.2 | 4426.5 | 6814.1 | 1.54× | 5.2× |
 | 65536 | 1163.9 | 4776.8 | not yet done | | 4.1× |
-| 131072 | 2274.6 | 6498.4 | not yet done | | 2.9× |
-| 262144 | 4570.8 | 9622.9 | not yet done | | 2.1× |
-| 524288 | 8993.5 | 14278.7 | not yet done | | 1.6× |
-| 1048576 | 17979.3 | 27197.6 | not yet done | | 1.5× |
+| 131072 | 2274.6 | 6498.4 | 8055.2 | 1.24× | 2.9× |
+| 262144 | 4570.8 | 9622.9 | 11211.2 | 1.17× | 2.1× |
+| 524288 | 8993.5 | 14278.7 | 17766.2 | 1.24× | 1.6× |
+| 1048576 | 17979.3 | 27197.6 | 29966.7 | 1.10× | 1.5× |
 
 ### 5.1 Reading guide
 
@@ -443,11 +451,11 @@ EP8 gang AIV is ~**1.9–2.3×** EP4 at matched sizes; egress stays in a similar
 
 ## 7. Bottom line for planning
 
-- **Roadmap:** EP2/EP4 = methodology-complete A1-style baseline; EP8 L2 full curve + HOST through 32 KiB in **§4** / **§5** (HOST ≥48 KiB labeled **not yet done**). Fabric notes in **§9**.
+- **Roadmap:** EP2/EP4 complete; EP8 L2 full curve + all §8.4 patterns; HOST almost full (§4/§5). Remaining: HOST `65536`, HOST `self-only` @24960, EP16, upstream Fabric.
 - Use **L2 AIV gang** as the A1 “collective performance” number (roadmap official column).
-- Use **full-program slot** when comparing HOST vs L2 end-to-end on this harness (~1.1–2× on EP2/EP4; **~1.1–2.0× on EP8** where both rails exist).
+- Use **full-program slot** when comparing HOST vs L2 end-to-end (~1.1–2× where both rails exist; ~1.1× at EP8 1 MiB).
 - Treat large-payload success (≥256 KiB) as a **harness correctness/capacity** win, not a transport redesign.
-- **Not yet done (EP8):** HOST ≥48 KiB; L2 zero/single-hot @24960; remaining §8.4 patterns; EP16; HOST AIV attribution; upstream Fabric/IPC fix.
+- **Not yet done:** HOST `65536`; HOST `self-only` @24960; EP16; HOST AIV attribution; upstream Fabric/IPC fix.
 
 ---
 
@@ -477,19 +485,19 @@ EP8 gang AIV is ~**1.9–2.3×** EP4 at matched sizes; egress stays in a similar
 
 Devices `0–7`, `L=1`, INT8, §8.6 persistent, `--profile both` (100 slot + 8 swimlane). Mid-curve + FORCE_IPC + **gap-fill retry** archived. Incomplete cells remain labeled **not yet done** in §4/§5.
 
-### 9.1 Status after gap-fill retry (2026-09-10)
+### 9.1 Status after open-items retry (2026-09-11)
 
 | Item | Status |
 |------|--------|
-| L2 uniform `0…1048576` (full §8.3 list) | **Done** (see §4) |
-| HOST uniform `0…32768` (+ mid-curve 32…16 KiB) | **Done** (see §4) |
-| HOST uniform `49152…1048576` | **Not yet done** — `49152` FAIL 5/5 after box poison; heal `rc=-11`; campaign stopped |
-| EP8 HOST zero / single-hot @ `24960` | **Done** |
-| EP8 L2 zero / single-hot @ `24960` | **Not yet done** — SIGSEGV thrash after long L2 curve; aborted |
-| Remaining §8.4 patterns; EP16 | **Not yet done** |
+| L2 uniform `0…1048576` | **Done** |
+| HOST uniform (all §8.3 except `65536`) | **Done** |
+| HOST uniform `65536` | **Not yet done** — FAIL 5/5 |
+| EP8 L2 all seven §8.4 patterns @24960 | **Done** |
+| EP8 HOST patterns @24960 | **Done** except `self-only` (FAIL 5/5) |
+| EP16 | **Not yet done** (8-device box) |
 | Upstream Fabric/IPC fix | Local FORCE_IPC only |
 
-Logs: `../issue-2521-a1-alltoallv-ep8-gapfill-2026-09-10/{sweep_retry,sweep_host_large}.log`.
+Logs: `../issue-2521-a1-alltoallv-ep8-gapfill-2026-09-10/sweep_open_2026-09-11.log`.
 
 ### 9.2 FORCE_IPC probe notes (2026-09-10)
 
@@ -629,4 +637,4 @@ Per-point files under `json/*.json` / harness `--output-json`:
 
 Campaign rollup: each report dir’s `summary.json` + `campaign_meta.json` + `sweep.log`.
 
-*Updated 2026-09-10 (late): gap-fill retry archived EP8 L2 through 1 MiB + HOST through 32 KiB; exec summary / §2 aligned; HOST ≥48 KiB still not yet done.*
+*Updated 2026-09-11: open-items campaign done — EP8 L2 all patterns; HOST large sizes except 65536; HOST patterns except self-only.*

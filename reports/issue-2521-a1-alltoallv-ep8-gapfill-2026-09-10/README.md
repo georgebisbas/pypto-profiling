@@ -1,18 +1,13 @@
-# EP8 gap-fill (2026-09-10) — retry results
+# EP8 gap-fill / open-items
 
-## Done
+## 2026-09-11 open-items (`sweep_open_2026-09-11.log`) — DONE
 
-| Tag | Result |
-|-----|--------|
-| L2 uniform `32768…1048576` | **OK** (full large curve) |
-| HOST uniform `0`, `24576`, `24960`, `32768` | **OK** |
-| HOST zero / single-hot @ `24960` | **OK** |
+| Area | Result |
+|------|--------|
+| L2 all 7 patterns @24960 | **OK** |
+| HOST `49152`, `131072…1048576` | **OK** |
+| HOST `65536` | **FAIL** 5/5 |
+| HOST `self-only` @24960 | **FAIL** 5/5 |
+| HOST mixed / asymmetric / random @24960 | **OK** |
 
-## Not yet done
-
-| Tag | Notes |
-|-----|--------|
-| HOST uniform `49152…1048576` | `49152` FAIL 5/5; heal poisoned (`rc=-11`); stopped |
-| L2 zero / single-hot @ `24960` | SIGSEGV thrash after long L2 curve; aborted |
-
-Logs: `sweep_retry.log`, `sweep_host_large.log`, `json/`, `attempt_logs/`.
+See `json/`, attempt logs, and analytic report §4/§5/§9.1.
