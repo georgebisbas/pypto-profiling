@@ -1,0 +1,73 @@
+module attributes {pto.target_arch = "a2a3"} {
+  func.func @consume_step(%arg0: !pto.ptr<i8>, %arg1: !pto.ptr<i32>, %arg2: !pto.ptr<i8>, %arg3: !pto.ptr<i32>, %arg4: !pto.ptr<i64>, %arg5: !pto.ptr<i64>) attributes {pto.kernel_kind = #pto.kernel_kind<vector>} {
+  %c0_i64 = arith.constant 0 : i64
+  %c4_index = arith.constant 4 : index
+  %c49152_index = arith.constant 49152 : index
+  %c1_index = arith.constant 1 : index
+  %c0_index = arith.constant 0 : index
+  %c16384_index = arith.constant 16384 : index
+  %c32768_index = arith.constant 32768 : index
+  %data__ssa_v0_view = pto.make_tensor_view %arg0, shape = [%c4_index, %c49152_index], strides = [%c49152_index, %c1_index] {layout = #pto.layout<nd>} : !pto.tensor_view<?x?xi8> loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":653:13)
+  %recv_counts__ssa_v0_view = pto.make_tensor_view %arg1, shape = [%c4_index, %c1_index], strides = [%c1_index, %c4_index] {layout = #pto.layout<dn>} : !pto.tensor_view<?x?xi32> loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":654:13)
+  %out__ssa_v0_view = pto.make_tensor_view %arg2, shape = [%c4_index, %c49152_index], strides = [%c49152_index, %c1_index] {layout = #pto.layout<nd>} : !pto.tensor_view<?x?xi8> loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":655:13)
+  %recv_out__ssa_v0_view = pto.make_tensor_view %arg3, shape = [%c4_index, %c1_index], strides = [%c1_index, %c4_index] {layout = #pto.layout<dn>} : !pto.tensor_view<?x?xi32> loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":656:13)
+  scf.for %src__idx_v0 = %c0_index to %c4_index step %c1_index {
+    %flat_offset_mul = arith.muli %src__idx_v0, %c1_index : index loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":659:30)
+    %flat_offset = arith.addi %flat_offset_mul, %c0_index : index loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":659:30)
+    %n_rows_i32__tile = pto.load_scalar %arg1[%flat_offset] : !pto.ptr<i32> -> i32 loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":659:30)
+    %0 = arith.muli %src__idx_v0, %c1_index : index loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":660:17)
+    %1 = arith.addi %0, %c0_index : index loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":660:17)
+    pto.store_scalar %n_rows_i32__tile, %arg3[%1] : !pto.ptr<i32>, i32 loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":660:17)
+    %2 = arith.index_cast %n_rows_i32__tile : i32 to index loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":661:17)
+    scf.for %r__idx_v0 = %c0_index to %2 step %c1_index {
+      %3 = arith.addi %src__idx_v0, %r__idx_v0 : index loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":664:21)
+      %tile__ssa_v0 = pto.alloc_tile addr = %c0_i64 valid_row = %c1_index valid_col = %c16384_index : !pto.tile_buf<loc=vec, dtype=i8, rows=1, cols=16384, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0> loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":667:25)
+      %4 = arith.maxsi %3, %c0_index : index loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":667:32)
+      %data__ssa_v0_pview = pto.partition_view %data__ssa_v0_view, offsets = [%4, %c0_index], sizes = [%c1_index, %c16384_index] : !pto.tensor_view<?x?xi8> -> !pto.partition_tensor_view<1x?xi8> loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":667:32)
+      pto.tload ins(%data__ssa_v0_pview : !pto.partition_tensor_view<1x?xi8>) outs(%tile__ssa_v0 : !pto.tile_buf<loc=vec, dtype=i8, rows=1, cols=16384, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0>) loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":667:32)
+      %5 = arith.maxsi %3, %c0_index : index loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":668:31)
+      %out__iter_v3_pview = pto.partition_view %out__ssa_v0_view, offsets = [%5, %c0_index], sizes = [%c1_index, %c16384_index] : !pto.tensor_view<?x?xi8> -> !pto.partition_tensor_view<1x?xi8> loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":668:31)
+      pto.tstore ins(%tile__ssa_v0 : !pto.tile_buf<loc=vec, dtype=i8, rows=1, cols=16384, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0>) outs(%out__iter_v3_pview : !pto.partition_tensor_view<1x?xi8>) loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":668:31)
+      %tile__ssa_v1 = pto.alloc_tile addr = %c0_i64 valid_row = %c1_index valid_col = %c16384_index : !pto.tile_buf<loc=vec, dtype=i8, rows=1, cols=16384, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0> loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":667:25)
+      %6 = arith.maxsi %3, %c0_index : index loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":667:32)
+      %7 = pto.partition_view %data__ssa_v0_view, offsets = [%6, %c16384_index], sizes = [%c1_index, %c16384_index] : !pto.tensor_view<?x?xi8> -> !pto.partition_tensor_view<1x?xi8> loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":667:32)
+      pto.tload ins(%7 : !pto.partition_tensor_view<1x?xi8>) outs(%tile__ssa_v1 : !pto.tile_buf<loc=vec, dtype=i8, rows=1, cols=16384, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0>) loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":667:32)
+      %8 = arith.maxsi %3, %c0_index : index loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":668:31)
+      %out__ssa_v5_pview = pto.partition_view %out__ssa_v0_view, offsets = [%8, %c16384_index], sizes = [%c1_index, %c16384_index] : !pto.tensor_view<?x?xi8> -> !pto.partition_tensor_view<1x?xi8> loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":668:31)
+      pto.tstore ins(%tile__ssa_v1 : !pto.tile_buf<loc=vec, dtype=i8, rows=1, cols=16384, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0>) outs(%out__ssa_v5_pview : !pto.partition_tensor_view<1x?xi8>) loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":668:31)
+      %tile__ssa_v2 = pto.alloc_tile addr = %c0_i64 valid_row = %c1_index valid_col = %c16384_index : !pto.tile_buf<loc=vec, dtype=i8, rows=1, cols=16384, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0> loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":667:25)
+      %9 = arith.maxsi %3, %c0_index : index loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":667:32)
+      %10 = pto.partition_view %data__ssa_v0_view, offsets = [%9, %c32768_index], sizes = [%c1_index, %c16384_index] : !pto.tensor_view<?x?xi8> -> !pto.partition_tensor_view<1x?xi8> loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":667:32)
+      pto.tload ins(%10 : !pto.partition_tensor_view<1x?xi8>) outs(%tile__ssa_v2 : !pto.tile_buf<loc=vec, dtype=i8, rows=1, cols=16384, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0>) loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":667:32)
+      %11 = arith.maxsi %3, %c0_index : index loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":668:31)
+      %out__ssa_v6_pview = pto.partition_view %out__ssa_v0_view, offsets = [%11, %c32768_index], sizes = [%c1_index, %c16384_index] : !pto.tensor_view<?x?xi8> -> !pto.partition_tensor_view<1x?xi8> loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":668:31)
+      pto.tstore ins(%tile__ssa_v2 : !pto.tile_buf<loc=vec, dtype=i8, rows=1, cols=16384, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0>) outs(%out__ssa_v6_pview : !pto.partition_tensor_view<1x?xi8>) loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":668:31)
+    }
+    scf.for %12 = %2 to %c1_index step %c1_index {
+      %13 = arith.addi %src__idx_v0, %12 : index loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":670:21)
+      %tile__ssa_v3 = pto.alloc_tile addr = %c0_i64 valid_row = %c1_index valid_col = %c16384_index : !pto.tile_buf<loc=vec, dtype=i8, rows=1, cols=16384, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0> loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":673:25)
+      %14 = arith.maxsi %13, %c0_index : index loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":673:32)
+      %15 = pto.partition_view %data__ssa_v0_view, offsets = [%14, %c0_index], sizes = [%c1_index, %c16384_index] : !pto.tensor_view<?x?xi8> -> !pto.partition_tensor_view<1x?xi8> loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":673:32)
+      pto.tload ins(%15 : !pto.partition_tensor_view<1x?xi8>) outs(%tile__ssa_v3 : !pto.tile_buf<loc=vec, dtype=i8, rows=1, cols=16384, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0>) loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":673:32)
+      %16 = arith.maxsi %13, %c0_index : index loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":674:31)
+      %out__iter_v8_pview = pto.partition_view %out__ssa_v0_view, offsets = [%16, %c0_index], sizes = [%c1_index, %c16384_index] : !pto.tensor_view<?x?xi8> -> !pto.partition_tensor_view<1x?xi8> loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":674:31)
+      pto.tstore ins(%tile__ssa_v3 : !pto.tile_buf<loc=vec, dtype=i8, rows=1, cols=16384, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0>) outs(%out__iter_v8_pview : !pto.partition_tensor_view<1x?xi8>) loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":674:31)
+      %tile__ssa_v4 = pto.alloc_tile addr = %c0_i64 valid_row = %c1_index valid_col = %c16384_index : !pto.tile_buf<loc=vec, dtype=i8, rows=1, cols=16384, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0> loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":673:25)
+      %17 = arith.maxsi %13, %c0_index : index loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":673:32)
+      %18 = pto.partition_view %data__ssa_v0_view, offsets = [%17, %c16384_index], sizes = [%c1_index, %c16384_index] : !pto.tensor_view<?x?xi8> -> !pto.partition_tensor_view<1x?xi8> loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":673:32)
+      pto.tload ins(%18 : !pto.partition_tensor_view<1x?xi8>) outs(%tile__ssa_v4 : !pto.tile_buf<loc=vec, dtype=i8, rows=1, cols=16384, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0>) loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":673:32)
+      %19 = arith.maxsi %13, %c0_index : index loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":674:31)
+      %out__ssa_v10_pview = pto.partition_view %out__ssa_v0_view, offsets = [%19, %c16384_index], sizes = [%c1_index, %c16384_index] : !pto.tensor_view<?x?xi8> -> !pto.partition_tensor_view<1x?xi8> loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":674:31)
+      pto.tstore ins(%tile__ssa_v4 : !pto.tile_buf<loc=vec, dtype=i8, rows=1, cols=16384, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0>) outs(%out__ssa_v10_pview : !pto.partition_tensor_view<1x?xi8>) loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":674:31)
+      %tile__ssa_v5 = pto.alloc_tile addr = %c0_i64 valid_row = %c1_index valid_col = %c16384_index : !pto.tile_buf<loc=vec, dtype=i8, rows=1, cols=16384, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0> loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":673:25)
+      %20 = arith.maxsi %13, %c0_index : index loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":673:32)
+      %21 = pto.partition_view %data__ssa_v0_view, offsets = [%20, %c32768_index], sizes = [%c1_index, %c16384_index] : !pto.tensor_view<?x?xi8> -> !pto.partition_tensor_view<1x?xi8> loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":673:32)
+      pto.tload ins(%21 : !pto.partition_tensor_view<1x?xi8>) outs(%tile__ssa_v5 : !pto.tile_buf<loc=vec, dtype=i8, rows=1, cols=16384, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0>) loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":673:32)
+      %22 = arith.maxsi %13, %c0_index : index loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":674:31)
+      %out__ssa_v11_pview = pto.partition_view %out__ssa_v0_view, offsets = [%22, %c32768_index], sizes = [%c1_index, %c16384_index] : !pto.tensor_view<?x?xi8> -> !pto.partition_tensor_view<1x?xi8> loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":674:31)
+      pto.tstore ins(%tile__ssa_v5 : !pto.tile_buf<loc=vec, dtype=i8, rows=1, cols=16384, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0>) outs(%out__ssa_v11_pview : !pto.partition_tensor_view<1x?xi8>) loc("/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py":674:31)
+    }
+  }
+  return
+  }
+}
