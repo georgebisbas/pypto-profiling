@@ -1,0 +1,72 @@
+===== NOISE RERUN START 2026-09-14T07:42:30Z =====
+===== EP4 L2 @0 x3 =====
+--- rep=1 07:42:31Z ---
+  OK rep=1 AIV=8.040000000000001 slot=6094.533950090408 eg=0.0
+--- rep=2 07:43:45Z ---
+  OK rep=2 AIV=6.955 slot=5740.2183301746845 eg=0.0
+--- rep=3 07:44:50Z ---
+  OK rep=3 AIV=6.84 slot=5958.520341664553 eg=0.0
+===== EP2 L2 32768/49152/65536 =====
+
+=== p2_managed-l2_uniform_32768 devices=0,1 attempts=4 ===
+  FAIL attempt=1/4 rc=-11
+untime/python/simpler/worker.py", line 9215, in _release_domain_now
+    raise failure
+  File "/opt/pypto/python/pypto/runtime/distributed_runner.py", line 3019, in close
+    self._release_persistent_domains(self._persistent_domains_by_program)
+  File "/opt/pypto/python/pypto/runtime/distributed_runner.py", line 2069, in _release_persistent_domains
+    handle.release()
+  File "/opt/pypto/runtime/python/simpler/task_interface.py", line 1121, in release
+    self._release_fn(self)
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 8970, in <lambda>
+    _release_fn=lambda released, owner=resources: self._release_domain_handle(released, owner),
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 9107, in _release_domain_handle
+    self._free_domain_after_fence(handle)
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 9176, in _free_domain_after_fence
+    self._release_domain_now(handle)
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 9248, in _release_domain_now
+    raise result.error
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 1339, in invoke
+    result.value = operation()
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 9232, in release_claim
+    self._release_domain_claimed(handle)
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 9293, in _release_domain_claimed
+    _run_with_owned_shared_memory(
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 1643, in _run_with_owned_shared_memory
+    raise result.error
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 1339, in invoke
+    result.value = operation()
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 1636, in run_lifecycle
+    raise operation_error
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 1623, in run_lifecycle
+    value = operation(owner)
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 9281, in release
+    self._dispatch_control_domain(
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 9334, in _dispatch_control_domain
+    raise RuntimeError(
+RuntimeError: release_domain(allocation_id=0) failed on 2/2 chips; first error chip=0: control_release_domain failed on child: chip_process dev=0 ctrl=8: RuntimeError: comm_release_domain_windows failed with code -1
+/usr/lib/python3.10/multiprocessing/resource_tracker.py:224: UserWarning: resource_tracker: There appear to be 2 leaked shared_memory objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '
+
+  [cooldown] sleeping 20s before retry
+  OK attempt=2 metric=aicore_gang_span  kernel_p50=107.11000000000001  slot_p50=1840.4526636004448  egress=2.452216618205346
+
+=== p2_managed-l2_uniform_49152 devices=0,1 attempts=4 ===
+  OK attempt=1 metric=aicore_gang_span  kernel_p50=157.98000000000002  slot_p50=1842.243131250143  egress=2.486800477481679
+
+=== p2_managed-l2_uniform_65536 devices=0,1 attempts=4 ===
+  OK attempt=1 metric=aicore_gang_span  kernel_p50=211.63  slot_p50=1869.1280856728554  egress=2.1466758109588198
+
+Wrote /opt/pypto-profiling/reports/issue-2521-a1-alltoallv-noise-rerun-2026-09-14/summary.json
+n_ok=3 n_fail=0
+===== SUMMARY =====
+EP4 L2 @0 repeats:
+  rep1: AIV=8.04 slot=6094.5
+  rep2: AIV=6.96 slot=5740.2
+  rep3: AIV=6.84 slot=5958.5
+  AIV min/median/max = 6.84 / 6.96 / 8.04
+EP2 L2 mid-large:
+  32768: AIV=107.11 slot=1840.5 eg=2.452
+  49152: AIV=157.98 slot=1842.2 eg=2.487
+  65536: AIV=211.63 slot=1869.1 eg=2.147
+===== NOISE RERUN DONE 2026-09-14T07:53:47Z =====
