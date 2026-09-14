@@ -29,3 +29,14 @@ Rails: L2 + HOST. EP: 2, 4, 8. Patterns: uniform only. EP8 uses `A2AV_FORCE_IPC=
 
 24960 slot spike is **real** on EP8 L2 and HOST (same shape effect as EP2/EP4).
 Artifacts: `json/`, `summary.json`, `sweep.log`, `sweep_resume_ep8_2026-09-11d.log`.
+
+## Resolution (2026-09-14)
+
+Two flags from this recheck were **bad swimlane samples**, not real effects — re-validated in `../issue-2521-a1-alltoallv-noise-rerun-2026-09-14/`:
+
+| Cell | weird-recheck | noise re-run verdict | Use for planning |
+|------|---------------|----------------------|------------------|
+| EP4 L2 `@0` AIV | 149 µs | three repeats **~7 µs** | **~7 µs** (not 78 or 149) |
+| EP2 L2 `@49152` egress | 1.52 Gbps | fresh run **2.49 Gbps** | **~2.49 Gbps** (not 2.14 / 1.52) |
+
+Corrected values are in `../issue-2521-a1-alltoallv-ubfix-2026-09-09/ANALYTIC_REPORT_FOR_COLLEAGUES.md` §4/§5. Raw archive JSON here is unchanged.

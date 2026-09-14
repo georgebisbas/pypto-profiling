@@ -6,9 +6,11 @@
 - **EP8 mid-curve + L2 vs HOST:** `issue-2521-a1-alltoallv-ep8-2026-09-10`, `issue-2521-a1-alltoallv-ep8-l2host-2026-09-10` (+ `zero_force_ipc/`)
 - **EP8 continuation (FORCE_IPC):** `issue-2521-a1-alltoallv-ep8-forceipc-2026-09-10` (L2 `24576` + `24960` OK)
 - **EP8 gap-fill / open-items:** `issue-2521-a1-alltoallv-ep8-gapfill-2026-09-10` — L2 + HOST full §8.3 uniform through 1 MiB; all seven EP8 patterns @24960 on both rails
+- **Weird-point recheck:** `issue-2521-a1-alltoallv-weird-recheck-2026-09-11` — EP2/4/8 L2+HOST on `{0,24576,24960,32768,49152}` (30/30 OK)
+- **Noise re-validation:** `issue-2521-a1-alltoallv-noise-rerun-2026-09-14` — EP4 L2 `@0` ×3; EP2 L2 `32768/49152/65536` (corrects two bad cells; §6.9)
 
 
-**When (UTC):** EP2/EP4 2026-09-09; EP8 insight + FORCE_IPC probes 2026-09-10  
+**When (UTC):** EP2/EP4 2026-09-09; EP8 insight + FORCE_IPC probes 2026-09-10; weird recheck 2026-09-11; noise re-run 2026-09-14  
 **Roadmap (YunjiQin, 2026-09-01):**
 [Part 1 — design & §8 benchmark](https://github.com/hw-native-sys/pypto/issues/2521#issuecomment-5495422542) ·
 [Part 2 — work items A1–A3](https://github.com/hw-native-sys/pypto/issues/2521#issuecomment-5495424411)  
@@ -179,8 +181,8 @@ For HOST rows, both columns are the **same timing slot** (no AIV gang captured).
 | 24576 | `aicore_gang_span` | 81.2 | 1758.8 | 2.42 | 4.84 | 24576 |
 | 24960 | `aicore_gang_span` | 107.0 | 3065.2 | 0.74 | 1.48 | 4160 |
 | 32768 | `aicore_gang_span` | 107.1 | 1955.0 | 2.45 | 4.90 | 32768 |
-| 49152 | `aicore_gang_span` | 165.2 | 1955.1 | 2.14 | 4.27 | 49152 |
-| 65536 | `aicore_gang_span` | 210.2 | 1975.2 | 2.49 | 4.97 | 65536 |
+| 49152 | `aicore_gang_span` | 158.0 | 1842.2 | 2.49 | 4.97 | 49152 |
+| 65536 | `aicore_gang_span` | 211.6 | 1869.1 | 2.15 | 4.29 | 65536 |
 | 131072 | `aicore_gang_span` | 421.4 | 2352.9 | 2.33 | 4.65 | 131072 |
 | 262144 | `aicore_gang_span` | 835.3 | 2804.6 | 2.38 | 4.76 | 262144 |
 | 524288 | `aicore_gang_span` | 1665.8 | 3881.7 | 2.48 | 4.96 | 524288 |
@@ -211,7 +213,7 @@ For HOST rows, both columns are the **same timing slot** (no AIV gang captured).
 
 | peer_B | official metric | AIV/kernel p50 (µs) | full-program slot p50 (µs) | egress Gbps | duplex Gbps | row_width |
 |---:|---|---:|---:|---:|---:|---:|
-| 0 | `aicore_gang_span` | 78.5 | 5944.9 | 0.00 | 0.00 | 4160 |
+| 0 | `aicore_gang_span` | 7.0 | 5959.0 | 0.00 | 0.00 | 4160 |
 | 32 | `aicore_gang_span` | 9.5 | 2394.2 | 0.08 | 0.16 | 32 |
 | 128 | `aicore_gang_span` | 9.4 | 2170.2 | 0.11 | 0.22 | 128 |
 | 1024 | `aicore_gang_span` | 15.3 | 2193.9 | 1.59 | 3.19 | 1024 |
@@ -333,8 +335,8 @@ For HOST rows, both columns are the **same timing slot** (no AIV gang captured).
 | 24576 | 81.2 | 1758.8 | 3637.6 | 2.07× | 21.7× |
 | 24960 | 107.0 | 3065.2 | 5732.1 | 1.87× | 28.7× |
 | 32768 | 107.1 | 1955.0 | 3570.7 | 1.83× | 18.3× |
-| 49152 | 165.2 | 1955.1 | 3815.4 | 1.95× | 11.8× |
-| 65536 | 210.2 | 1975.2 | 3812.6 | 1.93× | 9.4× |
+| 49152 | 158.0 | 1842.2 | 3815.4 | 2.07× | 11.7× |
+| 65536 | 211.6 | 1869.1 | 3812.6 | 2.04× | 8.8× |
 | 131072 | 421.4 | 2352.9 | 4362.5 | 1.85× | 5.6× |
 | 262144 | 835.3 | 2804.6 | 4774.4 | 1.70× | 3.4× |
 | 524288 | 1665.8 | 3881.7 | 6246.6 | 1.61× | 2.3× |
@@ -395,7 +397,7 @@ Full EP8 HOST+L2 slot comparison. Mid-curve HOST/L2 ≈ **1.5–2.0×**; large s
 
 | Question | Answer from data |
 |----------|------------------|
-| Is the L2 **kernel** fast? | Yes. e.g. 8 KiB ≈ 29 µs; 64 KiB ≈ 210 µs; 1 MiB ≈ 3.4 ms; egress ~2.3–2.5 Gbps plateau. |
+| Is the L2 **kernel** fast? | Yes. e.g. 8 KiB ≈ 29 µs; 64 KiB ≈ 212 µs; 1 MiB ≈ 3.4 ms; egress ~2.3–2.5 Gbps plateau. |
 | Is the L2 **full program** as fast as the kernel? | No. At 8 KiB, slot ≈ 1.7 ms vs AIV 29 µs (~60×). At 1 MiB, slot ≈ 6.6 ms vs AIV 3.4 ms (~1.9×). |
 | Is L2 **full program** much faster than HOST? | Moderately. ~1.7–2.0× at mid sizes; ~1.2× at 1 MiB. |
 | Why does HOST look 40–100× slower in some slides? | Usually L2 **AIV** compared to HOST **slot** — different clocks. |
@@ -406,7 +408,7 @@ Full EP8 HOST+L2 slot comparison. Mid-curve HOST/L2 ≈ **1.5–2.0×**; large s
 |---:|---:|---:|---:|
 | 8192 | 29.1 | 72.1 | 2.5× |
 | 24960 | 107.0 | 268.2 | 2.5× |
-| 65536 | 210.2 | 534.7 | 2.5× |
+| 65536 | 211.6 | 534.7 | 2.5× |
 | 262144 | 835.3 | 2402.3 | 2.9× |
 | 1048576 | 3402.5 | 8564.4 | 2.5× |
 
@@ -446,6 +448,7 @@ EP8 gang AIV is ~**1.9–2.3×** EP4 at matched sizes; egress stays in a similar
 6. **24960 / 0 B slots** can look inflated vs neighbors (setup / pattern effects); prefer L2 AIV column for kernel trends. EP8 zero slot (~10.7 ms) and EP8 **24960** slot (~11.7 ms) are high vs mid-curve (~3.2–3.7 ms).
 7. **PR #2690** (InCore composite staging tile cap) does **not** explain these numbers; this campaign is managed HOST/L2 builtins. The UB fix was harness stage/consume tiling only.
 8. **EP8 rank spread** — L2 AIV fastest-rank is usable, but per-rank builtin durations often show ~3–5 ms spread (sync wait inside the named AIV task), not a parser mix-up with stage/consume.
+9. **Noise re-runs (2026-09-14)** — Two cells from the original archive were bad swimlane samples, not real regressions. **EP4 L2 `@0` AIV:** archive **78.5 µs** (weird-recheck **149 µs**) → three fresh repeats **~7 µs** (in line with EP2/EP8 `@0` scaling). **EP2 L2 `@49152` egress:** archive **2.14 Gbps** (weird-recheck **1.52 Gbps**) → fresh run **2.49 Gbps** with neighbors ~2.45 / 2.15. Corrected values are in §4/§5; raw repeats in `../issue-2521-a1-alltoallv-noise-rerun-2026-09-14/`.
 
 ---
 
@@ -476,6 +479,8 @@ EP8 gang AIV is ~**1.9–2.3×** EP4 at matched sizes; egress stays in a similar
 | `../issue-2521-a1-alltoallv-ep8-l2host-2026-09-10/` | EP8 L2 vs HOST + `zero_force_ipc/` |
 | `../issue-2521-a1-alltoallv-ep8-forceipc-2026-09-10/` | FORCE_IPC continuation (L2 `24576`, `24960` OK) |
 | `../issue-2521-a1-alltoallv-ep8-gapfill-2026-09-10/` | Gap-fill: L2+HOST full §8.3 + all EP8 patterns; see §9.1 |
+| `../issue-2521-a1-alltoallv-weird-recheck-2026-09-11/` | Weird-point recheck: EP2/4/8 on `{0,24576,24960,32768,49152}`; resolution §6.9 |
+| `../issue-2521-a1-alltoallv-noise-rerun-2026-09-14/` | Noise re-validation: EP4 L2 `@0` ×3; EP2 L2 `32768/49152/65536`; see §6.9 |
 
 ---
 
@@ -636,4 +641,4 @@ Per-point files under `json/*.json` / harness `--output-json`:
 
 Campaign rollup: each report dir’s `summary.json` + `campaign_meta.json` + `sweep.log`.
 
-*Updated 2026-09-11: last-gaps filled — EP8 HOST `65536` + HOST `self-only` OK; L2+HOST full §8.3 and all §8.4 patterns archived on this box.*
+*Updated 2026-09-14: noise re-run corrections — EP4 L2 `@0` AIV ~7 µs (was 78.5); EP2 L2 `@49152` egress ~2.49 Gbps (was 2.14). Prior 2026-09-11: EP8 gap-fill complete on this box.*

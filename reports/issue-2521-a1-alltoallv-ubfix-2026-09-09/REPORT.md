@@ -46,8 +46,8 @@ only** — not the collective kernel and not PR #2690 (InCore composite staging)
 | 24576 | `aicore_gang_span` | 81.2 | 1758.8 | 2.4 |
 | 24960 | `aicore_gang_span` | 107.0 | 3065.2 | 0.7 |
 | 32768 | `aicore_gang_span` | 107.1 | 1955.0 | 2.4 |
-| 49152 | `aicore_gang_span` | 165.2 | 1955.1 | 2.1 |
-| 65536 | `aicore_gang_span` | 210.2 | 1975.2 | 2.5 |
+| 49152 | `aicore_gang_span` | 158.0 | 1842.2 | 2.5 |
+| 65536 | `aicore_gang_span` | 211.6 | 1869.1 | 2.1 |
 | 131072 | `aicore_gang_span` | 421.4 | 2352.9 | 2.3 |
 | 262144 | `aicore_gang_span` | 835.3 | 2804.6 | 2.4 |
 | 524288 | `aicore_gang_span` | 1665.8 | 3881.7 | 2.5 |
@@ -78,7 +78,7 @@ only** — not the collective kernel and not PR #2690 (InCore composite staging)
 
 | peer_B | metric | kernel_p50_µs | slot_p50_µs | egress_Gbps |
 |---:|---|---:|---:|---:|
-| 0 | `aicore_gang_span` | 78.5 | 5944.9 | 0.0 |
+| 0 | `aicore_gang_span` | 7.0 | 5959.0 | 0.0 |
 | 32 | `aicore_gang_span` | 9.5 | 2394.2 | 0.1 |
 | 128 | `aicore_gang_span` | 9.4 | 2170.2 | 0.1 |
 | 1024 | `aicore_gang_span` | 15.3 | 2193.9 | 1.6 |
@@ -141,6 +141,9 @@ only** — not the collective kernel and not PR #2690 (InCore composite staging)
    swimlane tax); prefer kernel column for L2.
 4. First-pass flakiness (3× `release_domain`, 1× HOST correctness) cleared on
    single retry; artifacts retained under `json/` / `builds/`.
+5. **Noise re-run (2026-09-14):** EP4 L2 `@0` AIV and EP2 L2 `@49152`/`65536`
+   in the tables above are corrected from `../issue-2521-a1-alltoallv-noise-rerun-2026-09-14/`.
+   Raw `summary.json` here is unchanged archive data.
 
 ## Artifacts
 
