@@ -100,8 +100,13 @@ record.** Raw per-cell medians/spreads are in
 
 ## 7. Next steps
 
-1. Validate the fillpad/allfour slot-order fix on-device (fp_repro owner), then decide whether
-   to land it and re-measure fillpad/allfour at count ≥ 16384 (unblocks the allfour composition check).
+1. ~~Validate the fillpad/allfour slot-order fix on-device, then decide whether to land it and
+   re-measure at count ≥ 16384~~ — landed as `0790b5d`; the full matrix passed (§9). **Superseded
+   2026-09-16:** pto-isa fixed the underlying defect (`a77a7e2` + `3b49066`, on `origin/main`) and
+   asked us to verify and close [pto-isa#291](https://github.com/hw-native-sys/pto-isa/issues/291).
+   The remaining work is hardware-only — A/B the probe, revert the slot-order workaround, re-run
+   `fillpad`/`allfour` at count ≥ 16384. Queue entry with commands:
+   [`reports/onbox-todo.md`](onbox-todo.md) §1.
 2. Recover P=8 (box) and re-run the missing P=8 cells.
 3. Re-run the attribution on a **quiet box with the plan-98 interleaved A/B protocol**
    (mesh↔variant per cell, medians, ⚑ flags), prioritising P=2/P=4 × multi-chunk counts

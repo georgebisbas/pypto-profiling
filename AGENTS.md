@@ -191,3 +191,10 @@ numbers, HCCL launch-width policy).
 3. Never mix profiled (`--profile`) and unprofiled rounds (profiling perturbs timing).
 4. Never run on a box where the health probe fails — the numbers are meaningless.
 5. `execute_s` is NOT comparable to HCCL's collective; `device_wall_s` (or `--batch` means) is.
+
+## 10. On-box TODO queue
+
+`reports/onbox-todo.md` is the hardware queue — checks this repo owes that cannot be settled in
+sim, on the dev box, or by reading source, each with its exit criteria. **Read it before booking an
+NPU window**, and delete an entry once it is closed. It currently holds the TFILLPAD UB-OOB
+verification (pto-isa#291) and the ablation-kernel workaround revert.
