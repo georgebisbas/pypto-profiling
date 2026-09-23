@@ -136,17 +136,21 @@ def ceil_div(a: int, b: int) -> int:
 def cal_all_to_all_v_blocks(p: int, core_num: int) -> int:
     """HCCL-style AllToAllV launch width. Pure function of ``(P, L)``.
 
-    Matches plan 110's matrix: EP8 ``L=1,2,4,7,8,10,15,16 → B=1,2,4,7,8,8,8,16``
-    and EP16 ``L=1,4,8,15,16 → B=L``. ``B = L`` when ``L <= P``; ``B = P`` when
-    ``P < L < 2P``; ``B = 2P`` when ``L >= 2P``.
+    Mirrors the entry's ``CalAllToAllVBlocks(P, L)`` exactly (``entry.cpp.in``):
+    ``B = L`` when ``L < P``, else the **largest multiple of ``P`` not
+    exceeding ``L``**. There is **no** ``2P`` cap — the earlier model here had
+    one, and it broke EP4 ``L=16`` (P=4): the harness sized the signal for
+    ``B=8`` while the entry admitted ``B=16``, so the entry's stride admission
+    rejected the whole dispatch with ``INVALID_ARGS`` (found by the K3 scaling
+    campaign, 2026-09-23; all ten L=16 cells). The matrix points below were all
+    ``L <= 2P``, which is why the stale model matched them.
+
+    Reproduces plan 110's matrix: EP8 ``L=1,2,4,7,8,10,15,16 →
+    B=1,2,4,7,8,8,8,16`` and EP16 ``L=1,4,8,15,16 → B=L``.
     """
     if p < 1 or core_num < 1:
         raise ValueError(f"CalAllToAllVBlocks requires P>=1 and L>=1, got P={p} L={core_num}")
-    if core_num <= p:
-        return core_num
-    if core_num >= 2 * p:
-        return 2 * p
-    return p
+    return core_num if core_num < p else (core_num // p) * p
 
 
 def canonical_max_recv(max_peer_bytes: int = CANONICAL_MAX_PEER_BYTES, row_width: int = CANONICAL_C) -> int:
