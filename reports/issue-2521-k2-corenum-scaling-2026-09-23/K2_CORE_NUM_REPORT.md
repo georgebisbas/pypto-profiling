@@ -46,7 +46,7 @@ Pairwise deltas (same-drift-window comparison; the decisive read):
 ## Environment notes
 
 - Runs were unisolated (`task-submit` unavailable); shared 192-core host — within-run per-round spread reaches ±20 %, hence the pair-delta framing and run-level means.
-- Campaign extras: `zero@24960` cells are included above; `single-hot` extra cells were still running when this report was written and are not analyzed here.
+- Campaign extras: `zero@24960` cells are included above; the `single-hot` extra cells completed after this report's draft (final campaign: **24/24 cells OK**) but are not analyzed here.
 
 ## Artifacts
 
