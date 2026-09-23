@@ -597,14 +597,21 @@ def _pl():
     return pl, pld
 
 
-def build_host_program(shape: BenchShape):
-    """HOST rail: collective written in ``host_orch`` (per-device builtin fan-out)."""
+def build_host_program(shape: BenchShape, core_num: int):
+    """HOST rail: collective written in ``host_orch`` (per-device builtin fan-out).
+
+    ``core_num`` is the requested launch limit ``L`` (RFC #2521 K2). The entry admits
+    ``B = CalAllToAllVBlocks(P, L)`` blocks and requires one signal lane per admitted
+    block, so the signal window is sized ``[nr, max(1, B)]``.
+    """
     pl, pld = _pl()
     nr = shape.p
     mr = shape.max_recv
     total = shape.total
     width = shape.row_width
     tile_cols = stage_tile_cols(width)
+    blocks_b = cal_all_to_all_v_blocks(nr, core_num)
+    sig_s = max(1, blocks_b)
 
     @pl.program
     class HostAllToAllVBench:
@@ -694,7 +701,7 @@ def build_host_program(shape: BenchShape):
         ) -> tuple[pl.Tensor[[nr, total, width], pl.INT8], pl.Tensor[[nr, nr, 1], pl.INT32]]:
             input_buf = pld.alloc_window_buffer(total * width * pl.INT8.get_byte())
             data_buf = pld.alloc_window_buffer(total * width * pl.INT8.get_byte())
-            signal_buf = pld.alloc_window_buffer(nr * pl.INT32.get_byte())
+            signal_buf = pld.alloc_window_buffer(nr * sig_s * pl.INT32.get_byte())
             counts_buf = pld.alloc_window_buffer(nr * pl.INT32.get_byte())
             recv_buf = pld.alloc_window_buffer(nr * pl.INT32.get_byte())
 
@@ -708,10 +715,10 @@ def build_host_program(shape: BenchShape):
 
             stage = pld.window(input_buf, [total, width], dtype=pl.INT8)
             data = pld.window(data_buf, [total, width], dtype=pl.INT8)
-            signal = pld.window(signal_buf, [nr, 1], dtype=pl.INT32)
+            signal = pld.window(signal_buf, [nr, sig_s], dtype=pl.INT32)
             counts = pld.window(counts_buf, [nr, 1], dtype=pl.INT32)
             recv = pld.window(recv_buf, [nr, 1], dtype=pl.INT32)
-            data = pld.tensor.all_to_all_v(stage, data, signal, counts, recv, core_num=1)
+            data = pld.tensor.all_to_all_v(stage, data, signal, counts, recv, core_num=core_num)
 
             for r in pl.range(pld.world_size()):
                 self.consume_orch(data, recv, outputs[r], recv_outputs[r], device=r)
@@ -720,8 +727,13 @@ def build_host_program(shape: BenchShape):
     return HostAllToAllVBench
 
 
-def build_l2_program(shape: BenchShape):
-    """CHIP/L2 rail: collective written in the CHIP pipeline (one outer dispatch)."""
+def build_l2_program(shape: BenchShape, core_num: int):
+    """CHIP/L2 rail: collective written in the CHIP pipeline (one outer dispatch).
+
+    K2 keeps this rail gated at ``core_num=1`` (O2 wires dynamic ``L/B`` here).
+    """
+    if core_num != 1:
+        raise ValueError("managed-l2 is gated at core_num=1 (RFC #2521 O2)")
     pl, pld = _pl()
     nr = shape.p
     mr = shape.max_recv
@@ -833,11 +845,11 @@ def build_l2_program(shape: BenchShape):
     return L2AllToAllVBench
 
 
-def build_program(impl: Impl, shape: BenchShape):
+def build_program(impl: Impl, shape: BenchShape, core_num: int):
     if impl == "managed-host":
-        return build_host_program(shape)
+        return build_host_program(shape, core_num)
     if impl == "managed-l2":
-        return build_l2_program(shape)
+        return build_l2_program(shape, core_num)
     raise ValueError(f"unknown impl {impl!r}")
 
 
@@ -850,11 +862,17 @@ def outer_l3_l2_dispatches(impl: Impl) -> int:
     raise ValueError(f"unknown impl {impl!r}")
 
 
-def require_a1_core_num(core_num: int) -> None:
-    if core_num != 1:
+def require_a1_core_num(core_num: int, impl: str) -> None:
+    """Rail-aware gate: RFC #2521 K2 enables ``L>1`` on the managed HOST rail only.
+
+    The CHIP/L2 rail is deliberately left gated at ``core_num=1`` (O2 wires dynamic
+    ``L/B`` into the CHIP pipeline).
+    """
+    if core_num > 1 and impl != "managed-host":
         raise ValueError(
-            f"core_num={core_num} is RFC #2521 O2 and is not implemented on either rail "
-            "(HOST and CHIP both reject core_num!=1). Re-run with --core-num 1 for the A1 baseline."
+            f"core_num={core_num} is not implemented on impl={impl!r}: K2 enables L>1 on the "
+            "managed HOST rail only, and the CHIP/L2 rail stays gated at core_num=1 (O2). "
+            "Use --impl managed-host, or re-run with --core-num 1 for the A1 baseline."
         )
 
 
@@ -902,14 +920,14 @@ def _compile(program, *, platform: str, device_ids: list[int], output_dir: str |
 
 def compile_only_json(args: argparse.Namespace, shape: BenchShape) -> dict[str, Any]:
     """Compile one ``--impl`` with skip_ptoas and emit a schema-valid stub."""
-    require_a1_core_num(args.core_num)
+    require_a1_core_num(args.core_num, args.impl)
     if not row_bytes_aligned(shape.row_width):
         raise ValueError(
             f"row_width={shape.row_width} is not 32-byte aligned for INT8 staging; "
             "sub-32-byte tail points cannot use the row-loop stage kernel"
         )
     impl: Impl = args.impl
-    program = build_program(impl, shape)
+    program = build_program(impl, shape, args.core_num)
     compiled = _compile(
         program,
         platform=args.platform,
@@ -940,7 +958,7 @@ def compile_only_json(args: argparse.Namespace, shape: BenchShape) -> dict[str, 
         peer_bytes=args.peer_bytes,
         pattern=args.count_pattern,
         requested_l=args.core_num,
-        launched_b=1,
+        launched_b=cal_all_to_all_v_blocks(shape.p, args.core_num),
         expected_b=cal_all_to_all_v_blocks(shape.p, args.core_num),
         impl=impl,
         persistent=True,
@@ -1000,7 +1018,7 @@ def _timed_session(  # noqa: PLR0913
 def run_benchmark(args: argparse.Namespace, shape: BenchShape) -> dict[str, Any]:
     from pypto.runtime import RunConfig  # noqa: PLC0415
 
-    require_a1_core_num(args.core_num)
+    require_a1_core_num(args.core_num, args.impl)
     if not row_bytes_aligned(shape.row_width):
         raise ValueError(
             f"row_width={shape.row_width} is not 32-byte aligned for INT8 staging; "
@@ -1009,7 +1027,7 @@ def run_benchmark(args: argparse.Namespace, shape: BenchShape) -> dict[str, Any]
     if len(args.device_ids) < shape.p:
         raise ValueError(f"need {shape.p} devices, got {args.device_ids}")
 
-    program = build_program(args.impl, shape)
+    program = build_program(args.impl, shape, args.core_num)
     compiled = _compile(
         program,
         platform=args.platform,

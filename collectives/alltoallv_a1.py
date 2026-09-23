@@ -5,8 +5,13 @@ Calls the A1 harness. Preferred location (checked into this repo)::
 
   collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py
 
-Override with ``A2AV_HARNESS=/path/to/all_to_all_v_benchmark.py`` or fall back
-to ``$PYPTO_ROOT/tests/st/distributed/collectives/all_to_all_v_benchmark.py``.
+Override with ``A2AV_HARNESS=/path/to/all_to_all_v_benchmark.py``. The last
+fallback below points at
+``$PYPTO_ROOT/tests/st/distributed/collectives/all_to_all_v_benchmark.py`` for
+historical runs, but that path has **never** been committed to
+``hw-native-sys/pypto`` -- it only exists in a checkout where the file was
+copied in by hand, so in practice this repo's bundled copy is the harness's
+only home.
 
 Related bundle (patch, Fabric MFE, provenance): ``collectives/a1_alltoallv/``.
 
@@ -20,7 +25,10 @@ die-mix-filtered per-task duration). HOST vs L2 outer dispatch is a separate
 column from the clean timing-slot session.
 
 This box has 8× 910B2 and no EP16. Default is EP2 (devices 0,1) and EP4
-(devices 0,1,2,3). core_num=1 only (O2 is not implemented).
+(devices 0,1,2,3). The ``core_num`` sweep is supported for ``--impl managed-host``
+(RFC #2521 K2 admits ``L>1`` on the HOST rail); the CHIP/L2 rail stays gated at
+``core_num=1`` (O2). Set ``A2AV_CORE_NUMS=1,8`` (and optionally ``A2AV_REPS=N`` to
+interleave repeats) to run the sweep.
 
 EP8 on this box intermittently hits Fabric V2 export / device poison
 (``cross-server`` → ``release_domain -1`` / SIGSEGV). Mitigations:
@@ -171,8 +179,11 @@ def run_one(
     retries: int,
     cooldown_s: float,
     heal_ep: int | None,
+    core_num: int = 1,
+    rep: int = 0,
+    reps: int = 1,
 ) -> dict:
-    tag = f"p{ep}_{impl}_{pattern}_{peer_bytes}"
+    tag = f"p{ep}_l{core_num}_{impl}_{pattern}_{peer_bytes}" + (f"_r{rep}" if reps > 1 else "")
     out_dir = out / "builds" / tag
     json_path = out / "json" / f"{tag}.json"
     json_path.parent.mkdir(parents=True, exist_ok=True)
@@ -187,7 +198,7 @@ def run_one(
         "--count-pattern",
         pattern,
         "--core-num",
-        "1",
+        str(core_num),
         "--impl",
         impl,
         "--rounds",
@@ -224,6 +235,7 @@ def run_one(
                 "ok": True,
                 "ep": ep,
                 "impl": impl,
+                "core_num": core_num,
                 "peer_bytes": peer_bytes,
                 "count_pattern": pattern,
                 "devices": DEVICES[ep],
@@ -336,6 +348,8 @@ def main() -> int:
         for p in os.environ.get("A2AV_EXTRA_PATTERNS", "zero,single-hot").split(",")
         if p.strip()
     ]
+    core_nums = [int(x) for x in os.environ.get("A2AV_CORE_NUMS", "1").split(",") if x.strip()]
+    reps = _env_int("A2AV_REPS", 1)
 
     summary_path = out / "summary.json"
     ok_by_tag = _load_ok_tags(summary_path) if resume else {}
@@ -354,22 +368,27 @@ def main() -> int:
         "cooldown_s": cooldown_s,
         "heal_ep": heal_ep,
         "resume": resume,
-        "requested_L": 1,
+        "requested_L": core_nums,
+        "reps": reps,
         "devices": DEVICES,
         "started_utc": datetime.now(timezone.utc).isoformat(),
     }
     (out / "campaign_meta.json").write_text(json.dumps(meta, indent=2) + "\n")
 
-    jobs: list[tuple[int, str, int, str]] = []
+    jobs: list[tuple[int, str, int, str, int, int]] = []
     for ep in eps:
         for impl in impls:
             for peer_bytes in payloads:
-                jobs.append((ep, impl, peer_bytes, "uniform"))
+                for rep in range(reps):
+                    for core_num in core_nums:
+                        jobs.append((ep, impl, peer_bytes, "uniform", core_num, rep))
             for pattern in extra_patterns:
-                jobs.append((ep, impl, 24960, pattern))
+                for rep in range(reps):
+                    for core_num in core_nums:
+                        jobs.append((ep, impl, 24960, pattern, core_num, rep))
 
-    for ep, impl, peer_bytes, pattern in jobs:
-        tag = f"p{ep}_{impl}_{pattern}_{peer_bytes}"
+    for ep, impl, peer_bytes, pattern, core_num, rep in jobs:
+        tag = f"p{ep}_l{core_num}_{impl}_{pattern}_{peer_bytes}" + (f"_r{rep}" if reps > 1 else "")
         if resume and tag in ok_by_tag:
             print(f"\n=== {tag} SKIP (resume OK) ===", flush=True)
             continue
@@ -379,6 +398,9 @@ def main() -> int:
             impl=impl,
             peer_bytes=peer_bytes,
             pattern=pattern,
+            core_num=core_num,
+            rep=rep,
+            reps=reps,
             rounds=rounds,
             warmup=warmup,
             swimlane_rounds=swim_rounds,
