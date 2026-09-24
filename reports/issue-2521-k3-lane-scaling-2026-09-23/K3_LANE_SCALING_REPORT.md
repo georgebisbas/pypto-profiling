@@ -1,7 +1,9 @@
 # K3 multi-AIV lane scaling — managed-host `all_to_all_v`, EP4 on 4×910B2
 
 *Campaign: 2026-09-23 · `--impl managed-host`, EP4, NPUs 4,5,6,7 · **50/50 cells OK** ·
-kernel under test: pypto branch `feat/all-to-all-v-multiaiv-lanes` (`1af2335b`, K3 lane partition)*
+kernel under test: pypto branch `feat/all-to-all-v-multiaiv-lanes`, as-run `1af2335b`
+(post-rebase equivalent `67572c26`; the 2026-09-24 rebase's only kernel delta is a comment, so these
+numbers apply to the current branch head as well)*
 
 ## TL;DR
 
