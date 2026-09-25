@@ -18,9 +18,10 @@ documented **protocol deviation forced by a platform flake**:
 
 Why: the documented EP8 Fabric-V2 device fault (507018/507014 → lane poisoned →
 `comm_release_domain_windows failed with code -1` → rc=-11) fires
-probabilistically in **long sessions with ≥256 KiB payloads**: 7 consecutive
-100-round failures across both transports on 2026-09-24 (devices 6 & 4 seen),
-and ~50 %/attempt failure at 100 rounds even on a verified-idle box on 09-25.
+probabilistically in **long sessions with ≥256 KiB payloads**: repeated
+100-round failures across both transports on 2026-09-24 (six consecutive
+sessions recorded at the time; device faults seen on chips 6 and 4), and
+~50 %/attempt failure at 100 rounds even on a verified-idle box on 09-25.
 At 30 rounds the same cell passes reliably (23/24 first-try here). Transport and
 contention are excluded as causes: `FORCE_IPC` does not prevent it, and the box
 was exclusively ours on 09-25. Payload groups remain internally consistent
