@@ -26,6 +26,11 @@ collectives. Authoritative methodology: `pypto-3.0-notes/collectives_benchmarkin
   - `plot_figures.py` — 10 figures (scaling, efficiency, bw-crossover, wall-vs-device, model fit…).
   - `cases/` — pre-generated EquivalenceCase JSON files (P × count × dtype × variant × devices).
   - `kernels/` — the AIV kernel + orchestration shim for the simpler-own stack.
+  - `alltoallv_a1.py` — RFC #2521 A1 AllToAllV campaign driver (EP × impl × payloads).
+  - `a1_alltoallv/` — the A1 measurement bundle: the measured harness
+    (`harness/all_to_all_v_benchmark.py`), the FORCE_IPC patch, the Fabric domain-churn MFE,
+    and `PROVENANCE.json`. **This repo is the harness's only home** — it has never been
+    committed to `hw-native-sys/pypto`. See `a1_alltoallv/README.md`.
 - `run_campaign.sh` — campaign driver: runs a sweep, **merges** per-(P,count) results into
   `results.json`, then runs summarize + plot.
 - `tests/` — pure unit tests (no hardware): `python3 -m pytest tests/ -v` (24 tests).

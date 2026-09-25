@@ -1,0 +1,224 @@
+/*
+ * Copyright (c) PyPTO Contributors.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ * -----------------------------------------------------------------------------------------------------------
+ */
+
+// Generated from pypto.runtime.builtins.collectives.all_to_all_v.
+
+#include <cstdint>
+#include <pto/pto-inst.hpp>
+
+#include "platform_comm/comm_context.h"
+#include "pto/comm/comm_types.hpp"
+#include "pto/comm/pto_comm_inst.hpp"
+#include "tensor.h"
+
+#ifndef __gm__
+#define __gm__
+#endif
+
+#ifndef __aicore__
+#define __aicore__ [aicore]
+#endif
+
+namespace {
+
+static constexpr int64_t kTileCount = 256;
+static constexpr int kMaxSupportedRanks = 16;
+
+template <typename T>
+AICORE inline __gm__ T *CommRemotePtr(__gm__ CommContext *ctx, __gm__ T *local_ptr, int pe) {
+  uint64_t local_base = ctx->windowsIn[ctx->rankId];
+  uint64_t offset = reinterpret_cast<uint64_t>(local_ptr) - local_base;
+  return reinterpret_cast<__gm__ T *>(ctx->windowsIn[pe] + offset);
+}
+
+}  // namespace
+
+extern "C" __aicore__ __attribute__((always_inline)) void kernel_entry(__gm__ int64_t *args) {
+  __gm__ Tensor *input_tensor = reinterpret_cast<__gm__ Tensor *>(args[0]);
+  __gm__ Tensor *target_tensor = reinterpret_cast<__gm__ Tensor *>(args[1]);
+  __gm__ Tensor *signal_tensor = reinterpret_cast<__gm__ Tensor *>(args[2]);
+  __gm__ Tensor *send_counts_tensor = reinterpret_cast<__gm__ Tensor *>(args[3]);
+  __gm__ Tensor *recv_counts_tensor = reinterpret_cast<__gm__ Tensor *>(args[4]);
+  // args[5] is the CommContext on BOTH rails, and the rank count comes from the
+  // context rather than from a scalar argument:
+  //
+  //   HOST/L3 builtin dispatch : args[5] = CommContext* (the dispatch emits no
+  //                              rank-count scalar for this builtin)
+  //   CHIP/L2 managed task     : args[5] = CommContext* — MaterializeDistTensorCtx
+  //                              appends one ctx per DistributedTensor param;
+  //                              all of them hold the same pointer, and args[6..]
+  //                              are the unread duplicates
+  //
+  // `rankNum` is the domain's rank count: the context is derived per comm
+  // domain, so it is exactly the `domain_size` the dispatch used to pass. One
+  // GM load at entry buys an argument layout — and therefore a kernel source —
+  // that is identical on both rails.
+  __gm__ CommContext *comm_ctx = reinterpret_cast<__gm__ CommContext *>(args[5]);
+  int nranks = static_cast<int>(comm_ctx->rankNum);
+
+  if (nranks <= 0 || nranks > kMaxSupportedRanks) {
+    pipe_barrier(PIPE_ALL);
+    return;
+  }
+
+  int my_rank = static_cast<int>(comm_ctx->rankId);
+
+  // MAX_RECV = target.shape[0] / nranks. target is 2D [NR*MAX_RECV, SIZE] and
+  // nranks is the comm-domain size (dispatch scalar 0), so the block geometry
+  // below is always consistent with the rank count this kernel actually runs
+  // on. Deriving it here instead of baking it at codegen time closes the
+  // dynamic-domain hazard where signal.shape[0] is not tied to the runtime
+  // world size (an over-provisioned signal would otherwise silently change
+  // the per-destination block size).
+  int64_t max_recv = static_cast<int64_t>(target_tensor->shapes[0]) / nranks;
+  if (max_recv <= 0) {
+    pipe_barrier(PIPE_ALL);
+    return;
+  }
+
+  // row_numel = SIZE (target is 2D [NR*MAX_RECV, SIZE]).
+  int64_t row_numel = 1;
+  for (uint32_t dim = 1; dim < target_tensor->ndims; ++dim) {
+    row_numel *= static_cast<int64_t>(target_tensor->shapes[dim]);
+  }
+  if (row_numel <= 0) {
+    pipe_barrier(PIPE_ALL);
+    return;
+  }
+
+  // `input` and `target` are two DISTINCT windows — same same-window-race
+  // rationale as the symmetric all_to_all kernel.
+  __gm__ int8_t *input_local =
+      reinterpret_cast<__gm__ int8_t *>(input_tensor->buffer.addr) + input_tensor->start_offset;
+  __gm__ int8_t *target =
+      reinterpret_cast<__gm__ int8_t *>(target_tensor->buffer.addr) + target_tensor->start_offset;
+  __gm__ int32_t *signal_base =
+      reinterpret_cast<__gm__ int32_t *>(signal_tensor->buffer.addr) + signal_tensor->start_offset;
+  __gm__ int32_t *send_counts_base =
+      reinterpret_cast<__gm__ int32_t *>(send_counts_tensor->buffer.addr) + send_counts_tensor->start_offset;
+  __gm__ int32_t *recv_counts_base =
+      reinterpret_cast<__gm__ int32_t *>(recv_counts_tensor->buffer.addr) + recv_counts_tensor->start_offset;
+
+  using ShapeDyn = pto::Shape<pto::DYNAMIC, pto::DYNAMIC, pto::DYNAMIC, pto::DYNAMIC, pto::DYNAMIC>;
+  using StrideDyn = pto::Stride<pto::DYNAMIC, pto::DYNAMIC, pto::DYNAMIC, pto::DYNAMIC, pto::DYNAMIC>;
+  using Global = pto::GlobalTensor<int8_t, ShapeDyn, StrideDyn, pto::Layout::ND>;
+  using TileData = pto::Tile<pto::TileType::Vec, int8_t, 1, kTileCount, pto::BLayout::RowMajor, -1, -1>;
+
+  int tile_cols = static_cast<int>(row_numel < kTileCount ? row_numel : kTileCount);
+  TileData send_tile(1, tile_cols);
+  TASSIGN(send_tile, 0x0);
+
+  // ==================================================================
+  // Phase 1: per-destination push + inline count publish. Include self
+  // (dest == my_rank), matching HCCL identity / the InCore composite's
+  // EmitFor over [0, nranks) with no self-exclusion.
+  //
+  //   rows = clamp(send_counts[dest], 0, max_recv)  -- runtime scalar,
+  //          clamped on BOTH sides. Matches LowerTensorAllToAllVRule's
+  //          MakeMax(MakeMin(cast(count, INDEX), max_recv), 0) exactly, so
+  //          HOST and InCore agree bit-for-bit on every input, including a
+  //          negative send_counts.
+  //   TNOTIFY(recv_counts[dest]'s window, slot my_rank) = rows  (Set)
+  //   TPUT input[dest*max_recv : dest*max_recv + rows, :]
+  //        -> target[my_rank*max_recv : my_rank*max_recv + rows, :]
+  //
+  // The TPUT transfers exactly `rows` rows, not the full max_recv capacity —
+  // only the payload crosses the interconnect. Rows past `rows` in the
+  // destination's capacity slot are simply not written, and the receiver
+  // identifies the valid ones via recv_counts (unchanged semantics).
+  //
+  // The unwritten tail of the destination's capacity slot therefore holds
+  // whatever was already in the window. Window memory is not *guaranteed*
+  // zeroed and can carry over within a process, so those bytes are undefined
+  // (a freshly allocated window has been seen reading zero, and a reused one
+  // reading values like -1.2e+32).
+  // Previously the full-capacity push filled them with the sender's surplus
+  // rows, which were equally meaningless but were always FINITE FP32. The tail
+  // has therefore changed in KIND, not just in value: uninitialised bytes may
+  // decode as NaN/Inf. A consumer that reduces over the dense capacity block
+  // and masks by recv_counts afterwards - the natural MoE dispatch shape - was
+  // correct before and would now propagate NaN into valid rows. Trim to
+  // recv_counts BEFORE computing.
+  // recv_counts is what makes either correct, and always was: only code reading
+  // past recv_counts can tell the difference, and it was already reading data
+  // it had no right to.
+  //
+  // InCore/HOST wire parity is deliberate and preserved: LowerTensorAllToAllVRule
+  // emits the same [rows, SIZE] transfer, so the two lowering paths stay
+  // bit-for-bit identical and there is no second, divergent implementation.
+  // ==================================================================
+  for (int dest = 0; dest < nranks; ++dest) {
+    int32_t raw_count = send_counts_base[dest];
+    int64_t rows64 = static_cast<int64_t>(raw_count);
+    if (rows64 > max_recv) rows64 = max_recv;
+    if (rows64 < 0) rows64 = 0;
+    int32_t rows = static_cast<int32_t>(rows64);
+
+    __gm__ int32_t *remote_recv_slot = CommRemotePtr(comm_ctx, recv_counts_base + my_rank, dest);
+    pto::comm::Signal count_sig(remote_recv_slot);
+    pto::comm::TNOTIFY(count_sig, rows, pto::comm::NotifyOp::Set);
+
+    int64_t src_row_offset = static_cast<int64_t>(dest) * max_recv * row_numel;
+    int64_t dst_row_offset = static_cast<int64_t>(my_rank) * max_recv * row_numel;
+    __gm__ int8_t *remote_block = CommRemotePtr(comm_ctx, target + dst_row_offset, dest);
+
+    // The pushed block [rows, SIZE] is contiguous in the dense row-major
+    // [NR*max_recv, SIZE] layout, so it is flattened into one 1D-chunked TPUT
+    // loop (same tiling shape as symmetric all_to_all's single-row loop,
+    // generalized to rows*row_numel elements). rows == 0 makes block_numel 0
+    // and the loop below simply does not execute, so no TPUT is issued for a
+    // destination getting nothing — matching the InCore rail's rows > 0 guard.
+    int64_t block_numel = rows64 * row_numel;
+    for (int64_t base = 0; base < block_numel; base += tile_cols) {
+      int64_t chunk64 = block_numel - base;
+      if (chunk64 > tile_cols) chunk64 = tile_cols;
+      int chunk = static_cast<int>(chunk64);
+      send_tile.ColMaskInternal = chunk;
+
+      ShapeDyn shape(1, 1, 1, 1, chunk);
+      StrideDyn stride(chunk, chunk, chunk, chunk, 1);
+      Global src_g(input_local + src_row_offset + base, shape, stride);
+      Global dst_g(remote_block + base, shape, stride);
+
+      pipe_barrier(PIPE_ALL);
+      pto::comm::TPUT(dst_g, src_g, send_tile);
+      pipe_barrier(PIPE_ALL);
+    }
+  }
+
+  // ==================================================================
+  // Phase 2: barrier — notify peers and wait for all (NotifyOp::AtomicAdd).
+  // ==================================================================
+  pipe_barrier(PIPE_ALL);
+  dsb(DSB_DDR);
+  for (int peer = 0; peer < nranks; ++peer) {
+    if (peer == my_rank) continue;
+    __gm__ int32_t *remote_signal = CommRemotePtr(comm_ctx, signal_base + my_rank, peer);
+    pto::comm::Signal sig(remote_signal);
+    pto::comm::TNOTIFY(sig, static_cast<int32_t>(1), pto::comm::NotifyOp::AtomicAdd);
+  }
+  for (int peer = 0; peer < nranks; ++peer) {
+    if (peer == my_rank) continue;
+    pto::comm::Signal sig(signal_base + peer);
+    pto::comm::TWAIT(sig, static_cast<int32_t>(1), pto::comm::WaitCmp::GE);
+  }
+
+  // Self-clearing epilogue: each peer's AtomicAdd(+1) left its cell satisfied;
+  // a local self-notify (TNOTIFY on a local address is the same st_atomic the
+  // remote path uses) restores every cell to 0 so the signal is reusable
+  // across calls.
+  for (int peer = 0; peer < nranks; ++peer) {
+    if (peer == my_rank) continue;
+    pto::comm::Signal self_sig(signal_base + peer);
+    pto::comm::TNOTIFY(self_sig, static_cast<int32_t>(-1), pto::comm::NotifyOp::AtomicAdd);
+  }
+  pipe_barrier(PIPE_ALL);
+}
