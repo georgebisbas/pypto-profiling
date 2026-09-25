@@ -26,7 +26,7 @@ exclusively ours for the final data.
 
 ## Results (whole-program timing slot mean — `host_timing_slot_mean_us`, mean-of-2 per arm)
 
-| payload B/peer | L=1 (µs) | L=8 (µs) | L=16 (µs) | Δ L=8 | Δ L=16 | egress L=1/8/16 (GB/s) |
+| payload B/peer | L=1 (µs) | L=8 (µs) | L=16 (µs) | Δ L=8 | Δ L=16 | egress L=1/8/16 (Gbit/s, per-rank) |
 |---|---|---|---|---|---|---|
 | 16 KiB | 5473.2 | 5580.0 | 5806.0 | +2.0 % | +6.1 % | 0.168 / 0.164 / 0.158 |
 | 256 KiB | 11312.7 | 7534.7 | 7260.1 | −33.4 % | −35.8 % | 1.30 / 1.95 / 2.02 |
@@ -41,7 +41,8 @@ exclusively ours for the final data.
 - **1 MiB**: still −13.7 % from `L=8` → `L=16` (EP4 saw an L=8/L=16 tie;
   EP8's ordering is clean here — still treat 8/16 as one operating point
   pending more reps).
-- **Egress** peaks at **4.76 GB/s** (L=16, 1 MiB) vs EP4's 3.14 GB/s.
+- **Egress** peaks at **4.76 Gbit/s per rank** (L=16, 1 MiB; ≈0.60 GB/s) vs EP4's
+  3.14 Gbit/s (≈0.39 GB/s) — both ≈0.3 % of the 392 GB/s per-chip HCCS aggregate.
 - **Zero-counts control** drops only −6 %: the block-lane structure slightly
   reduces the fixed per-block floor but cannot move payloads.
 
@@ -61,6 +62,8 @@ flip run-to-run — no throughput benefit either way).
 
 - 2 reps/arm; pairwise deltas; ≤ ~3 % steps are noise, cross-run repeat spread
   ≤ ~5 % (see repeat runs in `summary.json`).
+- **Units**: `egress`/`duplex` are the harness `gbps` values = **Gbit/s**
+  (per-rank bits, fastest rank); divide by 8 for GB/s.
 - Artifacts: `summary.json` (per-cell `rounds`/`attempt`/metrics — all rows
   `rounds=30`), `json/` (raw per-cell JSON), `campaign_meta.json`,
   `analysis_output.txt` (verbatim analyzer output), `attempt_logs/`, `heal/`;

@@ -5,7 +5,7 @@ Reads ``summary.json`` (and each cell's harness JSON when present) produced by
 ``collectives/alltoallv_a1.py`` with ``A2AV_CORE_NUMS=1,2,4,8,16`` and prints
 the tables needed for the K3 per-``B`` write-up:
 
-  1. per-cell aggregates (slot mean/spread, egress GB/s, launched ``B``)
+  1. per-cell aggregates (slot mean/spread, egress Gbit/s, launched ``B``)
   2. Δ vs the ``L=1`` arm, per payload (uniform pattern)
   3. H1 readout: for ``B >= P`` the per-block work should fall ~1/K, so the
      whole-program slot time must be monotone non-increasing in ``B`` within
@@ -63,7 +63,7 @@ def group(rows: list[dict]) -> dict[tuple[int, int], list[dict]]:
 def table_cells(by: dict[tuple[int, int], list[dict]], ep: int) -> None:
     print("## Per-cell aggregates")
     print()
-    print("| payload B/peer | L | B (admitted) | runs | slot mean us (runs) | egress GB/s |")
+    print("| payload B/peer | L | B (admitted) | runs | slot mean us (runs) | egress Gbit/s |")
     print("|---|---|---|---|---|---|")
     for (b, l), runs in sorted(by.items()):
         m = _mean(runs, "host_timing_slot_mean_us")
@@ -72,6 +72,8 @@ def table_cells(by: dict[tuple[int, int], list[dict]], ep: int) -> None:
         if launched is None:
             launched = cal_all_to_all_v_blocks(ep, l)
         print(f"| {b} | {l} | {launched} | {len(runs)} | {m:.1f} ({_spread(runs, 'host_timing_slot_mean_us')}) | {e:.3f} |")
+    print()
+    print("_note: `egress` is the harness `gbps` value — **Gbit/s** per rank (bits); divide by 8 for GB/s._")
     print()
 
 

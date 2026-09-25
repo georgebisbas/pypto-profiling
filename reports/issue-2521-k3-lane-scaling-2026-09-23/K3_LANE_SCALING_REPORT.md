@@ -11,7 +11,7 @@ With K3's per-block work partition in place, launching `B > 1` AIV blocks is no 
 fixed-cost-only exercise — it is the **first configuration where a genuine bandwidth win is
 measurable**:
 
-- **1 MiB/peer: −40.3 % at B=4, −50.9 % at B=8** vs the B=1 arm; egress 1.54 → 3.15 GB/s.
+- **1 MiB/peer: −40.3 % at B=4, −50.9 % at B=8** vs the B=1 arm; egress 1.54 → 3.15 Gbit/s per rank.
 - **256 KiB/peer: −17.8 % / −19.3 % / −25.1 %** at B=4 / B=8 / B=16.
 - **16 KiB/peer: −7.7 % / −9.0 % / −14.1 %** at B=4 / B=8 / B=16.
 - Zero-counts control (no TPUTs): the fixed per-block machinery now costs **+1.5 %** at
@@ -43,7 +43,7 @@ large where the payload dominates.
 | 262 144 | 6 649.1 | 5 865.3 | 5 463.0 | 5 368.2 | 4 983.3 | −17.84 % | −19.26 % | −25.05 % |
 | 1 048 576 | 16 330.3 | 12 524.9 | 9 754.7 | 8 020.5 | 8 239.8 | −40.27 % | −50.89 % | −49.54 % |
 
-Egress (GB/s, per-cell mean): 16 KiB 0.089 → 0.103; 256 KiB 0.946 → 1.263; 1 MiB
+Egress (Gbit/s, per-cell mean): 16 KiB 0.089 → 0.103; 256 KiB 0.946 → 1.263; 1 MiB
 1.543 (L=1) → 2.010 (L=2) → 2.581 (L=4) → **3.150 (L=8)** → 3.055 (L=16).
 
 Raw per-rep spreads are in `analysis_output.txt`; 2 reps/arm, so treat ≤ ~3 % steps as noise.
