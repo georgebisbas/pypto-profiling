@@ -4,9 +4,9 @@ campaign: reports/issue-2521-k3-lane-scaling-ep8-2026-09-24  (ep=8, impl=managed
 
 | payload B/peer | L | B (admitted) | runs | slot mean us (runs) | egress GB/s |
 |---|---|---|---|---|---|
-| 16384 | 1 | 1 | 2 | 5473.2 (5459.4, 5487.1) | 0.168 |
-| 16384 | 8 | 8 | 2 | 5580.0 (5642.7, 5517.4) | 0.164 |
-| 16384 | 16 | 16 | 2 | 5806.0 (6043.4, 5568.7) | 0.158 |
+| 16384 | 1 | 1 | 2 | 5547.7 (5428.3, 5667.1) | 0.165 |
+| 16384 | 8 | 8 | 2 | 5573.9 (5543.8, 5604.0) | 0.165 |
+| 16384 | 16 | 16 | 2 | 5662.7 (5800.8, 5524.6) | 0.162 |
 | 262144 | 1 | 1 | 2 | 11312.7 (11021.5, 11603.9) | 1.299 |
 | 262144 | 8 | 8 | 2 | 7534.7 (7537.1, 7532.3) | 1.948 |
 | 262144 | 16 | 16 | 2 | 7260.1 (7169.5, 7350.7) | 2.022 |
@@ -18,13 +18,13 @@ campaign: reports/issue-2521-k3-lane-scaling-ep8-2026-09-24  (ep=8, impl=managed
 
 | payload B/peer | L=1 (us) | L=8 (us) | L=16 (us) | Δ L=8 | Δ L=16 |
 |---|---|---|---|---|---|
-| 16384 | 5473.2 | 5580.0 | 5806.0 | +1.95% | +6.08% |
+| 16384 | 5547.7 | 5573.9 | 5662.7 | +0.47% | +2.07% |
 | 262144 | 11312.7 | 7534.7 | 7260.1 | -33.40% | -35.82% |
 | 1048576 | 30025.6 | 14292.5 | 12333.9 | -52.40% | -58.92% |
 
 ## H1 readout — monotone non-increasing slot time over B >= P arms (noise band ±2.0%)
 
-- payload    16384: B=8:5580us, B=16:5806us → NON-MONOTONE at L=8→16: +4.05% (exceeds +2.0%)
+- payload    16384: B=8:5574us, B=16:5663us → monotone non-increasing (within noise) (worst step +1.59%)
 - payload   262144: B=8:7535us, B=16:7260us → monotone non-increasing (within noise) (worst step +0.00%)
 - payload  1048576: B=8:14293us, B=16:12334us → monotone non-increasing (within noise) (worst step +0.00%)
 
