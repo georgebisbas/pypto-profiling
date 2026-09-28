@@ -1,0 +1,48 @@
+{
+  "campaign": "issue-2521-a1-b1-k1ep8-swap-2026-09-28",
+  "purpose": "E2.1 K1 delta @ EP8: pre-K1 kernel template swapped into B1 tree vs B1 (K1 template). 8 payloads x 2 rails = 16 cells/side.",
+  "pypto_commit": "d626aea16 (B1)",
+  "pypto_worktree": "/opt/a1/b1",
+  "sides": {
+    "prek1": {
+      "template": "pre-K1 (5cb75663a^)",
+      "template_sha256": "bb503e2baf5fbe7f157ff8defd0ae8f206001f6fbec82e8eae33c8b47fbe4526",
+      "template_lines": 224
+    },
+    "k1": {
+      "template": "K1 squash",
+      "template_sha256": "70a6cb0943236357caf32bff2c43dc8842b03ad8ef3602a7e285ca4d3ea11066",
+      "template_lines": 305
+    }
+  },
+  "template_in_tree_at_launch": "bb503e2baf5fbe7f157ff8defd0ae8f206001f6fbec82e8eae33c8b47fbe4526",
+  "runtime_commit": "6e383fc57c12a8bd4dce045289b8b4f5d55a15f1 + FORCE_IPC patch",
+  "force_ipc_patch_sha256": "a88e4442e26b33d9a10a95f4c3c21cc42c90e780c82304750a99df06f2e16688",
+  "harness_sha256": "dd960384df7fcaa7e0e6581c2cecdb3ba78585c8cdf73bc424fd051ae2e9e5f1",
+  "ptoas": "0.65 (/opt/ptoas-bin)",
+  "cann": "9.0.0",
+  "protocol": {
+    "core_num": 1,
+    "rounds": 100,
+    "warmup": 5,
+    "swimlane_rounds": 8,
+    "persistent": true,
+    "force_ipc": true,
+    "count_pattern": "uniform",
+    "payloads": [
+      0,
+      4096,
+      8192,
+      16384,
+      24576,
+      24960,
+      32768,
+      65536
+    ],
+    "timing_slot_rounds": 30,
+    "reduced_protocol_reason": "100-round timing-slot sessions stall on this box (S1:running-stalled, round-count dependent; threshold config-dependent, ~65-85 dispatches for the 09:00-10:30 window; 60r also stalls for managed-l2 uniform_0 on both templates; 30r passes cleanly). E2.1 runs BOTH sides at 30 rounds (paired). Aborted attempts archived in prek1_100r_aborted/ and prek1_60r_aborted/."
+  },
+  "devices": "0,1,2,3,4,5,6,7",
+  "ep": 8,
+  "written_utc": "2026-09-28T09:39:50.052499+00:00"
+}
