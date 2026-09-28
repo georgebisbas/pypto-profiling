@@ -21,7 +21,7 @@ B1 tree, EP8, FORCE_IPC, uniform sweep (0 → 64 KiB), both rails.
 | rail | payload | pre-K1 p50 | K1 p50 | Δ% | E1 (K1@100r) p50 | k1@30r vs E1 |
 |---|---:|---:|---:|---:|---:|---:|
 | managed-l2 | 0 | 15.45 | 16.34 | **+5.8** | 16.22 | +0.7 |
-| managed-l2 | 4096 | 88.53* | 89.66 | +1.3* | 89.29 | +0.4 |
+| managed-l2 | 4096 | 87.43† | 89.66 | +2.6† | 89.29 | +0.4 |
 | managed-l2 | 8192 | 161.78 | 164.14 | +1.5 | 164.10 | +0.0 |
 | managed-l2 | 16384 | 301.93 | 313.91 | +4.0 | 313.89 | +0.0 |
 | managed-l2 | 24576 | 447.61 | 462.34 | +3.3 | 462.47 | −0.0 |
@@ -37,10 +37,10 @@ B1 tree, EP8, FORCE_IPC, uniform sweep (0 → 64 KiB), both rails.
 | managed-host | 32768 | 5627.07 | 5854.94 | +4.1 | 5727.95 | +2.2 |
 | managed-host | 65536 | 7010.05 | 6272.90 | **−10.5** | 6587.94 | −4.8 |
 
-\* prek1 L2-4096 raw JSON missing (relaunch artifact); value 88.53 µs from
-`prek1/summary.json`; Δ computed from it.
+\* prek1 L2-4096 raw JSON was missing (relaunch artifact) and was re-acquired
+2026-09-28 (rerun @30r: 87.43 µs; original summary value 88.53 — within 1.3%).
 
-**Summary:** K1 is **+2.6% slower (mean) on L2** (median +3.2%, 6/7 positive) and
+**Summary:** K1 is **+2.6% slower (mean) on L2** (median +2.9%, 7/8 positive) and
 **+2.7% slower (mean) on HOST** (median +3.9%, 7/8 positive), with one clear
 exception: HOST 65536 where **K1 is −10.5% faster** (also −4.8% vs E1 — likely real).
 
