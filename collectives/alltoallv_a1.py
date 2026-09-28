@@ -350,6 +350,12 @@ def main() -> int:
     ]
     core_nums = [int(x) for x in os.environ.get("A2AV_CORE_NUMS", "1").split(",") if x.strip()]
     reps = _env_int("A2AV_REPS", 1)
+    # Fragile-list exclusions (default: none). Skipped tags are recorded in
+    # campaign_meta.json under "skipped_fragile" so gaps stay auditable.
+    skip_tags = {
+        t.strip() for t in os.environ.get("A2AV_SKIP_TAGS", "").split(",") if t.strip()
+    }
+    skipped_fragile: list[str] = []
 
     summary_path = out / "summary.json"
     ok_by_tag = _load_ok_tags(summary_path) if resume else {}
@@ -389,6 +395,10 @@ def main() -> int:
 
     for ep, impl, peer_bytes, pattern, core_num, rep in jobs:
         tag = f"p{ep}_l{core_num}_{impl}_{pattern}_{peer_bytes}" + (f"_r{rep}" if reps > 1 else "")
+        if tag in skip_tags:
+            print(f"\n=== {tag} SKIP (fragile list) ===", flush=True)
+            skipped_fragile.append(tag)
+            continue
         if resume and tag in ok_by_tag:
             print(f"\n=== {tag} SKIP (resume OK) ===", flush=True)
             continue
@@ -414,6 +424,9 @@ def main() -> int:
     meta["finished_utc"] = datetime.now(timezone.utc).isoformat()
     meta["n_ok"] = sum(1 for r in rows if r.get("ok"))
     meta["n_fail"] = sum(1 for r in rows if not r.get("ok"))
+    meta["skipped_fragile"] = sorted(skipped_fragile)
+    if skipped_fragile:
+        print(f"skipped_fragile={sorted(skipped_fragile)}", flush=True)
     (out / "campaign_meta.json").write_text(json.dumps(meta, indent=2) + "\n")
     print("\nWrote", summary_path, flush=True)
     print(f"n_ok={meta['n_ok']} n_fail={meta['n_fail']}", flush=True)
