@@ -1,0 +1,22 @@
+campaign: /mounted_home/hw-native-sys/slots-verify/k3-reprace-ep4-l816  (ep=4, impl=managed-host, pattern=uniform)
+
+## Per-cell aggregates
+
+| payload B/peer | L | B (admitted) | runs | slot mean us (runs) | egress Gbit/s |
+|---|---|---|---|---|---|
+| 1048576 | 1 | 1 | 5 | 16044.3 (16001.7, 15807.0, 16186.4, 15806.6, 16420.0) | 1.569 |
+| 1048576 | 8 | 8 | 5 | 8637.7 (8966.2, 8745.7, 8906.9, 8411.2, 8158.8) | 2.917 |
+| 1048576 | 16 | 16 | 5 | 7926.4 (8135.0, 7788.7, 8265.1, 7347.9, 8095.2) | 3.181 |
+
+_note: `egress` is the harness `gbps` value — **Gbit/s** per rank (bits); divide by 8 for GB/s._
+
+## Whole-program timing slot — Δ vs the L=1 arm
+
+| payload B/peer | L=1 (us) | L=8 (us) | L=16 (us) | Δ L=8 | Δ L=16 |
+|---|---|---|---|---|---|
+| 1048576 | 16044.3 | 8637.7 | 7926.4 | -46.16% | -50.60% |
+
+## H1 readout — monotone non-increasing slot time over B >= P arms (noise band ±2.0%)
+
+- payload  1048576: B=8:8638us, B=16:7926us → monotone non-increasing (within noise) (worst step +0.00%)
+

@@ -1,0 +1,38 @@
+campaign: /mounted_home/hw-native-sys/slots-verify/k3-repro-ep8  (ep=8, impl=managed-host, pattern=uniform)
+
+## Per-cell aggregates
+
+| payload B/peer | L | B (admitted) | runs | slot mean us (runs) | egress Gbit/s |
+|---|---|---|---|---|---|
+| 16384 | 1 | 1 | 2 | 5573.2 (5574.4, 5572.1) | 0.165 |
+| 16384 | 8 | 8 | 2 | 5551.4 (5487.0, 5615.9) | 0.165 |
+| 16384 | 16 | 16 | 2 | 5528.9 (5742.3, 5315.5) | 0.166 |
+| 262144 | 1 | 1 | 2 | 11777.9 (11891.0, 11664.8) | 1.247 |
+| 262144 | 8 | 8 | 2 | 7782.1 (8022.2, 7541.9) | 1.888 |
+| 262144 | 16 | 16 | 2 | 7336.5 (7490.3, 7182.6) | 2.002 |
+| 1048576 | 1 | 1 | 2 | 30293.6 (30471.0, 30116.1) | 1.938 |
+| 1048576 | 8 | 8 | 2 | 14072.0 (14629.2, 13514.9) | 4.179 |
+| 1048576 | 16 | 16 | 2 | 13237.3 (12709.9, 13764.6) | 4.443 |
+
+_note: `egress` is the harness `gbps` value — **Gbit/s** per rank (bits); divide by 8 for GB/s._
+
+## Whole-program timing slot — Δ vs the L=1 arm
+
+| payload B/peer | L=1 (us) | L=8 (us) | L=16 (us) | Δ L=8 | Δ L=16 |
+|---|---|---|---|---|---|
+| 16384 | 5573.2 | 5551.4 | 5528.9 | -0.39% | -0.80% |
+| 262144 | 11777.9 | 7782.1 | 7336.5 | -33.93% | -37.71% |
+| 1048576 | 30293.6 | 14072.0 | 13237.3 | -53.55% | -56.30% |
+
+## H1 readout — monotone non-increasing slot time over B >= P arms (noise band ±2.0%)
+
+- payload    16384: B=8:5551us, B=16:5529us → monotone non-increasing (within noise) (worst step +0.00%)
+- payload   262144: B=8:7782us, B=16:7336us → monotone non-increasing (within noise) (worst step +0.00%)
+- payload  1048576: B=8:14072us, B=16:13237us → monotone non-increasing (within noise) (worst step +0.00%)
+
+## Zero-counts control (no TPUTs — isolates the fixed per-block cost) — Δ vs the L=1 arm
+
+| payload B/peer | L=1 (us) | L=8 (us) | L=16 (us) | Δ L=8 | Δ L=16 |
+|---|---|---|---|---|---|
+| 24960 | 11954.2 | 12300.0 | 11455.7 | +2.89% | -4.17% |
+
