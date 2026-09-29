@@ -1,0 +1,93 @@
+{
+  "campaign": "issue-2521-a1-k3-cf136e73-2026-09-29",
+  "status": "COMPLETE 2026-09-29",
+  "purpose": "Same-A1 measurement of K3 (PR #2900) head for the merge gate vs the main snapshot (54521824): L=1 parity + L=16 lane scaling at 1 MiB/peer.",
+  "pypto_commit": "cf136e736566200606a6a2c562731f05bc0e102b",
+  "pypto_commit_stamp": "cf136e736566",
+  "pypto_branch": "feat/all-to-all-v-multiaiv-lanes (PR #2900; open, not merged at measurement time)",
+  "pypto_worktree": "/opt/a1/k3",
+  "runtime_commit": "6e383fc57c12a8bd4dce045289b8b4f5d55a15f1 + FORCE_IPC patch",
+  "force_ipc_patch_sha256": "a88e4442e26b33d9a10a95f4c3c21cc42c90e780c82304750a99df06f2e16688",
+  "harness": "tests/st/distributed/collectives/all_to_all_v_benchmark.py (in-tree, e42 @ 86abfffb / PR #2945)",
+  "harness_sha256": "3c1f83beed61064bd3c939f2c42fc9fd66f58500d518e14c2dc2f07738640e88",
+  "ptoas": "0.65 (/opt/ptoas-bin)",
+  "cann": "9.0.0",
+  "protocol": {
+    "ep": 8,
+    "devices": "0,1,2,3,4,5,6,7",
+    "impls": [
+      "managed-l2",
+      "managed-host"
+    ],
+    "core_num": 1,
+    "requested_L": 1,
+    "reps": 1,
+    "timing_slot_rounds": 30,
+    "warmup": 5,
+    "swimlane_rounds": 8,
+    "retries": 4,
+    "cooldown_s": 60,
+    "heal_ep": 4,
+    "heal_devices": "0,1,2,3",
+    "persistent": true,
+    "force_ipc": true,
+    "count_pattern": "uniform",
+    "payloads": [
+      8192,
+      24960,
+      32768,
+      65536,
+      1048576
+    ],
+    "driver": "collectives/alltoallv_a1.py"
+  },
+  "cells": {
+    "ok": 10,
+    "fail": 0,
+    "absorbed_failures": [
+      "p8_l1_managed-host_uniform_24960 attempts 1-2 rc=-11 -> heal EP4 smoke on 0,1,2,3 -> attempt 3 OK (12250.35 p50)"
+    ]
+  },
+  "l16_spots": {
+    "impl": "managed-host",
+    "core_num": 16,
+    "launched_B": 16,
+    "expected_B": 16,
+    "timing_slot_rounds": 30,
+    "warmup": 5,
+    "payloads": [
+      24960,
+      1048576
+    ],
+    "results": {
+      "24960": {
+        "p50_us": 12337.76,
+        "mean_us": 12378.84,
+        "egress_gbit_s_per_rank": 0.113
+      },
+      "1048576": {
+        "p50_us": 12893.62,
+        "mean_us": 12720.45,
+        "egress_gbit_s_per_rank": 4.616
+      }
+    },
+    "cells_ok": 2
+  },
+  "windows_utc": {
+    "campaign": [
+      "2026-09-29T10:13:37Z",
+      "2026-09-29T11:03:09Z"
+    ],
+    "l16_spots": [
+      "2026-09-29T11:03:50Z",
+      "2026-09-29T11:05:43Z"
+    ]
+  },
+  "comparison": {
+    "vs": "reports/issue-2521-a1-main-2026-09-29 (main 54521824, measured ~1h earlier, same box/protocol/harness)",
+    "l1_headline": "L2 parity +/-0.5%; HOST -1.5..-6.5% (low end of session scatter; 24960=12250.35 ~ E2.1 12244.17; 1MiB inside E1.5 [30303.10, 30625.28]). No L=1 regression.",
+    "l16_headline": "1MiB/peer: -58.1% p50 / -59.5% mean vs main (gate values 30790.2 / 31390.5 -> measured 12893.6 / 12720.5); egress 1.871 -> 4.616 Gbit/s/rank; matches PR claim -58.9% and repro mean 12504.6 (+1.7%)."
+  },
+  "result_headline": "K3 head cf136e73 delivers the claimed lane scaling at 1 MiB/peer EP8 L=16 (-58.1% p50 / -59.5% mean vs main snapshot) with L=1 parity; merge gate met.",
+  "written_utc": "2026-09-29T11:08:01.866204+00:00"
+}
