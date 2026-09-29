@@ -8,7 +8,7 @@
 # -----------------------------------------------------------------------------------------------------------
 # ruff: noqa: F722, F821
 
-"""RFC #2521 A1 — AllToAllV benchmark harness (plan 110).
+"""RFC #2521 — AllToAllV benchmark harness (§8.1).
 
 Times a prepared contiguous window plus one managed ``pld.tensor.all_to_all_v``
 call. Stage / consume / L3→L2 dispatch are excluded from the official metric
@@ -35,6 +35,7 @@ import json
 import math
 import os
 import statistics
+import subprocess
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -94,6 +95,10 @@ PAYLOAD_SWEEP_BYTES: tuple[int, ...] = (
     1024 * 1024,
 )
 
+# RFC §8.3 sub-32-byte tail points. The current row-loop INT8 staging kernel
+# requires 32-byte-aligned rows, so these are expected to be rejected by the
+# alignment guard below; they are kept to document the intended sweep and the
+# recorded N/A outcome in the A1 archive.
 TAIL_PEER_BYTES: tuple[int, ...] = (1, 15, 31, 33, 4159, 4161)
 
 CORE_SWEEP: dict[int, tuple[int, ...]] = {
@@ -145,7 +150,7 @@ def cal_all_to_all_v_blocks(p: int, core_num: int) -> int:
     campaign, 2026-09-23; all ten L=16 cells). The matrix points below were all
     ``L <= 2P``, which is why the stale model matched them.
 
-    Reproduces plan 110's matrix: EP8 ``L=1,2,4,7,8,10,15,16 →
+    Known-good sweep points: EP8 ``L=1,2,4,7,8,10,15,16 →
     B=1,2,4,7,8,8,8,16`` and EP16 ``L=1,4,8,15,16 → B=L``.
     """
     if p < 1 or core_num < 1:
@@ -184,7 +189,7 @@ def shape_for_peer_bytes(
 
     Multiples of ``row_width`` (and the 0-byte point) share the canonical
     ``MAX_RECV = CeilDiv(max_peer_bytes, C)`` window. Any other size compiles a
-    ``C' = peer_bytes`` instance with one route per peer, per plan 110 §3.
+    ``C' = peer_bytes`` instance with one route per peer.
     """
     if p < 2:
         raise ValueError(f"need at least 2 ranks, got P={p}")
@@ -316,18 +321,21 @@ def read_pypto_commit() -> str:
     env = os.environ.get("PYPTO_COMMIT")
     if env:
         return env.strip()
-    head = Path(__file__).resolve().parents[4] / ".git" / "HEAD"
-    try:
-        text = head.read_text(encoding="utf-8").strip()
-    except OSError:
+    root = next((p for p in Path(__file__).resolve().parents if (p / ".git").exists()), None)
+    if root is None:
         return "unknown"
-    if text.startswith("ref:"):
-        ref = head.parent / text.split(" ", 1)[1]
-        try:
-            return ref.read_text(encoding="utf-8").strip()[:12]
-        except OSError:
-            return text
-    return text[:12]
+    try:
+        proc = subprocess.run(
+            ["git", "-C", str(root), "rev-parse", "--short=12", "HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return "unknown"
+    sha = proc.stdout.strip()
+    return sha if proc.returncode == 0 and sha else "unknown"
 
 
 def read_cann() -> str:
@@ -424,12 +432,16 @@ def _cluster_near_min(durs: list[float], factor: float = 2.5) -> list[float]:
 
 
 def _aiv_exec_us_from_raw_records(path: Path, needle: str = "all_to_all_v") -> float | None:
-    """Per-task AIV exec from ``chip_swimlane_records.json`` + ``name_map.json``.
+    """Last-completing AIV block per rank from ``chip_swimlane_records.json`` + ``name_map.json``.
 
     Level-1 records store ``func_id`` in ``task_token_raw & 0xFFFFFFFF``. Converted
     event names are ``task_spmd`` / ``func_-1_`` and must not be used. Duration is
     ``(end - start) / clock_freq`` **per task** — ``max(end) - min(start)`` across
-    cores is not a gang span on 910B2 (two cycle origins ~seconds apart).
+    cores is not a gang span on 910B2 (two cycle origins ~seconds apart). The
+    reported span is the **max of the valid per-block durations** (one task per
+    admitted block, ``B = CalAllToAllVBlocks(P, L)``): the collective completes
+    when its slowest block finishes, so averaging would understate completion
+    latency for ``L>1``; for ``L=1`` this equals the single block time.
     """
     names = _load_name_map(path.parent / "name_map.json")
     if not names:
@@ -457,7 +469,9 @@ def _aiv_exec_us_from_raw_records(path: Path, needle: str = "all_to_all_v") -> f
     clustered = _cluster_near_min(durs)
     if not clustered:
         return None
-    return sum(clustered) / len(clustered)
+    # The collective is complete when its slowest valid block completes; for a
+    # single-block (L=1) dispatch this is identical to the block time.
+    return max(clustered)
 
 
 def _gang_span_from_records(path: Path) -> float | None:
@@ -483,7 +497,7 @@ def _gang_span_from_records(path: Path) -> float | None:
 
 
 def collect_swimlane_spans_us(output_dir: Path) -> dict[int, float]:
-    """Collective AIV exec per rank, in microseconds.
+    """Collective completion per rank (last-completing block), in microseconds.
 
     Prefers raw ``chip_swimlane_records.json`` + ``name_map.json`` (onboard
     level-1). HOST writes stage/fill/consume as later ``d{{k}}`` folders and
@@ -542,7 +556,7 @@ def result_json(  # noqa: PLR0913
     recv_bytes: list[int],
     row_width: int,
 ) -> dict[str, Any]:
-    means = {int(r): (sum(v) / len(v) if v else 0.0) for r, v in per_rank_kernel_us.items()}
+    means = {int(r): sum(v) / len(v) for r, v in per_rank_kernel_us.items() if v}
     if means:
         fastest_rank = min(means, key=lambda r: means[r])
         samples = per_rank_kernel_us[str(fastest_rank)]
@@ -866,7 +880,7 @@ def outer_l3_l2_dispatches(impl: Impl) -> int:
     raise ValueError(f"unknown impl {impl!r}")
 
 
-def require_a1_core_num(core_num: int, impl: str) -> None:
+def require_supported_core_num(core_num: int, impl: str) -> None:
     """Rail-aware gate: RFC #2521 K2 enables ``L>1`` on the managed HOST rail only.
 
     The CHIP/L2 rail is deliberately left gated at ``core_num=1`` (O2 wires dynamic
@@ -876,7 +890,7 @@ def require_a1_core_num(core_num: int, impl: str) -> None:
         raise ValueError(
             f"core_num={core_num} is not implemented on impl={impl!r}: K2 enables L>1 on the "
             "managed HOST rail only, and the CHIP/L2 rail stays gated at core_num=1 (O2). "
-            "Use --impl managed-host, or re-run with --core-num 1 for the A1 baseline."
+            "Use --impl managed-host, or re-run with --core-num 1 for the baseline configuration."
         )
 
 
@@ -924,18 +938,21 @@ def _compile(program, *, platform: str, device_ids: list[int], output_dir: str |
 
 def compile_only_json(args: argparse.Namespace, shape: BenchShape) -> dict[str, Any]:
     """Compile one ``--impl`` with skip_ptoas and emit a schema-valid stub."""
-    require_a1_core_num(args.core_num, args.impl)
+    require_supported_core_num(args.core_num, args.impl)
     if not row_bytes_aligned(shape.row_width):
         raise ValueError(
             f"row_width={shape.row_width} is not 32-byte aligned for INT8 staging; "
-            "sub-32-byte tail points cannot use the row-loop stage kernel"
+            "sub-32-byte tail points cannot use the row-loop stage kernel (recorded as N/A in the A1 archive)"
         )
+    if len(args.device_ids) < shape.p:
+        raise ValueError(f"need {shape.p} devices, got {args.device_ids}")
+    device_ids = args.device_ids[: shape.p]
     impl: Impl = args.impl
     program = build_program(impl, shape, args.core_num)
     compiled = _compile(
         program,
         platform=args.platform,
-        device_ids=args.device_ids,
+        device_ids=device_ids,
         output_dir=args.output_dir,
         skip_ptoas=True,
     )
@@ -957,7 +974,7 @@ def compile_only_json(args: argparse.Namespace, shape: BenchShape) -> dict[str, 
     send_b, recv_b = remote_bytes_per_rank(send_counts, shape)
     doc = result_json(
         platform=args.platform,
-        device_ids=args.device_ids,
+        device_ids=device_ids,
         shape=shape,
         peer_bytes=args.peer_bytes,
         pattern=args.count_pattern,
@@ -1022,11 +1039,11 @@ def _timed_session(  # noqa: PLR0913
 def run_benchmark(args: argparse.Namespace, shape: BenchShape) -> dict[str, Any]:
     from pypto.runtime import RunConfig  # noqa: PLC0415
 
-    require_a1_core_num(args.core_num, args.impl)
+    require_supported_core_num(args.core_num, args.impl)
     if not row_bytes_aligned(shape.row_width):
         raise ValueError(
             f"row_width={shape.row_width} is not 32-byte aligned for INT8 staging; "
-            "sub-32-byte tail points cannot use the row-loop stage kernel"
+            "sub-32-byte tail points cannot use the row-loop stage kernel (recorded as N/A in the A1 archive)"
         )
     if len(args.device_ids) < shape.p:
         raise ValueError(f"need {shape.p} devices, got {args.device_ids}")
@@ -1106,9 +1123,9 @@ def run_benchmark(args: argparse.Namespace, shape: BenchShape) -> dict[str, Any]
         per_rank = aiv_rank
     else:
         metric = "timing_slot"
-        per_rank = slot_rank if any(slot_rank.values()) else {
-            str(i): list(host_slots) for i in range(shape.p)
-        }
+        per_rank = (
+            slot_rank if any(slot_rank.values()) else {str(i): list(host_slots) for i in range(shape.p)}
+        )
 
     doc = result_json(
         platform=args.platform,
@@ -1135,6 +1152,9 @@ def run_benchmark(args: argparse.Namespace, shape: BenchShape) -> dict[str, Any]
         doc["host_timing_slot_includes_swimlane_tax"] = slot_includes_tax
     if aiv_found:
         doc["aiv_rounds_captured"] = max(len(v) for v in aiv_rank.values())
+        missing = sorted(int(r) for r, v in aiv_rank.items() if not v)
+        if missing:
+            doc["aiv_ranks_missing"] = missing
     return doc
 
 
@@ -1150,7 +1170,7 @@ def _apply_smoke(args: argparse.Namespace) -> None:
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="RFC #2521 A1 AllToAllV benchmark harness")
+    parser = argparse.ArgumentParser(description="RFC #2521 AllToAllV benchmark harness")
     parser.add_argument("--ep", type=int, default=8, help="rank count (8 or 16 for the official sweep)")
     parser.add_argument("--peer-bytes", type=int, default=24960, help="bytes sent to each peer (uniform)")
     parser.add_argument("--count-pattern", choices=COUNT_PATTERNS, default="uniform")
