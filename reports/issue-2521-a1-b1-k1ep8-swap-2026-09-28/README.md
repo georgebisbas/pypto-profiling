@@ -35,14 +35,19 @@ B1 tree, EP8, FORCE_IPC, uniform sweep (0 → 64 KiB), both rails.
 | managed-host | 24576 | 5358.90 | 5450.27 | +1.7 | 5506.59 | −1.0 |
 | managed-host | 24960 | 11809.93 | 12244.17 | +3.7 | 12956.91 | −5.5 |
 | managed-host | 32768 | 5627.07 | 5854.94 | +4.1 | 5727.95 | +2.2 |
-| managed-host | 65536 | 7010.05 | 6272.90 | **−10.5** | 6587.94 | −4.8 |
+| managed-host | 65536 | 7010.05 | 6272.90 | **−10.5**† | 6587.94 | −4.8 |
 
 \* prek1 L2-4096 raw JSON was missing (relaunch artifact) and was re-acquired
 2026-09-28 (rerun @30r: 87.43 µs; original summary value 88.53 — within 1.3%).
+† HOST 65536 single-sample **−10.5%** superseded by the interleaved 3×3 recheck
+(`recheck_host64k/`): **K1 −2.8%** (non-overlapping).
 
 **Summary:** K1 is **+2.6% slower (mean) on L2** (median +2.9%, 7/8 positive) and
-**+2.7% slower (mean) on HOST** (median +3.9%, 7/8 positive), with one clear
-exception: HOST 65536 where **K1 is −10.5% faster** (also −4.8% vs E1 — likely real).
+**+2.7% slower (mean) on HOST** (median +3.9%, 7/8 positive), with one exception:
+HOST 65536, where the single paired session measured **−10.5%**; the interleaved 3×3
+recheck (`recheck_host64k/`) gives **−2.8% (K1 faster; non-overlapping, medians
+6217.8 vs 6396.0 µs)** — a real but small K1 advantage at this cell; the −10.5% was
+sampling noise.
 
 ## Result 2 — control: protocol drift (k1@30r vs E1 K1@100r)
 
@@ -72,11 +77,14 @@ Implication: (a) E1's L2 numbers are protocol-robust; (b) the +2.6% L2 delta abo
    quoted 1.5–1.8× does **not** reproduce at any scale measured.
 2. **K1's measured value is correctness**: it eliminates the intermittent pre-K1
    counts failure at EP8 (reproduced here independently) and unblocks K2/K3/K4/O2/A3.
-3. **Follow-up candidate:** HOST `65536` (`K1 −10.5%`): reproduce/attribute before
-   promoting; currently the only cell where K1 shows a real-looking gain.
+3. **HOST `65536` rechecked (interleaved 3×3, `recheck_host64k/`):** K1 is
+   **−2.8% faster** (medians 6217.8 vs 6396.0 µs; all three K1 reps beat all three
+   pre-K1 reps — non-overlapping). Real, small, single-cell K1 gain — the only one
+   beyond noise in this campaign; the original single-sample −10.5% is superseded.
 
 ## Artifacts
 
 `prek1/` and `k1/` (json, summary, campaign_meta), `provenance.json`, `evidence/`,
-`prek1_100r_aborted/`, `prek1_60r_aborted/`, `FRAGILE_LIST.md`.
+`prek1_100r_aborted/`, `prek1_60r_aborted/`, `FRAGILE_LIST.md`, `recheck_host64k/`
+(interleaved host-65536 recheck: json + README; raw logs stay on disk, not committed).
 Raw attempt logs & builds stay on disk (gitignored / not committed).

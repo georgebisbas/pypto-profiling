@@ -1,0 +1,305 @@
+/*
+ * Copyright (c) PyPTO Contributors.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ * -----------------------------------------------------------------------------------------------------------
+ */
+
+// Generated from pypto.runtime.builtins.collectives.all_to_all_v.
+
+#include <cstdint>
+#include <pto/pto-inst.hpp>
+
+#include "platform_comm/comm_context.h"
+#include "pto/comm/comm_types.hpp"
+#include "pto/comm/pto_comm_inst.hpp"
+#include "tensor.h"
+
+#ifndef __gm__
+#define __gm__
+#endif
+
+#ifndef __aicore__
+#define __aicore__ [aicore]
+#endif
+
+namespace {
+
+static constexpr int64_t kTileCount = 256;
+
+// Counts protocol: a peer PULL plus a TWO-ROUND credit barrier.
+// Every rank stages its own per-destination send vector into its OWN
+// send_counts window (window-bound on the builtin rails), and after Barrier A
+// every rank reads its peers' vectors straight from those windows:
+//   recv_counts[src] = clamp(peer src's send_counts[my_rank], 0, max_recv)
+// The read is ONE scalar word (ld_dev, non-cacheable), because the receiver
+// only ever needs its own column - no bulk TLOAD and no fixed-width capacity
+// requirement on the send_counts buffer.
+//
+// Barrier A also certifies that every rank finished consuming the previous
+// invocation's receive window before any new payload push can overwrite it.
+// Barrier B certifies that every peer finished reading this rank's counts and
+// pushed its payload, so returning (and restaging counts next invocation) is
+// safe. Credits accumulate: +1 per phase into each peer's slot, waits GE(1)
+// then GE(2) on the local slots, and ONE AtomicAdd(-2) per local slot at the
+// end - never a reset, so a credit from the next invocation that has already
+// arrived is preserved. All ranks must execute the same round order, and the
+// signal must be zero when the buffers are first used.
+
+template <typename T>
+AICORE inline __gm__ T *CommRemotePtr(__gm__ CommContext *ctx, __gm__ T *local_ptr, int pe) {
+  uint64_t local_base = ctx->windowsIn[ctx->rankId];
+  uint64_t offset = reinterpret_cast<uint64_t>(local_ptr) - local_base;
+  return reinterpret_cast<__gm__ T *>(ctx->windowsIn[pe] + offset);
+}
+
+}  // namespace
+
+extern "C" __aicore__ __attribute__((always_inline)) void kernel_entry(__gm__ int64_t *args) {
+  __gm__ Tensor *input_tensor = reinterpret_cast<__gm__ Tensor *>(args[0]);
+  __gm__ Tensor *target_tensor = reinterpret_cast<__gm__ Tensor *>(args[1]);
+  __gm__ Tensor *signal_tensor = reinterpret_cast<__gm__ Tensor *>(args[2]);
+  __gm__ Tensor *send_counts_tensor = reinterpret_cast<__gm__ Tensor *>(args[3]);
+  __gm__ Tensor *recv_counts_tensor = reinterpret_cast<__gm__ Tensor *>(args[4]);
+  // args[5] is the CommContext on BOTH rails, and the rank count comes from the
+  // context rather than from a scalar argument:
+  //
+  //   HOST/L3 builtin dispatch : args[5] = CommContext* (the dispatch emits no
+  //                              rank-count scalar for this builtin)
+  //   CHIP/L2 managed task     : args[5] = CommContext* — MaterializeDistTensorCtx
+  //                              appends one ctx per DistributedTensor param;
+  //                              all of them hold the same pointer, and args[6..]
+  //                              are the unread duplicates
+  //
+  // `rankNum` is the domain's rank count: the context is derived per comm
+  // domain, so it is exactly the `domain_size` the dispatch used to pass. One
+  // GM load at entry buys an argument layout — and therefore a kernel source —
+  // that is identical on both rails.
+  __gm__ CommContext *comm_ctx = reinterpret_cast<__gm__ CommContext *>(args[5]);
+  int nranks = static_cast<int>(comm_ctx->rankNum);
+
+  if (nranks <= 0) {
+    pipe_barrier(PIPE_ALL);
+    return;
+  }
+
+  int my_rank = static_cast<int>(comm_ctx->rankId);
+
+  // MAX_RECV = target.shape[0] / nranks. target is 2D [NR*MAX_RECV, SIZE] and
+  // nranks is the comm-domain size (dispatch scalar 0), so the block geometry
+  // below is always consistent with the rank count this kernel actually runs
+  // on. Deriving it here instead of baking it at codegen time closes the
+  // dynamic-domain hazard where signal.shape[0] is not tied to the runtime
+  // world size (an over-provisioned signal would otherwise silently change
+  // the per-destination block size).
+  int64_t max_recv = static_cast<int64_t>(target_tensor->shapes[0]) / nranks;
+  if (max_recv <= 0) {
+    pipe_barrier(PIPE_ALL);
+    return;
+  }
+
+  // row_numel = SIZE (target is 2D [NR*MAX_RECV, SIZE]).
+  int64_t row_numel = 1;
+  for (uint32_t dim = 1; dim < target_tensor->ndims; ++dim) {
+    row_numel *= static_cast<int64_t>(target_tensor->shapes[dim]);
+  }
+  if (row_numel <= 0) {
+    pipe_barrier(PIPE_ALL);
+    return;
+  }
+
+  // `input` and `target` are two DISTINCT windows — same same-window-race
+  // rationale as the symmetric all_to_all kernel.
+  __gm__ int8_t *input_local =
+      reinterpret_cast<__gm__ int8_t *>(input_tensor->buffer.addr) + input_tensor->start_offset;
+  __gm__ int8_t *target =
+      reinterpret_cast<__gm__ int8_t *>(target_tensor->buffer.addr) + target_tensor->start_offset;
+  __gm__ int32_t *signal_base =
+      reinterpret_cast<__gm__ int32_t *>(signal_tensor->buffer.addr) + signal_tensor->start_offset;
+  __gm__ int32_t *send_counts_base =
+      reinterpret_cast<__gm__ int32_t *>(send_counts_tensor->buffer.addr) + send_counts_tensor->start_offset;
+  __gm__ int32_t *recv_counts_base =
+      reinterpret_cast<__gm__ int32_t *>(recv_counts_tensor->buffer.addr) + recv_counts_tensor->start_offset;
+
+  using ShapeDyn = pto::Shape<pto::DYNAMIC, pto::DYNAMIC, pto::DYNAMIC, pto::DYNAMIC, pto::DYNAMIC>;
+  using StrideDyn = pto::Stride<pto::DYNAMIC, pto::DYNAMIC, pto::DYNAMIC, pto::DYNAMIC, pto::DYNAMIC>;
+  using Global = pto::GlobalTensor<int8_t, ShapeDyn, StrideDyn, pto::Layout::ND>;
+  using TileData = pto::Tile<pto::TileType::Vec, int8_t, 1, kTileCount, pto::BLayout::RowMajor, -1, -1>;
+
+  // Staging tile width is kTileCount; TPUT_IMPL chunks larger payloads against
+  // GetValidCol(), so one TPUT per destination is enough (RFC #2521 K1).
+  TileData send_tile(1, kTileCount);
+  TASSIGN(send_tile, 0x0);
+
+  // ==================================================================
+  // Phase 1 - Barrier A: all counts staged AND everyone done consuming the
+  // previous receive window. Each rank staged its per-destination send vector
+  // into its OWN send_counts window before the collective was dispatched; a
+  // rank's arrival here certifies that staging is complete, so every peer may
+  // read it below. The receive-window half matters across back-to-back
+  // invocations: a fast rank cannot push into a peer's window until that peer
+  // has arrived here, i.e. consumed the previous invocation's data.
+  // ==================================================================
+  pipe_barrier(PIPE_ALL);
+  dsb(DSB_DDR);
+  for (int peer = 0; peer < nranks; ++peer) {
+    if (peer == my_rank) continue;
+    __gm__ int32_t *remote_signal = CommRemotePtr(comm_ctx, signal_base + my_rank, peer);
+    pto::comm::Signal sig(remote_signal);
+    pto::comm::TNOTIFY(sig, static_cast<int32_t>(1), pto::comm::NotifyOp::AtomicAdd);
+  }
+  for (int peer = 0; peer < nranks; ++peer) {
+    if (peer == my_rank) continue;
+    pto::comm::Signal sig(signal_base + peer);
+    pto::comm::TWAIT(sig, static_cast<int32_t>(1), pto::comm::WaitCmp::GE);
+  }
+
+  // ==================================================================
+  // Phase 2 - scalar counts pull. Barrier A guarantees every peer's send
+  // vector is staged and visible, so each rank reads the ONE word it needs
+  // from every peer: peer_send_counts[my_rank]. ld_dev is the non-cacheable
+  // remote-word read idiom (the a2a3 TNotify NotifyOp::Set fix and the A2A3
+  // soft-SYNCALL poll read remote words the same way), so no bulk TLOAD, no
+  // dcci, and no fixed-width requirement on the send_counts buffer - the
+  // [NR] INT32 vector at the start of a window is all the op needs.
+  // The RAW value is clamped two-sided reader-side - the same clamp the sender
+  // applies to its transfer - so HOST and InCore stay bit-for-bit identical.
+  // No rank writes into another rank's array, and no NotifyOp::Set is
+  // involved anywhere.
+  // ==================================================================
+  {
+    // Self: my own send vector is local.
+    {
+      int32_t self_rows = send_counts_base[my_rank];
+      if (self_rows > max_recv) self_rows = static_cast<int32_t>(max_recv);
+      if (self_rows < 0) self_rows = 0;
+      recv_counts_base[my_rank] = self_rows;
+    }
+
+    for (int src = 0; src < nranks; ++src) {
+      if (src == my_rank) continue;
+      __gm__ int32_t *remote_slot = CommRemotePtr(comm_ctx, send_counts_base + my_rank, src);
+      int32_t pulled = static_cast<int32_t>(ld_dev(reinterpret_cast<__gm__ uint32_t *>(remote_slot), 0));
+      if (pulled > max_recv) pulled = static_cast<int32_t>(max_recv);
+      if (pulled < 0) pulled = 0;
+      recv_counts_base[src] = pulled;
+    }
+
+    // The delivered counts above are plain scalar stores. Flush them to GM: a
+    // consumer on another AIV invalidates and re-reads the window, so a value
+    // left sitting in this core's cache would read back as stale zero.
+    for (int src = 0; src < nranks; ++src) {
+      __asm__ __volatile__("");
+      dcci(static_cast<__gm__ void *>(recv_counts_base + src), cache_line_t::SINGLE_CACHE_LINE);
+      __asm__ __volatile__("");
+    }
+    dsb(DSB_DDR);
+    pipe_barrier(PIPE_ALL);
+  }
+
+  // ==================================================================
+  // Phase 3 - per-destination push. Include self
+  // (dest == my_rank), matching HCCL identity / the InCore composite's
+  // EmitFor over [0, nranks) with no self-exclusion.
+  //
+  //   rows = clamp(send_counts[dest], 0, max_recv)  -- runtime scalar,
+  //          clamped on BOTH sides. Matches LowerTensorAllToAllVRule's
+  //          MakeMax(MakeMin(cast(count, INDEX), max_recv), 0) exactly, so
+  //          HOST and InCore agree bit-for-bit on every input, including a
+  //          negative send_counts.
+  //   (no count publish here - peers already pulled THIS rank's send_counts
+  //    window word in Phase 2)
+  //   TPUT input[dest*max_recv : dest*max_recv + rows, :]
+  //        -> target[my_rank*max_recv : my_rank*max_recv + rows, :]
+  //
+  // The TPUT transfers exactly `rows` rows, not the full max_recv capacity —
+  // only the payload crosses the interconnect. Rows past `rows` in the
+  // destination's capacity slot are simply not written, and the receiver
+  // identifies the valid ones via recv_counts (unchanged semantics).
+  //
+  // The unwritten tail of the destination's capacity slot therefore holds
+  // whatever was already in the window. Window memory is not *guaranteed*
+  // zeroed and can carry over within a process, so those bytes are undefined
+  // (a freshly allocated window has been seen reading zero, and a reused one
+  // reading values like -1.2e+32).
+  // Previously the full-capacity push filled them with the sender's surplus
+  // rows, which were equally meaningless but were always FINITE FP32. The tail
+  // has therefore changed in KIND, not just in value: uninitialised bytes may
+  // decode as NaN/Inf. A consumer that reduces over the dense capacity block
+  // and masks by recv_counts afterwards - the natural MoE dispatch shape - was
+  // correct before and would now propagate NaN into valid rows. Trim to
+  // recv_counts BEFORE computing.
+  // recv_counts is what makes either correct, and always was: only code reading
+  // past recv_counts can tell the difference, and it was already reading data
+  // it had no right to.
+  //
+  // InCore/HOST wire parity is deliberate and preserved: LowerTensorAllToAllVRule
+  // emits the same [rows, SIZE] transfer, so the two lowering paths stay
+  // bit-for-bit identical and there is no second, divergent implementation.
+  // ==================================================================
+  for (int dest = 0; dest < nranks; ++dest) {
+    int32_t raw_count = send_counts_base[dest];
+    int64_t rows64 = static_cast<int64_t>(raw_count);
+    if (rows64 > max_recv) rows64 = max_recv;
+    if (rows64 < 0) rows64 = 0;
+
+    int64_t src_row_offset = static_cast<int64_t>(dest) * max_recv * row_numel;
+    int64_t dst_row_offset = static_cast<int64_t>(my_rank) * max_recv * row_numel;
+    __gm__ int8_t *remote_block = CommRemotePtr(comm_ctx, target + dst_row_offset, dest);
+
+    // K1: ONE TPUT per destination. TPUT_IMPL re-chunks the flat [rows * SIZE]
+    // block internally against the staging tile, so there is no caller-managed
+    // per-chunk loop and no pipe_barrier pair per chunk. rows == 0 issues no
+    // TPUT at all, matching the InCore rail's rows > 0 guard.
+    int64_t block_numel = rows64 * row_numel;
+    if (block_numel > 0) {
+      send_tile.ColMaskInternal = static_cast<int>(block_numel <= kTileCount ? block_numel : kTileCount);
+
+      ShapeDyn shape(1, 1, 1, 1, block_numel);
+      StrideDyn stride(block_numel, block_numel, block_numel, block_numel, 1);
+      Global src_g(input_local + src_row_offset, shape, stride);
+      Global dst_g(remote_block, shape, stride);
+
+      pipe_barrier(PIPE_ALL);
+      pto::comm::TPUT(dst_g, src_g, send_tile);
+      pipe_barrier(PIPE_ALL);
+    }
+  }
+
+  // ==================================================================
+  // Phase 4 - Barrier B: counts lifetime. Arriving here means the arriving
+  // rank already pulled every peer's counts in Phase 2 (its pull ran before
+  // this notify), so once ALL peers have arrived it is safe to return: the
+  // next invocation may restage this rank's send_counts, and every peer has
+  // read the current values. Each rank contributes +1 to every peer's slot
+  // again, so the wait threshold on the same slots is GE(2).
+  // ==================================================================
+  pipe_barrier(PIPE_ALL);
+  dsb(DSB_DDR);
+  for (int peer = 0; peer < nranks; ++peer) {
+    if (peer == my_rank) continue;
+    __gm__ int32_t *remote_signal = CommRemotePtr(comm_ctx, signal_base + my_rank, peer);
+    pto::comm::Signal sig(remote_signal);
+    pto::comm::TNOTIFY(sig, static_cast<int32_t>(1), pto::comm::NotifyOp::AtomicAdd);
+  }
+  for (int peer = 0; peer < nranks; ++peer) {
+    if (peer == my_rank) continue;
+    pto::comm::Signal sig(signal_base + peer);
+    pto::comm::TWAIT(sig, static_cast<int32_t>(2), pto::comm::WaitCmp::GE);
+  }
+
+  // Credit epilogue: this call added +1 (A) and +1 (B) to every peer's slot;
+  // drop both in ONE AtomicAdd(-2) per local slot. Never reset to zero - a
+  // credit from the next invocation may already have arrived, and keeping the
+  // arithmetic additive is what makes back-to-back calls safe.
+  for (int peer = 0; peer < nranks; ++peer) {
+    if (peer == my_rank) continue;
+    pto::comm::Signal self_sig(signal_base + peer);
+    pto::comm::TNOTIFY(self_sig, static_cast<int32_t>(-2), pto::comm::NotifyOp::AtomicAdd);
+  }
+  pipe_barrier(PIPE_ALL);
+}

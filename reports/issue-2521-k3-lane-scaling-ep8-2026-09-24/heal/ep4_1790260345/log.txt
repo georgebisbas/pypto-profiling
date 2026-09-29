@@ -1,0 +1,91 @@
+cmd=/usr/local/python3.12.13/bin/python /opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py --ep 4 --peer-bytes 1024 --count-pattern uniform --core-num 1 --impl managed-l2 --rounds 2 --warmup 1 --profile timing-slot --platform a2a3 --devices 0,1,2,3 --output-json /opt/pypto-profiling/reports/issue-2521-k3-lane-scaling-ep8-2026-09-24/heal/ep4_1790260345/out.json --output-dir /opt/pypto-profiling/reports/issue-2521-k3-lane-scaling-ep8-2026-09-24/heal/ep4_1790260345/build
+rc=1
+----- stdout -----
+[a2av-bench] session=timing-slot enter warmup=1 rounds=2
+
+----- stderr -----
+[mono_ns=15805501811470113][T0xe7bb22c9b020][TIMING] clock_anchor: [CLOCK_ANCHOR] v=1 pid=3846051 mono_ns=15805501811469413 wall_ns=1790260363757064002
+[mono_ns=15805501824255200][T0xe7bb22c9b020][TIMING] clock_anchor: [CLOCK_ANCHOR] v=1 pid=3846064 mono_ns=15805501824254460 wall_ns=1790260363769849149
+[mono_ns=15805501834603166][T0xe7bb22c9b020][TIMING] clock_anchor: [CLOCK_ANCHOR] v=1 pid=3846075 mono_ns=15805501834602426 wall_ns=1790260363780197085
+[mono_ns=15805501848027453][T0xe7bb22c9b020][TIMING] clock_anchor: [CLOCK_ANCHOR] v=1 pid=3846089 mono_ns=15805501848026623 wall_ns=1790260363793621362
+[mono_ns=15805510012893478][T0xe7bb22c9b020][TIMING] emit_host_span: [STRACE] v=1 pid=3846089 tid=3846089 inv=0 hid=0 depth=0 name=chip.prewarm.build ts=15805509929995683 dur=82882765 
+[chip_process pid=3846089 dev=3] ready
+[mono_ns=15805510031109358][T0xe7bb22c9b020][TIMING] emit_host_span: [STRACE] v=1 pid=3846064 tid=3846064 inv=0 hid=0 depth=0 name=chip.prewarm.build ts=15805509948058313 dur=83029255 
+[mono_ns=15805510032233878][T0xe7bb22c9b020][TIMING] emit_host_span: [STRACE] v=1 pid=3846075 tid=3846075 inv=0 hid=0 depth=0 name=chip.prewarm.build ts=15805509946703162 dur=85508006 
+[chip_process pid=3846064 dev=1] ready
+[chip_process pid=3846075 dev=2] ready
+[mono_ns=15805510071997680][T0xe7bb22c9b020][TIMING] emit_host_span: [STRACE] v=1 pid=3846051 tid=3846051 inv=0 hid=0 depth=0 name=chip.prewarm.build ts=15805509956900518 dur=115077922 
+[chip_process pid=3846051 dev=0] ready
+[mono_ns=15805510079400844][T0xe7bb22c9b020][TIMING] clock_anchor: [CLOCK_ANCHOR] v=1 pid=3836195 mono_ns=15805510079399474 wall_ns=1790260372024994403
+[mono_ns=15805512433164312][T0xe7bb22c9b020][ERROR] comm_init: [comm_hccl.cpp:486] [comm rank 0] HcclCommInitRootInfo failed: 7
+[mono_ns=15805512447929860][T0xe7bb22c9b020][ERROR] comm_init: [comm_hccl.cpp:486] [comm rank 1] HcclCommInitRootInfo failed: 7
+[mono_ns=15805512480694888][T0xe7bb22c9b020][ERROR] comm_init: [comm_hccl.cpp:486] [comm rank 2] HcclCommInitRootInfo failed: 7
+[mono_ns=15805512493580415][T0xe7bb22c9b020][ERROR] comm_init: [comm_hccl.cpp:486] [comm rank 3] HcclCommInitRootInfo failed: 7
+[mono_ns=15805512497526727][T0xe7bb22c9b020][TIMING] emit_host_span: [STRACE] v=1 pid=3836195 tid=3836195 inv=1 hid=0 depth=0 name=node.graph_build ts=15805510082816936 dur=2414669301 run_id=1 role=facade
+[mono_ns=15805512498215337][T0xe7bb22c9b020][TIMING] emit_host_span: [STRACE] v=1 pid=3836195 tid=3836195 inv=1 hid=0 depth=0 name=node.post_fence_retirement ts=15805512497610447 dur=597700 run_id=1 slot_id=0 generation=1 role=facade
+Traceback (most recent call last):
+  File "/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py", line 1224, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py", line 1213, in main
+    doc = run_benchmark(args, shape)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py", line 1071, in run_benchmark
+    host_slots, slot_rank = _timed_session(
+                            ^^^^^^^^^^^^^^^
+  File "/opt/pypto-profiling/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py", line 1002, in _timed_session
+    runtime.run(compiled, inputs, send_counts, outputs, recv_out, config=run_config)
+  File "/opt/pypto/python/pypto/runtime/distributed_runner.py", line 3342, in run
+    return self.submit(compiled, *args, config=config).result()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/pypto/python/pypto/runtime/distributed_runner.py", line 3316, in submit
+    return self._submit_compiled(compiled, *args, config=config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/pypto/python/pypto/runtime/distributed_runner.py", line 3158, in _submit_compiled
+    self._submit_native_dispatch(handle, frame, state, tensors, call_config)
+  File "/opt/pypto/python/pypto/runtime/distributed_runner.py", line 2418, in _submit_native_dispatch
+    native_handle = self._submit_prepared_native(
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/pypto/python/pypto/runtime/distributed_runner.py", line 2394, in _submit_prepared_native
+    return self._submit_persistent(state, tensors, call_config, keepalive, cleanup)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/pypto/python/pypto/runtime/distributed_runner.py", line 2372, in _submit_persistent
+    return self._w.submit(run_request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 11235, in submit
+    result = self._submit_locked(callable, args, config)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 11282, in _submit_locked
+    return self._submit_l3_locked(callable, args, cfg)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 11541, in _submit_l3_locked
+    callable(self._orch, args, cfg)
+  File "/opt/pypto/python/pypto/runtime/distributed_runner.py", line 2359, in run_request
+    state["entry_fn"](
+  File "/opt/pypto-profiling/reports/issue-2521-k3-lane-scaling-ep8-2026-09-24/heal/ep4_1790260345/build/orchestration/host_orch.py", line 10, in host_orch
+    with (_domain_provider or orch.allocate_domain)(
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/pypto/python/pypto/runtime/distributed_runner.py", line 2343, in domain_provider
+    handle = orch.allocate_domain(**runtime_kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/pypto/runtime/python/simpler/orchestrator.py", line 559, in allocate_domain
+    return self._worker._allocate_domain(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 8946, in _allocate_domain
+    self._ensure_comm_base()
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 8921, in _ensure_comm_base
+    _run_with_owned_shared_memory(
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 1643, in _run_with_owned_shared_memory
+    raise result.error
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 1339, in invoke
+    result.value = operation()
+                   ^^^^^^^^^^^
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 1636, in run_lifecycle
+    raise operation_error
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 1623, in run_lifecycle
+    value = operation(owner)
+            ^^^^^^^^^^^^^^^^
+  File "/opt/pypto/runtime/python/simpler/worker.py", line 8916, in initialize
+    raise RuntimeError(
+RuntimeError: _ensure_comm_base failed on 4/4 chips; first error chip=0: control_comm_init failed on child: chip_process dev=0 ctrl=9: RuntimeError: comm_init failed
+

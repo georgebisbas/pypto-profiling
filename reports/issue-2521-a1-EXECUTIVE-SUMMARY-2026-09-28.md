@@ -15,7 +15,7 @@ this repo; change record in `pypto-3.0-notes` (`d66a84e`).
 | Experiment | Headline | Report |
 |---|---|---|
 | E1 (official, EP8, 100r) | 43/44 cells; L2 aicore curve 16 µs→19.1 ms over 0→1 MiB; HOST slot family ≈5.2–13 ms | `issue-2521-a1-b1-2026-09-25/` |
-| E2.1 (paired K1 delta, 30r) | **K1 +2.6% L2 / +2.7% HOST slower (means)** vs pre-K1; host-64 KiB K1 **−10.5%** (follow-up); **no 1.5–1.8×**; pre-K1 counts-bug reproduced | `issue-2521-a1-b1-k1ep8-swap-2026-09-28/` |
+| E2.1 (paired K1 delta, 30r) | **K1 +2.6% L2 / +2.7% HOST slower (means)** vs pre-K1; host-64 KiB K1 **−2.8%** (interleaved recheck; single-sample −10.5% superseded); **no 1.5–1.8×**; pre-K1 counts-bug reproduced | `issue-2521-a1-b1-k1ep8-swap-2026-09-28/` |
 | E1.5 (R7 calibration) | repeat ×2: **1.0–1.9%** (128 B, 1 MiB), **5.1%** anchor (band edge) | `issue-2521-a1-b1-cal-rep-2026-09-28/` |
 | E1.4 (tails) | all six **N/A**: `row_width=N is not 32-byte aligned for INT8 staging` | `issue-2521-a1-b1-tails-2026-09-28/` |
 | Blocked cell | `managed-host random@24960` 100r stall characterized (round-count-dependent, runtime-level); 30/60r supplements archived | `issue-2521-a1-b1-2026-09-25/README + supplement/` |
