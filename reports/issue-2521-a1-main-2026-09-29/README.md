@@ -52,8 +52,9 @@ Frozen A1, protocol-matched to the E2.1 series:
 ## Artifacts
 
 - `json/` — 12 cell JSONs (10× L=1, 2× L=16); `summary.json`; `campaign_meta.json`
-- `builds/` — per-cell build/capture records (incl. dfx host logs, dispatch identities)
+- `attempt_logs/`, `heal/` — per-attempt harness logs; heal smoke record for the L2@65536 absorbed failure
 - `driver/` — `main_run.sh` (campaign driver), `main_l16.sh` (L=16 spot driver)
+- `builds/` — per-cell build/capture records (dfx host logs, dispatch identities); **local-only** — `reports/**/builds/` is gitignored repo-wide
 - on-box logs: `/opt/a1/main_run.log`, `/opt/a1/main_l16.log`
 
 ## Caveats
