@@ -1,8 +1,9 @@
 # RFC #2521 — A1 executive summary (2026-09-28)
 
 **Scope:** A1 = benchmark harness + pre-change baseline (plan 110). Measurement program
-**COMPLETE**; one open deliverable (in-tree harness PR, E4.2). All artifacts pushed to
-this repo; change record in `pypto-3.0-notes` (`d66a84e`).
+**COMPLETE** — all deliverables closed, incl. the in-tree harness PR
+[#2945](https://github.com/hw-native-sys/pypto/pull/2945) (opened 2026-09-29). All artifacts pushed to
+this repo; change record in `pypto-3.0-notes` (`d66a84e`, `07e6b98`).
 
 ## Deliverable definition (tactic change, 2026-09-25)
 
@@ -32,7 +33,8 @@ device span stays ~0.6 ms at 24960). Details in the E2.1/E1 reports.
 4. **Stall hazard**: timing-slot sessions ≥ ~65–85 dispatches can stall (`S1:running-stalled`,
    runtime-level; bisect in `RESUME_COMPLETION_2026-09-28.md`). Recommend a runtime/simpler issue;
    campaigns use 30r + retries + heals meanwhile.
-5. **In-tree harness PR (E4.2)** pending — the only open A1 deliverable.
+5. **In-tree harness PR (E4.2)** → [#2945](https://github.com/hw-native-sys/pypto/pull/2945), opened
+   2026-09-29 — all A1 deliverables closed (smoke + live EP2 verified; worktree-safe commit lookup).
 
 ## Policy (adopted 2026-09-28)
 
@@ -44,4 +46,6 @@ meta; list: `issue-2521-a1-b1-k1ep8-swap-2026-09-28/FRAGILE_LIST.md`).
 
 `ea684805`, `5ca4cef2`, `91016266` (E1 + blocked cell) · `4f8458ae`, `6bd0d4be`, `1347cf5b`
 (E2.1) · `0ddea067` (E1.5) · `7335588a` (E1.4) · `684fb059` (skip mechanism + fragile list) ·
-`cc187ed8`, `bc831ab1` (k1ab + tactic + B0 record). Notes repo: `d66a84e`.
+`32c0e37c` (this summary) · `62c8d184` (host-64K interleaved recheck) · `5a794159` (E4.2 evidence) ·
+`79d1a1db`, `6319d3a2` (README hygiene) · `cc187ed8`, `bc831ab1` (k1ab + tactic + B0 record).
+Notes repo: `d66a84e`, `07e6b98`.
