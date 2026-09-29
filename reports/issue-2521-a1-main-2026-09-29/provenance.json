@@ -1,0 +1,94 @@
+{
+  "campaign": "issue-2521-a1-main-2026-09-29",
+  "status": "COMPLETE 2026-09-29",
+  "purpose": "A1 protocol measurement of the pypto main snapshot (post-K2, pre-K3) to check the frozen B1 denominator; plus L=16 spot cells recording the pre-K3 multi-block state (K3 comparator point at 1 MiB/peer).",
+  "pypto_commit": "54521824f2777fcba180322b7148ce335d254709",
+  "pypto_commit_stamp": "54521824f277",
+  "pypto_worktree": "/opt/a1/main (git worktree; origin/main snapshot, contains K2 e48937b9 / PR #2889; forked before K3 / PR #2900)",
+  "runtime_commit": "6e383fc57c12a8bd4dce045289b8b4f5d55a15f1 + FORCE_IPC patch",
+  "force_ipc_patch_sha256": "a88e4442e26b33d9a10a95f4c3c21cc42c90e780c82304750a99df06f2e16688",
+  "harness": "tests/st/distributed/collectives/all_to_all_v_benchmark.py (in-tree, e42 @ 86abfffb / PR #2945)",
+  "harness_sha256": "3c1f83beed61064bd3c939f2c42fc9fd66f58500d518e14c2dc2f07738640e88",
+  "ptoas": "0.65 (/opt/ptoas-bin; `ptoas --version` => 'ptoas 0.65')",
+  "cann": "9.0.0",
+  "protocol": {
+    "ep": 8,
+    "devices": "0,1,2,3,4,5,6,7",
+    "impls": [
+      "managed-l2",
+      "managed-host"
+    ],
+    "core_num": 1,
+    "requested_L": 1,
+    "reps": 1,
+    "timing_slot_rounds": 30,
+    "warmup": 5,
+    "swimlane_rounds": 8,
+    "retries": 4,
+    "cooldown_s": 60,
+    "heal_ep": 4,
+    "heal_devices": "0,1,2,3",
+    "persistent": true,
+    "force_ipc": true,
+    "count_pattern": "uniform",
+    "payloads": [
+      8192,
+      24960,
+      32768,
+      65536,
+      1048576
+    ],
+    "driver": "collectives/alltoallv_a1.py",
+    "protocol_note": "30r timing-slot is the stable protocol on this box (100r sessions stall; see E2.1 and the B1 report)"
+  },
+  "cells": {
+    "ok": 10,
+    "fail": 0,
+    "absorbed_failures": [
+      "p8_l1_managed-l2_uniform_65536 attempt1 rc=-11 -> heal EP4 smoke on 0,1,2,3 -> cooldown 60s -> attempt2 OK"
+    ]
+  },
+  "l16_spots": {
+    "impl": "managed-host",
+    "core_num": 16,
+    "launched_B": 16,
+    "expected_B": 16,
+    "timing_slot_rounds": 30,
+    "warmup": 5,
+    "payloads": [
+      24960,
+      1048576
+    ],
+    "results": {
+      "24960": {
+        "p50_us": 12247.87,
+        "mean_us": 12566.89,
+        "egress_gbit_s_per_rank": 0.111
+      },
+      "1048576": {
+        "p50_us": 30790.2,
+        "mean_us": 31390.47,
+        "egress_gbit_s_per_rank": 1.871
+      }
+    },
+    "cells_ok": 2
+  },
+  "windows_utc": {
+    "campaign": [
+      "2026-09-29T09:03:46Z",
+      "2026-09-29T09:45:40Z"
+    ],
+    "l16_spots": [
+      "2026-09-29T09:48:07Z",
+      "2026-09-29T09:50:02Z"
+    ]
+  },
+  "comparators": {
+    "E2.1_k1_30r": "reports/issue-2521-a1-b1-k1ep8-swap-2026-09-28/k1 (B1 d626aea16 + K1 template 70a6cb09, 30r, harness dd960384)",
+    "E1_100r": "reports/issue-2521-a1-b1-2026-09-25 (100r, harness dd960384)",
+    "E1.5_repeat": "reports/issue-2521-a1-b1-cal-rep-2026-09-28 (host 24960 repeat spread [12554.75, 13194.11])",
+    "K3_repro": "reports/issue-2521-k3-repro-2026-09-28 (EP8 L=16 1MiB host mean 12504.6 us; branch cf136e73)"
+  },
+  "result_headline": "L=1 matches B1 within L2 +/-0.4% and HOST within the documented +/-6% scatter (no actionable regression). L=16 spot @1MiB shows no scaling on main (p50 30790.2 vs 31177.3 at L=1) => 2.51x slower than K3-repro L=16 (12504.6 us mean); the pre-K3 multi-lane gap is quantified at the K3 comparator point.",
+  "written_utc": "2026-09-29T10:02:31.253895+00:00"
+}
