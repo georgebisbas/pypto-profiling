@@ -42,6 +42,8 @@ from __future__ import annotations
 
 import json
 import os
+import re
+import statistics as _st
 import subprocess
 import sys
 import time
@@ -107,6 +109,42 @@ def _env_int(name: str, default: int) -> int:
 
 def _tail_text(text: str, n: int = 2500) -> str:
     return (text or "")[-n:]
+
+
+# The runtime emits one `[STRACE] ... name=<span> ts=<ns> dur=<ns>` per run()
+# around each phase. `chip.run.stage_inputs` and `chip.run.validate` are NOT what
+# their names suggest (see reports/issue-2521-a1-ep8-l2corenum-2026-10-14/GAP_CLOSING_NOTES.md):
+#   stage_inputs -> copy_in_run_inputs_impl    = H2D of the payload, EVERY run()
+#   validate     -> copy_back_run_outputs_impl = D2H of the payload, EVERY run()
+# Both scale linearly with payload and both are inside host_timing_slot_p50_us,
+# so reporting the slot without them is not a like-for-like number vs HCCL.
+BREAKDOWN_SPANS = (
+    "chip.run.stage_inputs",
+    "chip.run.validate",
+    "chip.run.runner_run.device_wall",
+    "chip.run.prepare_execution",
+    "chip.run.publish_image",
+    "chip.run.bind",
+    "chip.run",
+)
+
+
+def span_breakdown(log_path: Path) -> dict[str, dict[str, float]]:
+    """Per-span count + median duration (µs) from a captured attempt log.
+
+    Median rather than mean so a single straggler round does not move the
+    number; `count` lets a reader see whether the spans cover the timed rounds.
+    """
+    if not log_path.is_file():
+        return {}
+    found: dict[str, list[float]] = {}
+    for name, dur in re.findall(r"name=(\S+) ts=\d+ dur=(\d+)", log_path.read_text(errors="ignore")):
+        if name in BREAKDOWN_SPANS:
+            found.setdefault(name, []).append(int(dur) / 1e3)  # ns -> us
+    return {
+        name: {"count": len(vals), "median_us": _st.median(vals)}
+        for name, vals in sorted(found.items())
+    }
 
 
 def _run_harness(cmd: list[str], *, log_path: Path | None = None) -> subprocess.CompletedProcess[str]:
@@ -266,8 +304,13 @@ def run_one(
                 ),
                 "aiv_rounds_captured": harness.get("aiv_rounds_captured"),
                 "send_bytes": (harness.get("per_rank_send_bytes") or {}).get("0"),
+                "breakdown_us": span_breakdown(log_path),
                 "json_path": str(json_path),
             }
+            bd = row["breakdown_us"]
+            stage = (bd.get("chip.run.stage_inputs") or {}).get("median_us")
+            back = (bd.get("chip.run.validate") or {}).get("median_us")
+            dev = (bd.get("chip.run.runner_run.device_wall") or {}).get("median_us")
             print(
                 f"  OK attempt={attempt} metric={row['metric']}  "
                 f"kernel_p50={row['fastest_p50_us']}  "
@@ -275,6 +318,12 @@ def run_one(
                 f"egress={row['egress_gbps']}",
                 flush=True,
             )
+            if stage is not None or back is not None:
+                print(
+                    f"     breakdown (median per run): "
+                    f"stage_in={stage:.0f}us  copy_back={back:.0f}us  device_wall={dev:.0f}us",
+                    flush=True,
+                )
             return row
 
         tail = _tail_text(proc.stderr or proc.stdout or "")

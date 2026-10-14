@@ -88,16 +88,58 @@ fixed every PyPTO number this repo publishes at ≥256 KiB is inflated by it.
 
 ---
 
-## Step 1 — (next) make the terms separable, then attack A
+## Step 1 — make the terms separable, then attack A (partial)
 
-To do when the box is next free:
-1. Emit a **breakdown** instead of the single `host_timing_slot`: `stage_in / device / copy_back /
-   dispatch`, parsed from the `chip.run.*` spans. Then the headline becomes falsifiable and comparable
-   to HCCL line by line.
-2. Determine whether the harness can pass **device-resident** tensors (or a reused binding) so
-   `copy_in_run_inputs_impl` leaves the timed path. If the API forbids it, that is the change to
-   propose upstream in `simpler`.
-3. Only then re-measure B (async DMA) against a number that means something.
+### 1a. Breakdown is now first-class in the driver ✅ DONE
 
-_(nothing below this line is done yet — the box has not been re-booked for Step 1)_
+`collectives/alltoallv_a1.py` now parses the `[STRACE]` spans out of each attempt log and records
+`breakdown_us` in every summary row (median per run + occurrence count), and prints it inline.
+Median, not mean, so one straggler round cannot move it. Validated end-to-end through the queue on
+2026-10-14 (EP8, `managed-l2 L=8`, 256 KiB, 8 rounds):
+
+```
+OK attempt=1 metric=aicore_gang_span  kernel_p50=678.6  slot_p50=5581.1  egress=21.63
+   breakdown (median per run): stage_in=604us  copy_back=636us  device_wall=2089us
+```
+
+That is the shape we needed: of a 5581 µs slot, **1240 µs (22%) is H2D+D2H of the payload**, 2089 µs
+is device execution, and ~2250 µs is bind/dispatch plumbing. Every future cell reports this.
+
+### 1b. Device-resident I/O (action A) — mechanism confirmed, **blocked on an upstream accessor** ⛔
+
+The runtime will skip both copies if the tensor is already device memory — in
+`runtime/src/a2a3/runtime/tensormap_and_ringbuffer/host/runtime_maker.cpp`:
+
+```cpp
+if (t.is_device_memory()) { out->add_tensor(t); continue; }   // pass-through, no copy
+```
+
+and `pypto.runtime.DeviceTensor` is the public handle: *"Pass it to CompiledProgram in place of a
+torch.Tensor to skip the host→device copy on entry and the device→host copy on exit."* Allocation is
+`Worker.alloc_tensor(shape, dtype, init=<host tensor>, worker_id=...)` — allocate once with an
+initial upload, then pass the handle to every `run()`.
+
+**What blocks it:** `alloc_tensor` is defined on the abstract `Worker` (`runtime_base.py:247`), but
+the harness only ever holds the session yielded by `compiled.prepare(...)`. There is no public way to
+get the `Worker` (or workers — `worker_id` is per-rank, so 8 of them) back out of that session. And
+the harness's tensors are `share_memory_()` host tensors (`:1070`) that the 8 worker processes share,
+so the change is not a one-liner even once the handle is reachable.
+
+So action A splits into:
+
+| Piece | Where | Status |
+|---|---|---|
+| `DeviceTensor` handle + pass-through in the runtime | simpler / pypto runtime | **already exists** |
+| public accessor for the prepared `Worker`(s) | pypto `distributed_runner` | **missing — the blocker** |
+| harness passes device tensors, reads outputs back once for `check_correctness` | A1 harness | blocked on the above |
+
+**Predicted payoff** (from the breakdowns, per rank per run): 3.09 ms + 2.55 ms at 1 MiB, 0.60 ms +
+0.64 ms at 256 KiB — i.e. it should take the 1 MiB `managed-l2 L=8` slot from **13615 µs to ~8000 µs**
+(≈1.7×) without touching the kernel, and it removes a term HCCL never had.
+
+### 1c. Not started
+
+- Action B (async SDMA/URMA data path) — still the right fix for the *slope*, unstarted.
+- Actions C/D (barriers, overlap).
+- A real PR for the worker accessor.
 
