@@ -1,5 +1,8 @@
 # PR #2591 — Final performance impact report (2026-09-02)
 
+> ⚠️ **Run unqueued** — this campaign predates queue provisioning here, so its timings are
+> unisolated. See [`npu-queue-runbook.md`](npu-queue-runbook.md) §10 for the shared caveat.
+
 **Repo:** `pypto-profiling` · **Date:** 2026-09-02 · **Platform:** a2a3 (8× Ascend 910B2, CANN 9.0.0)
 **Interpreter:** `/usr/local/python3.12.13/bin/python3` (pypto editable, runtime pinned `dbdd041e`)
 **Harness:** `collectives.run_sweep pair-mesh` · `pypto-composite`, `--persistent`

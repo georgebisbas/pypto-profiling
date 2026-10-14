@@ -4,7 +4,7 @@
 
 ## Spec (methodology)
 
-Authoritative plan: [pypto-3.0-notes/allreduce_benchmark_variants/collectives_performance_benchmark_plan.md](../pypto-3.0-notes/collectives_benchmarking/collectives_performance_benchmark_plan.md)
+Authoritative plan: [pypto-3.0-notes/collectives_benchmarking/collectives_performance_benchmark_plan.md](../pypto-3.0-notes/collectives_benchmarking/collectives_performance_benchmark_plan.md)
 
 Profiling playbook: [pypto-3.0-notes/performance_tuning.md/profiling.md](../pypto-3.0-notes/performance_tuning/profiling.md)
 
@@ -29,15 +29,25 @@ profiling/
 
 ## Environment
 
-| Variable | Dev workspace default | Docker (cann9.0) default |
+| Variable | Dev workspace default | Container (`pypto3-hw-native-sys:cann9`) default |
 |----------|----------------------|---------------------------|
 | `PYPTO_ROOT` | `../pypto` | `/opt/pypto` (auto-detected) |
-| `SIMPLER_ROOT` | `../simpler` | `/opt/pypto/runtime` (auto-detected) |
+| `SIMPLER_ROOT` | `../pypto/runtime` (or `../simpler` if you keep a standalone checkout) | `/opt/pypto/runtime` (auto-detected) |
 | `PYPTO_NOTES_ROOT` | `../pypto-3.0-notes` | must be set or mounted |
 | `PTO_ISA_ROOT` | `../pto-isa` | `/opt/pto-isa` |
 
-Auto-detection checks sibling directories first, then falls back to Docker-standard
-paths (`/opt/pypto`, `/opt/pypto/runtime`). Set the env var to override.
+Auto-detection order (`collectives/config.py`): environment variable → sibling directory →
+`/opt/pypto` / `/opt/pypto/runtime` → `<pypto>/runtime`. `simpler` is the **`runtime` git submodule
+of the pypto checkout**, not a standalone clone; in this workspace that submodule is not
+initialised, so the empty `pypto/runtime` directory is accepted silently and the simpler stacks
+break — run `git submodule update --init runtime` in the pypto checkout first.
+
+## Running on the NPU boxes
+
+The NPU hosts are shared and **queued**: on `192.168.150.11` / `192.168.150.12` every
+card-touching command must go through `task-submit`; `192.168.150.13` has no queue, and sim work
+(container `pypto3-hw-native-sys:sim`) never needs one. Start with [`AGENTS.md` §2.1](AGENTS.md)
+and the full recipe book in [`reports/npu-queue-runbook.md`](reports/npu-queue-runbook.md).
 
 ## Benchmark methodology
 

@@ -1,5 +1,8 @@
 # Plan 101 Phase 0 — reset-cost campaign + `--profile l2 --persistent` crash repro (2026-09-03)
 
+> ⚠️ **Run unqueued** (`task-submit`/taskqueue unavailable by owner instruction). See
+> [`npu-queue-runbook.md`](npu-queue-runbook.md) §10 for the shared caveat.
+
 **Status:** executed. Task A (CLI exposure of `reset_persistent_windows`) shipped to
 pypto-profiling `main` (`878558d`). Task B (NPU reset-cost tax) measured — 5 cells × 3 legs,
 15/15 PASS; verdict below. Task C (`--profile l2 --persistent` crash) **reproduced

@@ -60,3 +60,27 @@ Then set `SIMPLER_COMM_FORCE_IPC=1` or `A2AV_FORCE_IPC=1` (driver sets the forme
 These files are a **snapshot in pypto-profiling**. The harness and FORCE_IPC
 patch are **not** assumed to be on `hw-native-sys/pypto` / `simpler` `main`.
 INT8 builtin itself is pypto [PR #2714](https://github.com/hw-native-sys/pypto/pull/2714).
+
+## Sync status (re-checked 2026-10-14)
+
+This bundle is **no longer the harness's only home**, and the copy here has drifted behind the
+in-tree one:
+
+| | Path / ref |
+|---|---|
+| In-tree harness | `pypto/tests/st/distributed/collectives/all_to_all_v_benchmark.py` — pypto PR [#2945](https://github.com/hw-native-sys/pypto/pull/2945), branch `a2av-in-tree-harness` @ `eb1ed877` (open, bot-approved only) |
+| In-tree follow-up | branch `a2av-harness-l2-core-num` @ `22fc5886` (plan 129): managed-l2 `core_num>1` |
+| Upstream enabler | pypto [#2971](https://github.com/hw-native-sys/pypto/pull/2971) (O2a, merged 2026-10-13) |
+| This bundle | `harness/all_to_all_v_benchmark.py`, sha256 `3c1f83be…` (2026-10-13 snapshot) |
+
+Concretely, the in-tree version has and this copy lacks:
+
+- `cal_all_to_all_v_blocks(nr, core_num)` and the `sig_s = max(1, B)` signal-window sizing, so the
+  `signal` window is `[nr, sig_s]` instead of `[nr, 1]`;
+- `core_num=core_num` passed through to `pld.tensor.all_to_all_v` on the CHIP/L2 rail;
+- and it has dropped `require_supported_core_num`, i.e. **the `managed-l2` rail is no longer gated
+  at `core_num=1`** (this copy still raises `"managed-l2 is gated at core_num=1 (RFC #2521 O2)"`).
+
+**Consequence:** this snapshot cannot produce the RFC #2521 §10 HOST-vs-L2 comparison at `L>1`.
+Treat it as the A0/A1 baseline record only. Before re-running anything, sync from the in-tree file
+(or run inside the pypto worktree) and re-check its sha256 against the table above.

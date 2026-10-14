@@ -90,4 +90,6 @@ A2AV_PAYLOADS=16384,262144,1048576 A2AV_EXTRA_PATTERNS=zero \
 A2AV_RETRIES=3 A2AV_COOLDOWN_S=30 A2AV_HEAL_EP=4 python collectives/alltoallv_a1.py
 ```
 
-(Queue note: long campaigns need `MAX_TIME_HARD_CAP` raised on the task-submit invocation; default cap is 3600 s.)
+(Queue note: these are *payloads* and must be wrapped in `task-submit` on a queue host. Do **not**
+raise `MAX_TIME_HARD_CAP` — it is a 3600 s hard cap by design, so split the campaign into sub-hour
+units (per `A2AV_EPS` / `A2AV_IMPLS` / payload band) instead. See `../npu-queue-runbook.md`.)

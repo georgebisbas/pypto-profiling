@@ -7,13 +7,59 @@ Rules for this file: every entry states **what decides the answer** (not just "r
 steps, and the exit criteria that close it. Sim is not a substitute for any entry here. Add new
 entries at the top of §, keep closed ones out (delete them when done).
 
-Reference: [AGENTS.md](../AGENTS.md) §2 (interpreter, box), §3 (quick start),
+Reference: [AGENTS.md](../AGENTS.md) §2 (container, box) and §2.1 (the queue), §3 (quick start),
+[`npu-queue-runbook.md`](npu-queue-runbook.md) (in-repo: how to run any entry below through
+`task-submit`),
 [`npu-task-submit-runbook.md`](https://github.com/hw-native-sys/pypto-3.0-notes/blob/main/tools/npu-task-submit-runbook.md)
-(box etiquette — `task-submit` exists only on `192.168.150.11`).
+(box etiquette — `task-submit` exists on `192.168.150.11` **and** `192.168.150.12`; `.13` has none,
+and is **not** `.11`-only as an earlier revision of this file claimed).
 
 ---
 
-## 1. TFILLPAD UB-OOB (pto-isa#291) — verify the upstream fix and un-hack the ablation kernels
+## 1. RFC #2521 plan 129 — A1 `managed-l2` `core_num>1` sweep
+
+**Reporter:** us. **Upstream status:** O2a landed (pypto #2971, `fe651f29`, merged 2026-10-13) and
+the harness side is **implemented** on branch `a2av-harness-l2-core-num` @ `22fc5886`, stacked on
+`a2av-in-tree-harness` @ `eb1ed877` (pypto PR #2945, open — bot-approved only). **The hardware
+sweep has never been run.**
+**Decides:** whether the sanctioned RFC #2521 §10 HOST-vs-L2 comparison can be produced at all —
+today the A1 harness refuses `L>1` on the `managed-l2` rail, so no L2 row of any `L`/`B` sweep is
+obtainable from the sanctioned tool. Unblocks plan 116 (A3) and the `managed-l2` rows of plan 110.
+**Detail:** [`pypto-3.0-notes/pr_plans/129-pypto-a1-harness-managed-l2-core-num.md`](https://github.com/hw-native-sys/pypto-3.0-notes/blob/main/pr_plans/129-pypto-a1-harness-managed-l2-core-num.md)
+
+### 1.1 What is owed
+
+1. Steps 4–6 of plan 129: the hardware sweep on a real box, both rails, for `L ∈ {1,4,8,16}`.
+2. The PR, **only after #2945 merges** (the branch is stacked on `eb1ed877`; rebase onto `main`
+   first). Do not add this commit to #2945 — its body already promises "a separate change after
+   #2945".
+
+### 1.2 Things that will bite
+
+- **Over-capacity `L`.** `L = 64` is rejected at *submit* by the runtime
+  (`REQUIRE_SYNC_START_INVALID`, verified 2026-10-09), not by the compiler. Keep the sweep to
+  `L ∈ {1,4,8,16}`; a row at such an `L` should fail cleanly, not hang.
+- **`launched_b` is not device-observed on the L2 rail.** It is the compile-time fold
+  (`CalAllToAllVBlocks`); #2971 ships no DFX on L2. The stub writes `launched_b = expected_b` — say
+  so in the PR body, and do not add a JSON field (the stub is schema-validated).
+- **HOST metric fallback.** The HOST cells fell back to the host-slot metric (swimlane naming is
+  missing on the HOST path), so a cross-rail ratio stays directional. Plan 129 deliberately does
+  **not** fix this — it must be resolved or explicitly caveated before the §10 claim is called
+  like-for-like.
+- **Work in a separate worktree**, not the shared `pypto` tree.
+- Queue: the sweep is a set of sub-hour units, not one long job — see the surrounding host rules in
+  [`npu-queue-runbook.md`](npu-queue-runbook.md) (`--max-time` is capped at 3600 s).
+
+### 1.3 Exit criteria
+
+- [ ] 1.2's sweep produced L2 rows for `L>1` (they are impossible today)
+- [ ] `L ∈ {1,4,8,16}` × both rails, correctness check passing on every recorded row
+- [ ] Cross-rail HOST-vs-L2 ratio either resolved or explicitly caveated as directional
+- [ ] PR opened after #2945 merges (fork remote only), rebased onto `main`
+
+---
+
+## 2. TFILLPAD UB-OOB (pto-isa#291) — verify the upstream fix and un-hack the ablation kernels
 
 **Reporter:** us (filed 2026-09-03 from the plan-107 `fillpad`/`allfour` crash). **Upstream status:**
 fixed by pto-isa `a77a7e2` (2026-09-08) + `3b49066` (2026-09-11), both on `origin/main`; the
@@ -23,7 +69,7 @@ pto-isa side asked us to verify and close.
 `pypto/runtime/pto_isa.pin` needs the bump.
 **Detail:** [issue291_tfillpad_ub_oob.md](https://github.com/hw-native-sys/pypto-3.0-notes/blob/main/issues/issue291_tfillpad_ub_oob.md)
 
-### 1.1 A/B the standalone probe (discriminating case)
+### 2.1 A/B the standalone probe (discriminating case)
 
 Our `/tmp/fp_repro` bundle is gone; the durable copy is the public
 [`tfillpad-ub-oob-repro`](https://github.com/georgebisbas/tfillpad-ub-oob-repro) repo
@@ -38,7 +84,7 @@ git -C <pto-isa> checkout 3b49066
 
 Hardware only: `a2a3sim` does not fault in either revision, so a sim run answers nothing here.
 
-### 1.2 pto-isa's own regression ST
+### 2.2 pto-isa's own regression ST
 
 ```bash
 python3 tests/script/run_st.py -r npu -v a3 -t tfillpad      # inside the pto-isa checkout
@@ -48,14 +94,13 @@ Expect: pre-fix `testKey == 23` **FAIL with 507035**, post-fix **PASS** (upstrea
 ~41 s). Note their AIV error code (`507035`, CCU address check) differs from ours (`-100`,
 `finalize_native_run`) — same OOB write, different reporting layer.
 
-### 1.3 Prove the fix covers *our* kernel (the one that actually matters)
+### 2.3 Prove the fix covers *our* kernel (the one that actually matters)
 
 Passing with the workaround still in place proves nothing. Revert it first: in
 `collectives/kernels/aiv/allreduce_mesh_fillpad.cpp` and `allreduce_mesh_allfour.cpp`, restore the
 pre-`0790b5d` slot order (TFILLPAD'd `recvTile` back at the top slot, `0x20000`), then:
 
 ```bash
-export PATH=/usr/local/python3.12.13/bin:$PATH
 export PYTHONPATH=.
 for V in fillpad allfour; do
   PYPTO_SIMPLER_KERNEL=$V python3 -m collectives.run_sweep pair-mesh \
@@ -69,13 +114,15 @@ Expect PASS at 16384 and 65536 on a fixed pto-isa — those are exactly the cell
 (count ≤ 4096 never crashed, so they are not evidence). Wrap the runs in `task-submit --device …`
 where it exists.
 
-### 1.4 Exit criteria
+### 2.4 Exit criteria
 
-- [ ] 1.1 A/B: pre-fix crashes, post-fix passes
-- [ ] 1.2 pto-isa ST case 23: pre-fix FAIL, post-fix PASS
-- [ ] 1.3 `fillpad` + `allfour` PASS at count ≥ 16384 with the workaround **reverted**
+- [ ] 2.1 A/B: pre-fix crashes, post-fix passes
+- [ ] 2.2 pto-isa ST case 23: pre-fix FAIL, post-fix PASS
+- [ ] 2.3 `fillpad` + `allfour` PASS at count ≥ 16384 with the workaround **reverted**
 - [ ] Slot-order workaround reverted in both kernels, and both called out in the follow-up commit
-- [ ] `pypto/runtime/pto_isa.pin` bumped `96ba706c` → ≥ `3b49066` (simpler's pin already has it)
+- [ ] `pypto/runtime/pto_isa.pin` bumped `96ba706c` → ≥ `3b49066` (simpler's pin already has it).
+      Read the pin **through the recorded gitlink**, not the submodule working tree:
+      `git -C pypto show "$(git -C pypto ls-tree HEAD runtime | awk '{print $3}')":pto_isa.pin`
 - [ ] Comment the results on [pto-isa#291](https://github.com/hw-native-sys/pto-isa/issues/291) and
       close it; then re-measure `fillpad`/`allfour` at count ≥ 16384 (unblocks plan 107's allfour
       composition check)

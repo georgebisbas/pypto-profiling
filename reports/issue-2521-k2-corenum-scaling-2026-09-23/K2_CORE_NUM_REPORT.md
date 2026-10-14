@@ -1,5 +1,8 @@
 # K2 `core_num` scaling baseline — `managed-host` all_to_all_v, EP4 on NPUs 4-7
 
+> ⚠️ **Run unqueued** — the report itself records the run as "unisolated". See
+> [`npu-queue-runbook.md`](../npu-queue-runbook.md) §10 for the shared caveat.
+
 **Date:** 2026-09-23 · **Branch under test:** `feat/all-to-all-v-multiblock-enable` (PR [hw-native-sys/pypto#2889](https://github.com/hw-native-sys/pypto/pull/2889), RFC #2521 K2) · **Against:** post-K1 `main` + K2.
 
 **Question.** What do multiple launched blocks (K2's `B > 1`) deliver end-to-end today on the HOST rail?

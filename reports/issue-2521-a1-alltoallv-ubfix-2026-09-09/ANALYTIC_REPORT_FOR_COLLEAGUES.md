@@ -1,5 +1,8 @@
 # Analytic report: RFC #2521 A1 AllToAllV baseline (INT8)
 
+> ⚠️ **Run unqueued** — no `task-submit` on this box at the time, so timings are unisolated. See
+> [`npu-queue-runbook.md`](../npu-queue-runbook.md) §10 for the shared caveat.
+
 **For:** colleagues reviewing A1 performance / HOST vs L2  
 **Campaigns:**
 - **EP2/EP4 full curve:** `issue-2521-a1-alltoallv-ubfix-2026-09-09` (72/72 OK)

@@ -1,5 +1,9 @@
 # RFC #2521 — A1 executive summary (2026-09-28)
 
+> ⚠️ **Every campaign behind this summary was run unqueued.** See
+> [`npu-queue-runbook.md`](npu-queue-runbook.md) §10 for what that means for the numbers, and for
+> the queue procedure to use on the follow-up (plan 129) work.
+
 **Scope:** A1 = benchmark harness + pre-change baseline (plan 110). Measurement program
 **COMPLETE** — all deliverables closed, incl. the in-tree harness PR
 [#2945](https://github.com/hw-native-sys/pypto/pull/2945) (opened 2026-09-29). All artifacts pushed to
