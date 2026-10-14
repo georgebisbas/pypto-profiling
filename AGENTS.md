@@ -297,8 +297,14 @@ per-cell records), and any figure you actually reference.
 
 **Never commit:** `attempt_logs/`, `builds/`, `heal/`, `dfx_outputs/`, or a bare `.log` / `.so` /
 `.o` / `.pto` / `.bin` / `.lock`. All of these are in `.gitignore` now. They are regenerable, and
-the queue task's own log (`task-submit --log <id>`) outlives the repo. If a log excerpt *is* the
-evidence, paste the tail into the campaign README instead of committing the file.
+the **parsed** evidence already lives in `summary.json` + `json/`. If a raw log excerpt *is* the
+evidence, paste the tail into the campaign README rather than committing the file.
+
+> Don't lean on the queue for this: `task-submit --log <id>` keeps only the thin wrapper output
+> (~2 KB — it does **not** contain the harness's `[STRACE]` spam), and its nominal retention is
+> **1 day** (`--clean --days 1`; currently longer only because the prune cron is not installed on
+> this box — 4042 stale entries back to 2026-09-09 were sitting in `/var/lib/taskqueue/logs` on
+> 2026-10-14). Never treat it as durable storage.
 
 The pre-2026-10-14 campaigns still carry ~4.4 GB of such artifacts in history and in the checked-out
 tree. Dropping them from the *current* tree (`git rm -r --cached …`) is safe and reversible — the
