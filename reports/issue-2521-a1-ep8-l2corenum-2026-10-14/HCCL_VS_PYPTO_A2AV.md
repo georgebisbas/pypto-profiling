@@ -1,5 +1,14 @@
 # HCCL `HcclAlltoAllV` vs PyPTO `all_to_all_v` — EP8, 64 KiB/peer
 
+> ⚠️ **Read [`GAP_CLOSING_NOTES.md`](GAP_CLOSING_NOTES.md) § Step 0 before quoting the ratios below.**
+> A `[STRACE]` decomposition of the PyPTO side shows that `host_timing_slot_p50_us` — the column used
+> as the apples-to-apples ruler here — includes a per-invocation **H2D of the inputs and D2H of the
+> outputs** made by the runtime (`copy_in_run_inputs_impl` / `copy_back_run_outputs_impl`), and that
+> this grows linearly with payload: **5.92 ms of 13.6 ms at 1 MiB**. `hccl_bench` has no equivalent,
+> so the ≥256 KiB ratios are dominated by runtime plumbing rather than by the collective. The
+> like-for-like collective comparison at 1 MiB is **2663 µs (PyPTO AIV span) vs 578 µs (HCCL) = 4.6×**,
+> not 23.57×. The tables below are left as measured; the interpretation is corrected in the notes.
+
 **Date:** 2026-10-14 · **Box:** `hng-atlas02` (192.168.150.12), 8× Ascend 910B2 · **Both sides
 queue-isolated** · **pypto** `verify-merge-2976` @ `d2551caa` (K3 #2900 + O2a #2971) · **CANN**
 9.0.0
