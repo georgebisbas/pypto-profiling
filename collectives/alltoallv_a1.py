@@ -225,6 +225,11 @@ def run_one(
     reps: int = 1,
 ) -> dict:
     tag = f"p{ep}_l{core_num}_{impl}_{pattern}_{peer_bytes}" + (f"_r{rep}" if reps > 1 else "")
+    # Name the variant in the tag when extra harness flags are in play, so the row and the
+    # attempt log stay self-describing without having to re-read the launcher env.
+    _extra_tag = os.environ.get("A2AV_EXTRA_HARNESS_ARGS", "").strip()
+    if _extra_tag:
+        tag += "_" + re.sub(r"[^0-9A-Za-z]+", "-", _extra_tag).strip("-")
     out_dir = out / "builds" / tag
     json_path = out / "json" / f"{tag}.json"
     json_path.parent.mkdir(parents=True, exist_ok=True)
@@ -259,6 +264,10 @@ def run_one(
         "--output-dir",
         str(out_dir),
     ]
+    # Harness flags the campaign does not model (e.g. an A/B of `--resident-args`).
+    # Appended last so a repeated option overrides the value set above.
+    extra_args = os.environ.get("A2AV_EXTRA_HARNESS_ARGS", "").split()
+    cmd.extend(extra_args)
 
     attempts = max(1, retries + 1)
     last_fail: dict | None = None
