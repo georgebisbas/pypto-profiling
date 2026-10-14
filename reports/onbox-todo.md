@@ -27,14 +27,27 @@ today the A1 harness refuses `L>1` on the `managed-l2` rail, so no L2 row of any
 obtainable from the sanctioned tool. Unblocks plan 116 (A3) and the `managed-l2` rows of plan 110.
 **Detail:** [`pypto-3.0-notes/pr_plans/129-pypto-a1-harness-managed-l2-core-num.md`](https://github.com/hw-native-sys/pypto-3.0-notes/blob/main/pr_plans/129-pypto-a1-harness-managed-l2-core-num.md)
 
-### 1.1 What is owed
+### 1.1 Status (2026-10-14 — partially done at EP8)
+
+First hardware run of the L2 `L>1` path is **green**: EP8 on cards 0–7, 64 KiB/peer `uniform`,
+`L ∈ {1,8}` × {managed-l2, managed-host}, 20 rounds — 4/4 cells OK, `n_fail=0`, no Fabric poison.
+Queue task `task_20261014_085749_20485986058`. Results + caveats:
+[`issue-2521-a1-ep8-l2corenum-2026-10-14/`](issue-2521-a1-ep8-l2corenum-2026-10-14/README.md).
+
+Headline: `managed-l2 L=8` = **186 µs** kernel p50 / **19.75 Gbit/s/rank** (6.5× over L2 `L=1`,
+34× over the HOST `L=1` baseline), while the HOST rail gained ~nothing from multi-lane (2.9%).
+
+**Still owed:** `L ∈ {4,16}`, the rest of the `§8.3` payload curve, the official 100-round
+conditions, and the PR after #2945 merges.
+
+### 1.2 What is owed
 
 1. Steps 4–6 of plan 129: the hardware sweep on a real box, both rails, for `L ∈ {1,4,8,16}`.
 2. The PR, **only after #2945 merges** (the branch is stacked on `eb1ed877`; rebase onto `main`
    first). Do not add this commit to #2945 — its body already promises "a separate change after
    #2945".
 
-### 1.2 Things that will bite
+### 1.3 Things that will bite
 
 - **Over-capacity `L`.** `L = 64` is rejected at *submit* by the runtime
   (`REQUIRE_SYNC_START_INVALID`, verified 2026-10-09), not by the compiler. Keep the sweep to
@@ -50,11 +63,13 @@ obtainable from the sanctioned tool. Unblocks plan 116 (A3) and the `managed-l2`
 - Queue: the sweep is a set of sub-hour units, not one long job — see the surrounding host rules in
   [`npu-queue-runbook.md`](npu-queue-runbook.md) (`--max-time` is capped at 3600 s).
 
-### 1.3 Exit criteria
+### 1.4 Exit criteria
 
-- [ ] 1.2's sweep produced L2 rows for `L>1` (they are impossible today)
-- [ ] `L ∈ {1,4,8,16}` × both rails, correctness check passing on every recorded row
+- [x] First hardware run of the L2 `L>1` path (EP8, 64 KiB, `L ∈ {1,8}`) — done 2026-10-14, 4/4 OK
+- [ ] `L ∈ {4,16}` × both rails over the official payload curve, correctness passing on every row
 - [ ] Cross-rail HOST-vs-L2 ratio either resolved or explicitly caveated as directional
+      (still blocked: the HOST rail emits only `timing_slot`, no per-rank AIV span — see the
+      2026-10-14 report caveat 1)
 - [ ] PR opened after #2945 merges (fork remote only), rebased onto `main`
 
 ---

@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 """RFC #2521 A1 AllToAllV campaign wrapper (YunjiQin 2026-09-01 roadmap).
 
-Calls the A1 harness. Preferred location (checked into this repo)::
+Calls the A1 harness. Two copies exist and they are **not** interchangeable:
 
-  collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py
+* the bundled snapshot ``collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py``
+  (pre-O2: the CHIP/L2 rail is gated at ``core_num=1``), and
+* the in-tree harness ``$PYPTO_ROOT/tests/st/distributed/collectives/
+  all_to_all_v_benchmark.py`` (pypto PR #2945 + plan 129, which is the only one
+  that admits ``L>1`` on the ``managed-l2`` rail).
 
-Override with ``A2AV_HARNESS=/path/to/all_to_all_v_benchmark.py``. The last
-fallback below points at
-``$PYPTO_ROOT/tests/st/distributed/collectives/all_to_all_v_benchmark.py`` for
-historical runs, but that path has **never** been committed to
-``hw-native-sys/pypto`` -- it only exists in a checkout where the file was
-copied in by hand, so in practice this repo's bundled copy is the harness's
-only home.
+Override with ``A2AV_HARNESS=/path/to/all_to_all_v_benchmark.py``; the fallback
+below resolves to the in-tree path. **For any ``L>1`` run on ``managed-l2`` you
+must set ``A2AV_HARNESS``** (or otherwise use the in-tree copy), or the harness
+will refuse the cell.
 
 Related bundle (patch, Fabric MFE, provenance): ``collectives/a1_alltoallv/``.
 
@@ -25,10 +26,12 @@ die-mix-filtered per-task duration). HOST vs L2 outer dispatch is a separate
 column from the clean timing-slot session.
 
 This box has 8× 910B2 and no EP16. Default is EP2 (devices 0,1) and EP4
-(devices 0,1,2,3). The ``core_num`` sweep is supported for ``--impl managed-host``
-(RFC #2521 K2 admits ``L>1`` on the HOST rail); the CHIP/L2 rail stays gated at
-``core_num=1`` (O2). Set ``A2AV_CORE_NUMS=1,8`` (and optionally ``A2AV_REPS=N`` to
-interleave repeats) to run the sweep.
+(devices 0,1,2,3). The ``core_num`` sweep is now supported on **both** rails:
+K2 (#2889) admitted ``L>1`` on the HOST rail, and O2a (#2971, merged 2026-10-13)
+extended it to the CHIP/L2 rail. ``L>1`` on ``managed-l2`` additionally requires
+the in-tree harness (see above). Set ``A2AV_CORE_NUMS=1,8`` (and optionally
+``A2AV_REPS=N`` to interleave repeats) to run the sweep. First EP8 measurement of
+the L2 ``L>1`` path: ``reports/issue-2521-a1-ep8-l2corenum-2026-10-14/``.
 
 EP8 on this box intermittently hits Fabric V2 export / device poison
 (``cross-server`` → ``release_domain -1`` / SIGSEGV). Mitigations:
