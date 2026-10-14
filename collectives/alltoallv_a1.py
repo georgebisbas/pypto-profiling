@@ -37,6 +37,14 @@ EP8 on this box intermittently hits Fabric V2 export / device poison
 (``cross-server`` → ``release_domain -1`` / SIGSEGV). Mitigations:
 ``A2AV_RETRIES``, ``A2AV_COOLDOWN_S``, optional ``A2AV_HEAL_EP`` smoke, and
 ``A2AV_RESUME=1`` to skip already-OK tags in ``summary.json``.
+
+``A2AV_EXTRA_HARNESS_ARGS`` appends raw flags to the harness command, so the
+campaign can drive a harness option it does not model. It is appended **last**,
+so a repeated option overrides the modelled value (e.g.
+``A2AV_EXTRA_HARNESS_ARGS=--profile timing-slot``). The flags are folded into the
+cell tag, so the row and the attempt log stay self-describing. Used for the
+worker-resident A/B (``--resident-args``, 1.97x host slot at EP8 1 MiB):
+``reports/a2av-resident-args-2026-10-14/``.
 """
 from __future__ import annotations
 
