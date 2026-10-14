@@ -22,6 +22,13 @@ struct Config {
     std::vector<uint32_t> devices;
     uint32_t warmup_rounds = 0;
     uint32_t timed_rounds = 1;
+    // "allreduce" (default) or "alltoallv".
+    std::string op = "allreduce";
+    // Per-remote-rank payload for --op alltoallv (bytes; --dtype int8 => elements).
+    uint64_t peer_bytes = 0;
+    // Match the pypto A1 harness default: `remote_bytes_per_rank` counts only the
+    // P-1 remote peers, so the diagonal contribution is 0 unless this is set.
+    bool include_self = false;
 };
 
 struct ThreadResult {
@@ -111,17 +118,44 @@ bool ParseArgs(int argc, char** argv, Config* config, std::string* error)
             config->timed_rounds = static_cast<uint32_t>(std::stoul(argv[++i]));
             continue;
         }
+        if (arg == "--op" && i + 1 < argc) {
+            config->op = argv[++i];
+            continue;
+        }
+        if (arg == "--peer-bytes" && i + 1 < argc) {
+            config->peer_bytes = std::stoull(argv[++i]);
+            continue;
+        }
+        if (arg == "--include-self") {
+            config->include_self = true;
+            continue;
+        }
         *error = "unknown or incomplete argument: " + arg;
         return false;
     }
 
-    if (config->count == 0) {
-        *error = "--count must be > 0";
+    if (config->op != "allreduce" && config->op != "alltoallv") {
+        *error = "--op must be allreduce|alltoallv";
         return false;
     }
-    if (config->dtype != "fp32") {
-        *error = "compiled HCCL helper currently supports only --dtype fp32";
-        return false;
+    if (config->op == "alltoallv") {
+        if (config->peer_bytes == 0) {
+            *error = "--peer-bytes must be > 0 for --op alltoallv";
+            return false;
+        }
+        if (config->dtype != "int8") {
+            *error = "--op alltoallv currently supports only --dtype int8";
+            return false;
+        }
+    } else {
+        if (config->count == 0) {
+            *error = "--count must be > 0";
+            return false;
+        }
+        if (config->dtype != "fp32") {
+            *error = "compiled HCCL helper currently supports only --dtype fp32";
+            return false;
+        }
     }
     if (config->devices.empty()) {
         *error = "--devices must not be empty";
@@ -204,6 +238,36 @@ bool RunAllReduceTimed(void* send_buf, void* recv_buf, uint64_t count, HcclComm 
     return true;
 }
 
+HcclDataType ToHcclDataType(const std::string& dtype)
+{
+    return dtype == "int8" ? HCCL_DATA_TYPE_INT8 : HCCL_DATA_TYPE_FP32;
+}
+
+// One HcclAlltoAllV round. `counts`/`displs` are element counts; with --dtype
+// int8 one element is one byte, so they equal byte counts. The arrays are
+// symmetric (send == recv) for this benchmark.
+bool RunAllToAllVTimed(void* send_buf, void* recv_buf, const std::vector<uint64_t>& counts,
+                       const std::vector<uint64_t>& displs, HcclDataType hccl_dtype, HcclComm comm,
+                       aclrtStream stream, double* wall_s, ThreadResult* result)
+{
+    const auto t0 = std::chrono::steady_clock::now();
+    const HcclResult hccl_ret = HcclAlltoAllV(send_buf, counts.data(), displs.data(), hccl_dtype,
+                                              recv_buf, counts.data(), displs.data(), hccl_dtype, comm, stream);
+    const aclError sync_ret = aclrtSynchronizeStream(stream);
+    *wall_s = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
+    if (hccl_ret != HCCL_SUCCESS) {
+        result->ok = false;
+        result->error = "HcclAlltoAllV -> " + std::to_string(hccl_ret);
+        return false;
+    }
+    if (sync_ret != ACL_SUCCESS) {
+        result->ok = false;
+        result->error = "aclrtSynchronizeStream -> " + std::to_string(sync_ret);
+        return false;
+    }
+    return true;
+}
+
 bool VerifyGolden(uint32_t rank, uint32_t world_size, uint64_t count, void* recv_buf, size_t nbytes,
                   ThreadResult* result)
 {
@@ -263,7 +327,27 @@ void RunRank(uint32_t rank, uint32_t world_size, uint32_t device_id, const HcclR
         return;
     }
 
-    const size_t nbytes = static_cast<size_t>(config.count * sizeof(float));
+    const bool is_a2av = (config.op == "alltoallv");
+    const size_t elem_size = is_a2av ? 1u : sizeof(float);
+    // a2av: every rank holds its P-1 remote payloads (P when --include-self).
+    const uint64_t total_elems = is_a2av
+        ? config.peer_bytes * static_cast<uint64_t>(world_size)
+        : config.count;
+    const size_t nbytes = static_cast<size_t>(total_elems * elem_size);
+
+    std::vector<uint64_t> a2av_counts;
+    std::vector<uint64_t> a2av_displs;
+    if (is_a2av) {
+        a2av_counts.assign(world_size, config.peer_bytes);
+        a2av_displs.assign(world_size, 0);
+        for (uint32_t peer = 0; peer < world_size; ++peer) {
+            if (peer == rank && !config.include_self) {
+                a2av_counts[peer] = 0;  // match remote_bytes_per_rank semantics
+            }
+            a2av_displs[peer] = static_cast<uint64_t>(peer) * config.peer_bytes;
+        }
+    }
+
     acl_ret = aclrtMalloc(&send_buf, nbytes, ACL_MEM_MALLOC_HUGE_ONLY);
     if (acl_ret != ACL_SUCCESS) {
         fail("aclrtMalloc(send_buf) -> " + std::to_string(acl_ret));
@@ -282,9 +366,13 @@ void RunRank(uint32_t rank, uint32_t world_size, uint32_t device_id, const HcclR
         return;
     }
 
-    auto* host = static_cast<float*>(host_buf);
-    for (uint64_t index = 0; index < config.count; ++index) {
-        host[index] = static_cast<float>(index + rank * 100);
+    if (is_a2av) {
+        std::memset(host_buf, static_cast<int>(rank), nbytes);
+    } else {
+        auto* host = static_cast<float*>(host_buf);
+        for (uint64_t index = 0; index < config.count; ++index) {
+            host[index] = static_cast<float>(index + rank * 100);
+        }
     }
 
     acl_ret = aclrtMemcpy(send_buf, nbytes, host_buf, nbytes, ACL_MEMCPY_HOST_TO_DEVICE);
@@ -314,7 +402,11 @@ void RunRank(uint32_t rank, uint32_t world_size, uint32_t device_id, const HcclR
     result->warmup_walls.reserve(config.warmup_rounds);
     for (uint32_t round = 0; round < config.warmup_rounds; ++round) {
         double wall_s = 0.0;
-        if (!RunAllReduceTimed(send_buf, recv_buf, config.count, comm, stream, &wall_s, result)) {
+        const bool ran = is_a2av
+            ? RunAllToAllVTimed(send_buf, recv_buf, a2av_counts, a2av_displs, ToHcclDataType(config.dtype),
+                                comm, stream, &wall_s, result)
+            : RunAllReduceTimed(send_buf, recv_buf, config.count, comm, stream, &wall_s, result);
+        if (!ran) {
             CleanupBuffers(send_buf, recv_buf, host_buf, nullptr, stream, comm);
             return;
         }
@@ -329,12 +421,16 @@ void RunRank(uint32_t rank, uint32_t world_size, uint32_t device_id, const HcclR
     result->timed_walls.reserve(config.timed_rounds);
     for (uint32_t round = 0; round < config.timed_rounds; ++round) {
         double wall_s = 0.0;
-        if (!RunAllReduceTimed(send_buf, recv_buf, config.count, comm, stream, &wall_s, result)) {
+        const bool ran = is_a2av
+            ? RunAllToAllVTimed(send_buf, recv_buf, a2av_counts, a2av_displs, ToHcclDataType(config.dtype),
+                                comm, stream, &wall_s, result)
+            : RunAllReduceTimed(send_buf, recv_buf, config.count, comm, stream, &wall_s, result);
+        if (!ran) {
             CleanupBuffers(send_buf, recv_buf, host_buf, nullptr, stream, comm);
             return;
         }
         result->timed_walls.push_back(wall_s);
-        if (!VerifyGolden(rank, world_size, config.count, recv_buf, nbytes, result)) {
+        if (!is_a2av && !VerifyGolden(rank, world_size, config.count, recv_buf, nbytes, result)) {
             CleanupBuffers(send_buf, recv_buf, host_buf, nullptr, stream, comm);
             return;
         }
@@ -461,7 +557,8 @@ int main(int argc, char** argv)
             std::cout << "HCCL_TIMED round=" << (round + 1) << " per_rank=" << FormatTimedRound(results, round)
                       << std::endl;
         }
-        std::cout << "HCCL_ALLREDUCE_OK setup_s=" << setup_barrier.setup_s << std::endl;
+        std::cout << "HCCL_" << (config.op == "alltoallv" ? "ALLTOALLV" : "ALLREDUCE")
+                  << "_OK setup_s=" << setup_barrier.setup_s << std::endl;
     }
 
     (void)aclrtFreeHost(root_info_buf);
