@@ -23,9 +23,15 @@ profiling/
   collectives/stacks.py # stack capability registry (single source of truth)
   collectives/runners/  # per-stack in-process session runners
   collectives/model.py  # O + N/B bandwidth-model fit + pipelining scorecard
+  reports/              # committed campaign reports: README + summary.json + json/ only
   results/              # gitignored campaign outputs
   requirements.txt      # matplotlib, pandas
 ```
+
+A committed campaign directory carries the **durable evidence only** — `README.md`,
+`summary.json`, `campaign_meta.json`, `json/*.json`. Raw `attempt_logs/`, `builds/`, `heal/` and
+`dfx_outputs/` are gitignored: they are regenerable and, before 2026-10-14, had grown the tree to
+4.8 GB (of which markdown was 0.4 MB). See `AGENTS.md` §11.
 
 ## Environment
 

@@ -285,3 +285,27 @@ workaround revert.
 
 `reports/npu-queue-runbook.md` is the companion: how to run any of it through `task-submit`
 without losing cards (§2.1).
+
+## 11. Repo hygiene — what a campaign directory may contain
+
+By 2026-10-14 the tree had reached **4.8 GB across 22k files, of which markdown was 0.4 MB** — raw
+logs and build trees had been committed under `reports/` (`.log` alone was 4.24 GB over 1570 files,
+plus 604 `.so`, 1148 `.o`, 793 `.pto`). Don't repeat that.
+
+**Commit** per campaign: `README.md`, `summary.json`, `campaign_meta.json`, `json/*.json` (the
+per-cell records), and any figure you actually reference.
+
+**Never commit:** `attempt_logs/`, `builds/`, `heal/`, `dfx_outputs/`, or a bare `.log` / `.so` /
+`.o` / `.pto` / `.bin` / `.lock`. All of these are in `.gitignore` now. They are regenerable, and
+the queue task's own log (`task-submit --log <id>`) outlives the repo. If a log excerpt *is* the
+evidence, paste the tail into the campaign README instead of committing the file.
+
+The pre-2026-10-14 campaigns still carry ~4.4 GB of such artifacts in history and in the checked-out
+tree. Dropping them from the *current* tree (`git rm -r --cached …`) is safe and reversible — the
+blobs stay reachable from the old commits, which the reports cite as provenance. **Rewriting
+history is not** safe for the same reason: the A1 reports reference commit SHAs (`ea684805`,
+`5ca4cef2`, `32c0e37c`, …) as their audit trail, and a force-push would invalidate all of them.
+
+One more gotcha: runs executed inside a container write files as **root**, so new campaign output
+lands unwritable by your local user. Chown it back before editing or deleting locally:
+`docker exec <container> chown -R $(id -u):$(id -g) /mounted_home/hw-native-sys/pypto-profiling/reports`

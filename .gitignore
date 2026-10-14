@@ -3,10 +3,26 @@ __pycache__/
 *.py[cod]
 .venv/
 *.egg-info/
+.pytest_cache/
 
 # pypto JIT compile artifacts (from benchmark runs)
 build_output/
 
-# Large campaign artifacts (kept on disk, not committed)
+# ── Campaign artifacts: keep on disk, do NOT commit ──────────────────────
+# A committed campaign directory should carry the durable evidence only:
+#   README.md, summary.json, json/*.json, campaign_meta.json
+# Raw logs and build trees are regenerable (or re-obtainable from the queue
+# task's own log) and were ~4.4 GB of the 4.8 GB tree as of 2026-10-14.
+# If a log excerpt is needed as evidence, paste the relevant tail into the
+# campaign README instead of committing the whole file.
 reports/**/builds/
 reports/**/ascend/
+reports/**/attempt_logs/
+reports/**/heal/
+reports/**/dfx_outputs/
+reports/**/*.log
+reports/**/*.so
+reports/**/*.o
+reports/**/*.pto
+reports/**/*.bin
+reports/**/*.lock
