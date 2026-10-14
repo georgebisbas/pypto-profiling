@@ -38,10 +38,13 @@ HCCL detail: per-rank p50 spread 549–568 µs across the 8 ranks; slowest-rank 
 
 1. **On the host-visible ruler, HCCL is 6.3–11.4× faster than every PyPTO configuration.** Even the
    best PyPTO setting (L2, `L=8`) leaves a 6.3× gap.
-2. **The gap is dispatch, not the collective.** PyPTO's device-attributable time at L2/`L=8` is
+2. **At 64 KiB the gap is dispatch, not the collective.** PyPTO's device-attributable time at L2/`L=8` is
    **186 µs — actually below HCCL's own 558 µs host wall** — but PyPTO pays ~3.3 ms of host-side
    remainder (staging + outer dispatch + sync) around it. That is a 5% duty cycle. See
    `figures-2026-10-14/a2av_ep8_decomposition.png`.
+   > ⚠️ **This holds only at 64 KiB.** From 256 KiB upward PyPTO's device span itself exceeds HCCL's
+   > whole wall and the gap widens to 23.6× at 1 MiB — see [Bigger workloads](#bigger-workloads-64-kib--1-mib)
+   > below. Do not quote the "it's only dispatch" line without the payload attached.
 3. **This is the same conclusion the A1 programme reached against the AllReduce baseline**, now
    confirmed against an HCCL AllToAllV baseline instead of an inferred one.
 4. **Multi-lane closes the *collective* gap, not the *dispatch* gap.** `L=8` takes L2's device span
@@ -78,9 +81,13 @@ diagonal counted. Egress uses that same 458 752 B on both sides.
 
 | File | What it shows |
 |---|---|
-| `a2av_ep8_host_slot.png` | log-scale host-slot p50, HCCL vs the 4 PyPTO configs |
-| `a2av_ep8_egress.png` | effective per-rank egress on the matched remote payload |
-| `a2av_ep8_decomposition.png` | the money chart: device-attributable vs host remainder |
+| `a2av_ep8_host_slot.png` | log-scale host-slot p50, HCCL vs the 4 PyPTO configs (64 KiB) |
+| `a2av_ep8_egress.png` | effective per-rank egress on the matched remote payload (64 KiB) |
+| `a2av_ep8_decomposition.png` | device-attributable vs host remainder (64 KiB) |
+| `a2av_ep8_payload_time.png` | host-slot p50 vs payload, 64 KiB → 1 MiB |
+| `a2av_ep8_payload_bw.png` | effective egress vs payload |
+| `a2av_ep8_payload_ratio.png` | PyPTO/HCCL ratio vs payload — the gap widening |
+| `a2av_ep8_payload_device_vs_hccl.png` | the crossover: PyPTO device span vs HCCL's whole wall |
 
 Regenerate with:
 
@@ -89,4 +96,49 @@ python3 collectives/plot_hccl_vs_pypto_a2av.py \
   --campaign reports/issue-2521-a1-ep8-l2corenum-2026-10-14 \
   --hccl-log reports/issue-2521-a1-ep8-l2corenum-2026-10-14/hccl_a2av_ep8_65536.log \
   --out reports/figures-2026-10-14
+python3 collectives/plot_hccl_vs_pypto_payload_sweep.py \
+  --sweep reports/issue-2521-a1-ep8-l2corenum-2026-10-14/payload_sweep.json \
+  --out reports/figures-2026-10-14
 ```
+
+## Bigger workloads (64 KiB → 1 MiB)
+
+Same EP8 / `uniform` / 20 rounds, four payloads, **all queue-isolated** (PyPTO:
+`task_20261014_095427_377034317589` (256 KiB), `task_20261014_100207_398830811917` (512 KiB),
+`task_20261014_101537_15956818920` (1 MiB); HCCL: `task_20261014_095321_3733713566` for all three).
+16/16 PyPTO cells OK, `n_fail=0`. ~41 min of 8-card occupancy in total — bigger payloads are
+expensive mostly because the HOST rail's round time grows.
+
+| config | 64 KiB | 256 KiB | 512 KiB | 1 MiB |
+|---|---|---|---|---|
+| **HCCL `HcclAlltoAllV`** | **558 µs** (×1.00) | **475 µs** (×1.00) | **565 µs** (×1.00) | **578 µs** (×1.00) |
+| pypto `managed-l2` L=8 | 3513 (×6.30) | 5469 (×11.52) | 7961 (×14.09) | 13615 (×23.57) |
+| pypto `managed-host` L=8 | 6179 (×11.08) | 6657 (×14.02) | 9290 (×16.44) | 13921 (×24.10) |
+| pypto `managed-l2` L=1 | 4687 (×8.40) | 9445 (×19.89) | 15888 (×28.11) | 26986 (×46.72) |
+| pypto `managed-host` L=1 | 6361 (×11.40) | 10927 (×23.01) | 17433 (×30.85) | 29835 (×51.65) |
+
+(HCCL per-payload egress: 6.58 / 30.91 / 51.96 / **101.66** Gbit/s per rank.)
+
+### Findings
+
+1. **The gap widens with payload, it does not close.** Best PyPTO config: **6.30× → 23.57×**.
+   Anyone hoping the fixed dispatch cost would amortise at scale should look at
+   `a2av_ep8_payload_ratio.png`.
+2. **HCCL is latency-bound, not bandwidth-bound, across this whole range.** 16× more data costs
+   1.04× more time (558 → 578 µs); its marginal bandwidth from 256 KiB→1 MiB is **~429 Gbit/s**.
+3. **PyPTO is bandwidth-bound.** `managed-l2 L=8` marginal bandwidth over the same span is
+   **~5.4 Gbit/s** — about **80× below HCCL's marginal rate**. Its EGRESS does improve with payload
+   (1.04 → 4.31 Gbit/s) but stays far below the wire.
+4. **The device span crosses HCCL's wall between 64 and 256 KiB.** PyPTO's AIV gang span is
+   **0.33× HCCL's whole wall at 64 KiB**, then **1.43× at 256 KiB, 2.37× at 512 KiB, 4.61× at
+   1 MiB** (186 → 678 → 1338 → 2663 µs).
+   ⇒ **The "gap is dispatch, not the collective" reading is a small-payload result.** By 1 MiB the
+   collective itself is the slower part, and multi-lane is not keeping up with HCCL's scaling.
+5. **Multi-lane still helps, but its advantage shrinks relative to HCCL**: `L=8` vs `L=1` on the L2
+   rail is 2.0× at 1 MiB (13615 vs 26986) versus 1.33× on the HOST rail (13921 vs 29835).
+
+### What would have to change
+
+At 1 MiB, `managed-l2 L=8`'s AIV span alone (2663 µs → 4.31 Gbit/s egress) is 4.6× HCCL's entire
+wall. No dispatch optimisation closes that; the kernel's steady-state rate has to rise. That is a
+different work item from the dispatch/staging overhead the A1 programme has been chasing.
