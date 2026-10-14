@@ -142,3 +142,83 @@ expensive mostly because the HOST rail's round time grows.
 At 1 MiB, `managed-l2 L=8`'s AIV span alone (2663 µs → 4.31 Gbit/s egress) is 4.6× HCCL's entire
 wall. No dispatch optimisation closes that; the kernel's steady-state rate has to rise. That is a
 different work item from the dispatch/staging overhead the A1 programme has been chasing.
+
+## What is missing from the PyPTO implementation
+
+Code-level gap analysis against the measured behaviour. Evidence is
+`python/pypto/runtime/builtins/collectives/all_to_all_v/templates/kernel.cpp.in` (the emitter for the
+builtin A2AV AIV kernel) and `/opt/pto-isa/include/pto/comm/` in the container.
+
+> ⚠️ Scope note: HCCL is a vendor library and I have **not** read its source. What it *uses* is
+> inferred from behaviour — flat latency, >100 Gbit/s/rank, and no AIV-core involvement in the
+> timeline. Treat the comparison as "what the vendor achieves", not "what the vendor does".
+
+### 1. The data path uses the wrong engine (dominant gap)
+
+The kernel moves payload with **`pto::comm::TPUT`** — the *synchronous, AIV-issued* put — one per
+block per destination (`kernel.cpp.in:390`, `:418`). pto-isa ships dedicated async DMA backends and
+the kernel references **none of them**:
+
+```
+/opt/pto-isa/include/pto/comm/async/{sdma,urma,rdma,ccu}/
+    sdma_async_intrin.hpp  urma_async_intrin.hpp  rdma_backend.hpp
+    sdma_workspace_manager.hpp  urma_workspace_channels.hpp  ...
+```
+
+`grep -c 'async|sdma|urma|rdma'` over the 444-line kernel template is **0**.
+
+This is an architectural gap, not a tuning one. AIV-issued copies run through the vector-core
+pipeline and cap out around **5 Gbit/s marginal per rank** (measured); a DMA/RDMA engine sustains
+**~429 Gbit/s marginal** (measured, HCCL). The async backends appear implemented (they carry
+workspace managers and channel helpers), so this is *available* work rather than missing
+infrastructure — but it is a different kernel.
+
+### 2. No in-flight overlap: 14 full-pipeline barriers in 444 lines
+
+Every `TPUT` is bracketed by `pipe_barrier(PIPE_ALL)` (`:389`/`:391`, `:417`/`:419`, plus `:141`,
+`:160`, `:181`, `:196`, `:206`, `:242`, `:306`, `:432`, `:443`). Staging, transfer and consume cannot
+overlap, and a block's next destination cannot be set up while the previous TPUT drains. HCCL keeps
+multiple transfers in flight.
+
+### 3. Two stop-the-world barriers per invocation
+
+`kernel.cpp.in:38–82` documents a **two-round credit barrier**: *Barrier A* (all peers reached and
+the previous receive window is consumed) then the payload push, then *Barrier B* (all peers have
+read this rank's counts and pushed). Each barrier is N × `TNOTIFY` + N × `TWAIT`. Nothing moves until
+**every** rank has reached Barrier A, so the slower half of the box gates the faster half — and the
+next collective cannot start until Barrier B clears. This is the fixed ~0.5 ms-scale cost, and the
+reason the host-slot time does not amortise.
+
+### 4. The counts prologue is a serialized N-way remote read
+
+Each rank pulls `recv_counts[src]` from every peer's `send_counts` window with a **non-cacheable
+scalar `ld_dev`** (`:289`, and the design note at `:38–45` explaining why it is a scalar read rather
+than a bulk `TLOAD`). All N−1 of those complete before the first payload byte moves. It is a
+correct protocol (it is what makes ragged counts work) but it is latency the payload path cannot
+overlap with.
+
+### 5. The payload crosses memory more than once
+
+The harness runs `stage_step` → `all_to_all_v` → `consume_step` (harness `:773`, `:794`): input is
+copied into a staging window, TPUT'd, then copied out to the destination. HCCL moves payload once.
+
+### 6. Per-rank asymmetry is the visible symptom
+
+At `L=8`/64 KiB the **slowest rank costs 4.4 ms while the fastest costs 186 µs** — a 24× spread on a
+*uniform* all-to-all, which should be symmetric. With `lanes_per_peer > 0` each block pushes only its
+own lane's 32-byte-aligned sub-range of one destination (`:355–390`), and every rank waits at
+Barrier B for the slowest block. HCCL has no equivalent global coupling.
+
+### Ranked, if you wanted to close it
+
+1. **Move payload movement to the SDMA/URMA async path** — AIV orchestrates, the DMA engine moves.
+   Everything else is second-order next to this.
+2. **Drop the two global barriers** for per-peer completion counters, so ranks stop waiting on a
+   global epoch.
+3. **Overlap across invocations** — double-buffer the staging window (the `reset_persistent_windows`
+   machinery already exists for window reuse) so invocation K+1 stages while K drains.
+4. **Remove the staging hop** where the source layout allows direct HBM→remote-HBM transfer.
+
+Items 2–4 address the *fixed* cost (which dominates at 64 KiB); item 1 addresses the *slope* (which
+dominates from 256 KiB up). The measurements say both are real, and that the slope is now the
+binding constraint.
