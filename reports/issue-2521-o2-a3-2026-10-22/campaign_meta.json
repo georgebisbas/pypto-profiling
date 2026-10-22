@@ -1,0 +1,56 @@
+{
+  "roadmap": "https://github.com/hw-native-sys/pypto/issues/2521",
+  "handoff": "pypto-3.0-notes/pr_plans/2521-sweep-npu-handoff.md",
+  "box": "hng-atlas02 (192.168.150.12), 8x Ascend 910B2 (a2a3), CANN 9.0.0, full HCCS mesh (driver/repro3051-npu-topo.txt)",
+  "container": "pypto-2521-sweep (pypto3-hw-native-sys:cann9), runtime reinstalled from the submodule",
+  "pypto_commit": "af75165dd411596ddb9cd0d3090e68403913add2",
+  "runtime_commit": "d8f997fabd1b6988b69a94feef61ab669dda0eea",
+  "pypto_profiling_base_sha": "6ed1a362fe76ff189c7fbedc01dfe21a0a722a8f",
+  "simpler_comm_force_ipc": "unpatched/unset (env has no effect on this runtime)",
+  "devices_physical": "0,1,2,3,4,5,6,7",
+  "grants": {
+    "gate": {
+      "task_id": "task_20261022_053929_103696911215",
+      "note": "stopped by hand after 3 cells; managed-host cell DEGRADED (no AIV span)"
+    },
+    "repro-3051": {
+      "task_id": "task_20261022_055849_198169625427",
+      "kibs": [
+        64,
+        128,
+        256,
+        512,
+        1024,
+        2048
+      ]
+    },
+    "repro-3051-small": {
+      "task_id": "task_20261022_060917_24833563352",
+      "kibs": [
+        8,
+        16
+      ]
+    },
+    "repro-3051-large": {
+      "task_id": "task_20261022_061401_271193230738",
+      "kibs": [
+        4096,
+        8192,
+        16384
+      ],
+      "note": "8192/16384: ptoas 60 s compile timeout on consume_step, no JSON"
+    }
+  },
+  "phase2_codegen_only_job": "task_20261022_053841_99463031931 (managed-l2 L in {2,4,7,10,15} x {24960,16384}; 10/10 compiled)",
+  "protocol": {
+    "gate": "run-2521-sweep.sh: warmup 5, 30 timing-slot + 8 swimlane rounds, uniform",
+    "repro-3051": "managed-l2, core_num 16, uniform, --profile swimlane, warmup 5, 10 rounds"
+  },
+  "n_cell_json": 11,
+  "n_failed_no_json": 3,
+  "failed": [
+    "gate managed-host L1 24960: metric degraded to end_to_end_latency (builtin collective dispatch untraced on host rail)",
+    "repro-3051 8192 KiB/peer: ptoas compile timeout (60 s) on consume_step",
+    "repro-3051 16384 KiB/peer: same"
+  ]
+}
