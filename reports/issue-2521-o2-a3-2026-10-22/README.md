@@ -1,7 +1,9 @@
 # RFC #2521 O2/A3 gate + #3051 payload re-run on `main` `af75165dd` (2026-10-22)
 
-**Status: PARTIAL.** O2 §11.2 sweep held at its gate (HOST rail returns no AIV span). The #3051
-payload sweep was re-run instead: 9/11 cells OK, 2 compile failures above 4 MiB/peer.
+**Status: PARTIAL.** O2 §11.2 (Part A) held at its gate — the HOST rail returns no AIV span.
+A3 Part B pass 1 ran on the L2 rail: 30/30 cells + 8 anchors OK (grants g3–g6); 9 matrix points wait
+in g1/g2 behind the HOST-rail fix. The #3051 payload sweep was re-run: 9/11 cells OK, 2 compile
+failures above 4 MiB/peer.
 
 **Tree:** pypto `main` @ `af75165dd411596ddb9cd0d3090e68403913add2`, runtime submodule
 `d8f997fabd1b6988b69a94feef61ab669dda0eea` (reinstalled from the submodule — the image's prebuilt
@@ -20,11 +22,12 @@ is the evidence.
 | Path | What |
 | --- | --- |
 | `json/gate_*.json` | gate grant: 2 OK `managed-l2` L=1 @ 24960 cells (30 timing-slot + 8 swimlane rounds) |
+| `json/g{3,4,5,6}_*.json` | Part B pass 1: 30 `managed-l2` uniform cells + 8 `anchor-*` cells, same protocol as the gate |
 | `json/repro3051_*.json` | 9 OK `managed-l2` `core_num=16` cells, 8 KiB–4 MiB/peer (5 warmup + 10 swimlane rounds) |
 | `json/codegen/` | Phase 2 compile-only stubs (`metric=compile-only`), L ∈ {2,4,7,10,15} × {24960, 16384} |
 | `summary.json` | per cell: #3051-definition trend µs / GB/s, best fixed-rank mean, min-rank span range, slowest-rank median |
 | `campaign_meta.json` | tree, runtime, queue task ids per grant, protocol, failures |
-| `driver/` | `run-2521-sweep.sh` (notes `08eb981`), the re-run runner, Phase 2 script, `cells.tsv`, manifests, topology |
+| `driver/` | `run-2521-sweep.sh` (notes `08eb981`), the re-run runner, Phase 2 script, `cells.tsv` (one row per attempt), per-grant `manifest-*.txt`, `partB-taskids.txt`, topology |
 | `logs/` | per-cell console logs — **on disk only, gitignored** |
 
 ## Queue grants
@@ -33,9 +36,28 @@ is the evidence.
 | --- | --- | --- |
 | Phase 2 (no card) | `task_20261022_053841_99463031931` | 10/10 compiled |
 | gate | `task_20261022_053929_103696911215` | 2 OK, 1 DEGRADED, stopped by hand |
+| g3 / g4 / g5 / g6 | `task_20261022_062722_33869877661` / `…062723_33871785507` / `…062723_338733616086` / `…062723_338761518436` | 10 / 10 / 10 / 8 OK (incl. 2 anchors each), all `exit=0` |
 | #3051 64 KiB–2 MiB | `task_20261022_055849_198169625427` | 6/6 OK |
 | #3051 8, 16 KiB | `task_20261022_060917_24833563352` | 2/2 OK |
 | 4–16 MiB | `task_20261022_061401_271193230738` | 1/3 OK (exit 2) |
+
+## Results — Part B pass 1 (trend GB/s; one pass, not a publishable `B*`)
+
+| L → B | 16 KiB | 24960 | 48 KiB | 256 KiB | 1 MiB |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 1 → 1 | 4.83 | 6.42 | 9.10 | 15.14 | — |
+| 2 → 2 | **5.50** | — | 12.22 | 23.80 | 28.47 |
+| 4 → 4 | 5.15 | — | **13.08** | 34.58 | 47.81 |
+| 7 → 7 | 4.48 | — | 12.40 | 35.35 | 47.23 |
+| 8 → 8 | 4.34 | — | 11.94 | **43.39** | — |
+| 10 → 8 | 4.41 | — | 12.10 | 43.06 | 70.12 |
+| 15 → 8 | 4.38 | 6.43 | 12.17 | 43.05 | **70.35** |
+| 16 → 16 | 3.19 | — | 9.47 | 37.44 | — |
+
+"—" = g1/g2 cells, not run (they pair with `managed-host` cells). Provisional `B*`: 2 / 4 / 8 / 8 at
+16 KiB / 48 KiB / 256 KiB / 1 MiB. B=16 trails B=8 by 14–27 % where both exist. L ∈ {8, 10, 15}
+(all B=8) agree to ≤±1 %. Anchors (`managed-l2` L=1 @ 24960, 9 runs over ~2 h): 30.76–31.42 µs,
+−1.2 %…+1.0 % around 31.12 µs.
 
 ## Results — #3051 re-run (trend = mean over rounds of the per-round min-rank span)
 
