@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 
 
 def fill_rank_inputs(case: EquivalenceCase) -> list[list[float]]:
-    """Per-rank input vectors — matches simpler allreduce_distributed/main.py."""
+    """Per-rank input vectors — matches the simpler L3 allreduce example."""
     if case.input_formula != "rank_linear_v1":
         raise NotImplementedError(f"input_formula {case.input_formula!r}")
     out: list[list[float]] = []

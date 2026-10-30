@@ -1,5 +1,7 @@
 # K3 bandwidth ceiling probe (2026-09-25)
 
+> **Report status:** current — bandwidth-ceiling analysis still referenced. See [../upstream-status.md](../upstream-status.md).
+
 *Follow-up to the [EP8 campaign](../issue-2521-k3-lane-scaling-ep8-2026-09-24/README.md):
 how close is lane-mapped `all_to_all_v` to the interconnect peak at large
 payloads? EP8 (NPUs 0–7), `--impl managed-host`, `L=16` (max lanes),

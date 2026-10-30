@@ -1,5 +1,7 @@
 # PR #2591 — Final performance impact report (2026-09-02)
 
+> **Report status:** archived — #2591 merged. See [upstream-status.md](upstream-status.md).
+
 > ⚠️ **Run unqueued** — this campaign predates queue provisioning here, so its timings are
 > unisolated. See [`npu-queue-runbook.md`](npu-queue-runbook.md) §10 for the shared caveat.
 

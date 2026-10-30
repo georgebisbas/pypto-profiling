@@ -1,5 +1,7 @@
 # K3 scaling — repeatability re-run (2026-09-24)
 
+> **Report status:** current — repeatability re-run of the 2026-09-23 campaign. See [../upstream-status.md](../upstream-status.md).
+
 *Same matrix and protocol as the [2026-09-23 campaign](../issue-2521-k3-lane-scaling-2026-09-23/K3_LANE_SCALING_REPORT.md):
 EP4 (NPUs 4,5,6,7), `--impl managed-host`, `L ∈ {1,2,4,8,16}`, payloads
 `{0, 16 KiB, 256 KiB, 1 MiB}` + `zero@24960` control, `--rounds 100 --warmup 5

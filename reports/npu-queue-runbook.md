@@ -1,5 +1,7 @@
 # NPU queue runbook — how to run this harness on a shared box
 
+> **Report status:** reference — queue operating procedure. See [upstream-status.md](upstream-status.md).
+
 Companion to [`onbox-todo.md`](onbox-todo.md) (what is owed) and [`../AGENTS.md`](../AGENTS.md) §2.1
 (the short version). This file is the *how*: how to get a card, how to run a campaign on it, and how
 to record the result so someone else can tell the run was isolated.
@@ -196,7 +198,7 @@ task-submit --device auto --device-num 2 --max-time 3600 --timeout 0 \
 Notes specific to this harness:
 
 - The A1 harness already defaults its device from the environment
-  (`TASK_DEVICE` → `PYPTO_DEVICES`; `collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py`), so
+  (`TASK_DEVICE` → `PYPTO_DEVICES`; `$PYPTO_ROOT/tests/st/distributed/collectives/all_to_all_v_benchmark.py`), so
   it needs no extra plumbing.
 - **Post-processing does not need a card.** `summarize.py`, `plot_figures.py` and
   `apples_to_apples.py` read `results.json`; run them under `--no-device` and give the card back

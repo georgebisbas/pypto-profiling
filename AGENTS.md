@@ -6,19 +6,22 @@ before running anything on hardware.
 
 Repo: **pypto-profiling** — personal benchmark harness for PyPTO vs HCCL vs simpler L3
 collectives. Authoritative methodology: `pypto-3.0-notes/collectives_benchmarking/`.
+Upstream SHAs, PR states, and archived branch SHAs: [`reports/upstream-status.md`](reports/upstream-status.md)
+(last verified 2026-10-30).
 
 ---
 
 ## 1. What this repo is
 
 - `collectives/` — Python package:
-  - `stacks.py` — stack capability registry (hccl, simpler, simpler-own, pypto-composite,
-    pypto-host, pto-isa) — the single source of truth for what each stack can run.
+  - `stacks.py` — stack capability registry (hccl, simpler-own, pypto-composite,
+    pypto-host, pto-isa) — the single source of truth for what each stack can run. The
+    upstream-example `simpler` subprocess stack was retired 2026-10-30.
   - `equivalence.py`, `golden.py`, `metrics.py`, `model.py` — case model, golden outputs,
     timing parsers (`device_wall`, `HCCL_TIMED`), and the O+N/B bandwidth model.
   - `run_sweep.py` — the benchmark entry point (`pair-mesh`, `cross-variant`, `validate-case`).
-  - `runners/` — in-process session runners for pypto and simpler-own; subprocess runners
-    for hccl / simpler / pto-isa.
+  - `runners/` — in-process session runners for pypto and simpler-own; the `pto-isa`
+    subprocess runner lives in `treduce_bench.py`.
   - `summarize.py` — aggregation, paired comparison, `--model` scorecard, `--emit-report`.
   - `apples_to_apples.py` — **the HPC-view analysis**: decomposes `execute_s` into
     device + dispatch + lifecycle (persistent vs non-persistent), honest ratios vs HCCL,
@@ -26,17 +29,17 @@ collectives. Authoritative methodology: `pypto-3.0-notes/collectives_benchmarkin
   - `plot_figures.py` — 10 figures (scaling, efficiency, bw-crossover, wall-vs-device, model fit…).
   - `cases/` — pre-generated EquivalenceCase JSON files (P × count × dtype × variant × devices).
   - `kernels/` — the AIV kernel + orchestration shim for the simpler-own stack.
-  - `alltoallv_a1.py` — RFC #2521 A1 AllToAllV campaign driver (EP × impl × payloads).
-  - `a1_alltoallv/` — the A1 measurement bundle: a **snapshot** of the measured harness
-    (`harness/all_to_all_v_benchmark.py`), the FORCE_IPC patch, the Fabric domain-churn MFE,
-    and `PROVENANCE.json`. It is no longer the harness's only home: the in-tree copy lives at
-    `pypto/tests/st/distributed/collectives/all_to_all_v_benchmark.py` (pypto PR #2945, branch
-    `a2av-in-tree-harness`), and plan 129 (`a2av-harness-l2-core-num` @ `22fc5886`) stacks
-    managed-l2 `core_num>1` on top of it. The copy here lags that work — read the sync-status
-    block in `a1_alltoallv/README.md` before quoting or re-running it.
+  - `alltoallv_a1.py` — RFC #2521 A1 AllToAllV campaign driver (EP × impl × payloads). Defaults to
+    the in-tree harness; the vendored snapshot was removed on 2026-10-30.
+  - `a1_alltoallv/` — the A1 measurement bundle: the FORCE_IPC patch, the Fabric domain-churn MFE,
+    and `PROVENANCE.json`. The in-tree harness is
+    `pypto/tests/st/distributed/collectives/all_to_all_v_benchmark.py` (merged via pypto #2945 on
+    2026-10-20). Plan 129 (`a2av-harness-l2-core-num`) and the resident-args work were archived as
+    fork tags on 2026-10-30 — read `reports/upstream-status.md` before re-running either.
 - `run_campaign.sh` — campaign driver: runs a sweep, **merges** per-(P,count) results into
   `results.json`, then runs summarize + plot.
-- `tests/` — pure unit tests (no hardware): `python3 -m pytest tests/ -v` (27 tests, 2026-10-14).
+- `tests/` — pure unit tests (no hardware): `python3 -m pytest tests/ -v` in the container (27
+  tests at the last verification, 2026-10-14).
 - `results/` — campaign outputs (gitignored). `reports/` — committed reports + figures.
 
 ## 2. Prerequisites (the `pypto3-hw-native-sys:cann9` container)
@@ -52,8 +55,8 @@ older revision — ignore it).
 | NPU | `/dev/davinci*` (8× Ascend 910B2) | **shared box, queue mandatory** — see §2.1 |
 | CANN | `/usr/local/Ascend/cann-9.0.0` (`CANN_HOME`, also `ASCEND_HOME_PATH`) | baked into the image; never mount `/usr/local/Ascend` from the host |
 | HCCL | `${CANN_HOME}/aarch64-linux/lib64/libhccl.so` | needed for the `hccl` stack; the image defines a `hccl-preload` bash function and deliberately leaves `LD_PRELOAD` unset |
-| pypto | `/opt/pypto` (`PYPTO_DIR`) | pinned commit install — current image `PYPTO_COMMIT=4a82915408eaf8aaf0e84dca4c1eab5e92eefed6`; not editable (use the `.dev.` image for that) |
-| simpler | `/opt/pypto/runtime` (`SIMPLER_ROOT`) | the **`runtime/` git submodule of the pypto checkout** — not a sibling clone, not a PyPI package |
+| pypto | `/opt/pypto` (`PYPTO_DIR`) | pinned commit install — current image `PYPTO_COMMIT=dccabd79508e8811dd83b4242d078dc818d78740` (pypto-docker `b1c7129`, 2026-10-28); not editable (use the `.dev.` image for that) |
+| simpler | `/opt/pypto/runtime` (`SIMPLER_ROOT`) | the **`runtime/` git submodule of the pypto checkout** — not a sibling clone, not a PyPI package; image pin `5e59ec5a` (2026-10-28) |
 | pto-isa | `/opt/pto-isa` (`PTO_ISA_ROOT`) | commit derived at build time from `runtime/pto_isa.pin` |
 | PTOAS | `/opt/ptoas-bin` (`PTOAS_ROOT`) | py3.10 venv holding the v0.65 cp310 wheel; **appended** to `PATH`, never prepended, so it cannot shadow the system py3.12 |
 | **Python** | **bare `python3`** = `/usr/local/python3.12.13/bin/python3` | the py3.12 interpreter that has pypto + torch. The py3.10 `/opt/ptoas-bin` venv is *appended* to `PATH`, so it does not shadow it — the old "you MUST use the absolute path" advice is obsolete; bare `python3` is correct (and the absolute path still works). |
@@ -63,10 +66,11 @@ older revision — ignore it).
 `run_campaign.sh` calls bare `python3`; inside the container that is already the right one. From
 a bare host, run inside the container and submit it through the queue (§2.1).
 
-> **Workspace caveat.** In this dev workspace `pypto/runtime` is an **uninitialised submodule**
-> (an empty directory), and `collectives/config.py::_first_existing` will happily accept it as
-> `SIMPLER_ROOT` — silently breaking the simpler stacks. Run `git submodule update --init
-> runtime` in the pypto checkout, or point `SIMPLER_ROOT` at a real tree.
+> **Workspace caveat.** In this dev workspace `pypto/runtime` is an initialised submodule. Keep it
+> at the gitlink recorded by `pypto HEAD` (`6b6b88f2` at pypto `f32ecf3f0`); a stale checkout
+> silently changes what `collectives/config.py` resolves as `SIMPLER_ROOT`. Verify with
+> `git -C ../pypto submodule status runtime` — a leading `+` means stale — before running a
+> simpler stack.
 
 ### 2.1 The NPU boxes are queued — read this before touching a card
 
@@ -155,8 +159,9 @@ stack instead of raising `--max-time`.
 ## 4. What every experiment option does
 
 Full suite verified 2026-08-28: ring & twophase variants (ring runs pypto-composite/host
-+ hccl; twophase is hccl-only), `--core-nums` B\* sweep (pypto-host mesh), `simpler`/
-`simpler-own` at count 256, `--profile pmu`, cross-variant (`--mode cross-variant`),
++ hccl; twophase is hccl-only), `--core-nums` B\* sweep (pypto-host mesh), `simpler-own`
+at count 256, `--profile pmu`, cross-variant (`--mode cross-variant`),
+(the `simpler` subprocess stack covered by that suite was retired 2026-10-30),
 `--mode full-sweep`, and `--platform a2a3sim` (simulator). Known gaps: `fp16` (hccl bench
 is fp32-only and the `rank_linear_v1` golden overflows fp16 at count 65536), `pto-isa`
 (needs `treduce_test` built via `build_st.py`), P=16 (only 8 devices).
@@ -169,7 +174,7 @@ simpler runtime `15f5cbd`. Records: `reports/plan101-phase0-reset-cost-and-l2-cr
 
 | Flag | Effect |
 |------|--------|
-| `--stacks` | `hccl,simpler,simpler-own,pypto-composite,pypto-host,pto-isa` (default `hccl,simpler,pypto-composite,pypto-host`) |
+| `--stacks` | `hccl,simpler-own,pypto-composite,pypto-host,pto-isa` (default `hccl,pypto-composite,pypto-host`) |
 | `--persistent` | **Use for all real benchmarks.** `prepare(persistent=True)` keeps CommDomains across dispatches → removes ~95% of per-dispatch overhead (~20–25× faster `execute_s`). |
 | `--reset-persistent-windows` | (plan 101 Phase 0, added 2026-09-03) reset CommDomain windows between rounds of a persistent pair-mesh run — isolates the domain-reset cost the persistent default must amortise. |
 | `--batch N` | N back-to-back `rt.run()` per timed round, amortizing dispatch (second view). |
@@ -213,8 +218,8 @@ re-verified and must be re-checked on the box (§10) before you quote them.
    (orch `orchestration_api.h`/`ChipTaskArgs`, `worker.make_tensor_arg(t, shapes=, dtype=)`,
    `domain.buffers["scratch"].tensor(...)`). History: the runtime used `TaskTensor` for a stretch;
    commit `7a74a2d` (2026-09-03) ported the kernels back to plain `Tensor` for simpler runtime
-   `15f5cbd`. That pin is historical — read the current `runtime` submodule gitlink before
-   porting. If you see compile errors naming a
+   `15f5cbd`. That pin is historical — the current gitlink is `6b6b88f2` (pypto `f32ecf3f0`,
+   2026-10-30). Read the gitlink before porting. If you see compile errors naming a
    type or symbol that no longer exists (`BufferDescriptor`/`start_offset`/
    `pto_orchestration_api.h` are the pre-`TaskTensor`-era names; `TaskTensor` was the interim
    one), the simpler runtime moved again — port the runtime's own
@@ -279,9 +284,9 @@ numbers, HCCL launch-width policy).
 
 `reports/onbox-todo.md` is the hardware queue — checks this repo owes that cannot be settled in
 sim, on the dev box, or by reading source, each with its exit criteria. **Read it before booking an
-NPU window**, and delete an entry once it is closed. It currently holds the plan-129 A1
-`managed-l2` sweep, the TFILLPAD UB-OOB verification (pto-isa#291) and the ablation-kernel
-workaround revert.
+NPU window**, and delete an entry once it is closed. It currently holds the #3229-gated
+HOST-vs-L2 cells, the plan-129 A1 `managed-l2` `L ∈ {4,16}` sweep, and the TFILLPAD UB-OOB
+hardware A/B + workaround revert (pto-isa#291 is closed upstream; the verification is still ours).
 
 `reports/npu-queue-runbook.md` is the companion: how to run any of it through `task-submit`
 without losing cards (§2.1).
@@ -290,7 +295,9 @@ without losing cards (§2.1).
 
 By 2026-10-14 the tree had reached **4.8 GB across 22k files, of which markdown was 0.4 MB** — raw
 logs and build trees had been committed under `reports/` (`.log` alone was 4.24 GB over 1570 files,
-plus 604 `.so`, 1148 `.o`, 793 `.pto`). Don't repeat that.
+plus 604 `.so`, 1148 `.o`, 793 `.pto`). Don't repeat that. A second pass on 2026-10-30 untracked
+the 21 surviving per-attempt `log.txt` dumps (24.8 MB), taking tracked content to **10.2 MB / 1143
+files**; the small `out.json` evidence and `DEBUG_NOTES.md` beside them stay tracked.
 
 **Commit** per campaign: `README.md`, `summary.json`, `campaign_meta.json`, `json/*.json` (the
 per-cell records), and any figure you actually reference.
@@ -306,8 +313,8 @@ evidence, paste the tail into the campaign README rather than committing the fil
 > this box — 4042 stale entries back to 2026-09-09 were sitting in `/var/lib/taskqueue/logs` on
 > 2026-10-14). Never treat it as durable storage.
 
-The pre-2026-10-14 campaigns still carry ~4.4 GB of such artifacts in history and in the checked-out
-tree. Dropping them from the *current* tree (`git rm -r --cached …`) is safe and reversible — the
+The pre-2026-10-14 campaigns still carry ~4.4 GB of such artifacts in git history, and the raw files
+remain on disk wherever the campaign was run. Dropping them from the *current* tree (`git rm -r --cached …`) is safe and reversible — the
 blobs stay reachable from the old commits, which the reports cite as provenance. **Rewriting
 history is not** safe for the same reason: the A1 reports reference commit SHAs (`ea684805`,
 `5ca4cef2`, `32c0e37c`, …) as their audit trail, and a force-push would invalidate all of them.

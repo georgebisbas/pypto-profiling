@@ -1,5 +1,7 @@
 # E1.5 — R7 calibration/repeat (timing-slot repeatability)
 
+> **Report status:** archived — timing-slot repeatability, pre-K3. See [../upstream-status.md](../upstream-status.md).
+
 **Status: COMPLETE (2026-09-28).** 6/6 runs recorded (3 points × 2 repeats).
 
 Per plan-110 R7: *"small, anchor, and 1024 KiB points; 5+100, twice; calibrate

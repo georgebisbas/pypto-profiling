@@ -1,5 +1,7 @@
 # K3 (PR #2900) head `cf136e73` — A1 protocol @ EP8 (L=1 sweep + L=16 spots)
 
+> **Report status:** archived — K3 merged; superseded by the 2026-10-22 main run. See [../upstream-status.md](../upstream-status.md).
+
 **Status: COMPLETE (2026-09-29).** 10/10 L=1 cells OK, 2/2 L=16 cells OK, 0 failures.
 
 **Tree:** `feat/all-to-all-v-multiaiv-lanes` @ `cf136e736566200606a6a2c562731f05bc0e102b` (PR #2900 head at measurement time; PR still **open, not merged**) · **Worktree:** `/opt/a1/k3` · **Runtime:** `6e383fc5` + FORCE_IPC patch `a88e4442…` (same as B1/main) · PTOAS 0.65 · CANN 9.0.0 · **Harness:** e42 `3c1f83be…` (same file both sides of the comparison) · **Box:** hng-atlas01.

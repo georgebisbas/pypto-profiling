@@ -35,7 +35,6 @@ FIGURE_IDS = (
 # Canonical per-stack colors/markers, shared across figures.
 STACK_COLORS = {
     "hccl": "#2ecc71",
-    "simpler": "#3498db",
     "simpler-own": "#9b59b6",
     "pypto-composite": "#e74c3c",
     "pypto-host": "#e67e22",
@@ -43,7 +42,6 @@ STACK_COLORS = {
 }
 STACK_MARKERS = {
     "hccl": "D",
-    "simpler": "o",
     "simpler-own": "v",
     "pypto-composite": "s",
     "pypto-host": "^",
@@ -70,7 +68,7 @@ def _load_matplotlib():
 
 
 def _plot_paired_stack_ratio(runs: list[dict], fig_dir: Path) -> Path:
-    """Bar chart: pypto/simpler ratio per case_id. Falls back to text if no matplotlib."""
+    """Bar chart: stack/hccl ratio per case_id. Falls back to text if no matplotlib."""
     plt = _load_matplotlib()
     if plt is None:
         return _text_fallback(runs, fig_dir, "paired_stack_ratio")
@@ -86,9 +84,9 @@ def _plot_paired_stack_ratio(runs: list[dict], fig_dir: Path) -> Path:
     labels: list[str] = []
     stack_names: list[str] = []
     for cid in case_ids:
-        base = groups[cid].get("simpler")
+        base = groups[cid].get("hccl")
         for stack, t in sorted(groups[cid].items()):
-            if stack in ("simpler", "hccl"):
+            if stack == "hccl":
                 continue
             if base and t and base > 0:
                 ratios.append(t / base)
@@ -105,8 +103,8 @@ def _plot_paired_stack_ratio(runs: list[dict], fig_dir: Path) -> Path:
     ax.axhline(y=1.0, color="gray", linestyle="--", linewidth=0.8, label="parity (1.0×)")
     ax.set_xticks(range(len(ratios)))
     ax.set_xticklabels(labels, rotation=30, ha="right", fontsize=7)
-    ax.set_ylabel("stack / simpler execute-time ratio")
-    ax.set_title("Paired stack ratio vs simpler (lower = closer to simpler)")
+    ax.set_ylabel("stack / hccl execute-time ratio")
+    ax.set_title("Paired stack ratio vs hccl (lower = closer to hccl)")
     ax.legend()
 
     for rect, val in zip(bars, ratios):
@@ -718,13 +716,13 @@ def _text_fallback(runs: list[dict], fig_dir: Path, fig_id: str) -> Path:
             cells = ", ".join(
                 f"{s}={t:.4f}" for s, t in sorted(groups[cid].items()) if t is not None
             )
-            base = groups[cid].get("simpler")
+            base = groups[cid].get("hccl")
             ratios = " ".join(
                 f"{s}:{t / base:.2f}x"
                 for s, t in sorted(groups[cid].items())
-                if s not in ("simpler", "hccl") and base and t and base > 0
+                if s != "hccl" and base and t and base > 0
             )
-            lines.append(f"  {cid}: {cells} | vs simpler: {ratios}")
+            lines.append(f"  {cid}: {cells} | vs hccl: {ratios}")
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     print(f"  {fig_id} → {path} (text)")
     return path

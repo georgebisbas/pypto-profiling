@@ -1,5 +1,7 @@
 # PyPTO / simpler — Kernel Performance Improvement Ideas — Measured Results (2026-08-28)
 
+> **Report status:** reference — open performance ideas. See [upstream-status.md](upstream-status.md).
+
 **Status:** six ideas identified and **benchmarked on a2a3 (8× Ascend 910B2)**. Every idea
 was implemented as a runnable benchmark (new kernel variants where needed) and **correctness
 was verified automatically** (harness golden check vs `allreduce_sum_v1`, rtol/atol 1e-3; a

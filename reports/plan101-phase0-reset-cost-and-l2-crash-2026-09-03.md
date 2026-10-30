@@ -1,5 +1,7 @@
 # Plan 101 Phase 0 — reset-cost campaign + `--profile l2 --persistent` crash repro (2026-09-03)
 
+> **Report status:** reference — plan 101 record. See [upstream-status.md](upstream-status.md).
+
 > ⚠️ **Run unqueued** (`task-submit`/taskqueue unavailable by owner instruction). See
 > [`npu-queue-runbook.md`](npu-queue-runbook.md) §10 for the shared caveat.
 

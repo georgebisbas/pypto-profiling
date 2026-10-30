@@ -1,5 +1,7 @@
 # EP8 `all_to_all_v` — HOST vs L2 at `L=1` and `L=8` (first L2 multi-lane measurement)
 
+> **Report status:** current — first L2 multi-lane measurement; L4/L16 still owed. See [../upstream-status.md](../upstream-status.md).
+
 **Date:** 2026-10-14 · **Box:** `hng-atlas02` (192.168.150.12), 8× Ascend 910B2 · **Queue task:**
 `task_20261014_085749_20485986058` (8/8 cards, exit=0, locks released) · **Container:** `cann9-verify`
 · **pypto:** `verify-merge-2976` @ `d2551caa` (has **K3 #2900** `be5168bb` and **O2a #2971**

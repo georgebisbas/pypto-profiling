@@ -1,5 +1,7 @@
 # Composite barrier/dcci slimming — NPU verification + measured perf (2026-08-31)
 
+> **Report status:** archived — DCCI work landed as #2591. See [upstream-status.md](upstream-status.md).
+
 **Branch:** `perf/composite-slim-peer-dcci-barrier` on `georgebisbas/pypto`
 (2 commits on `49aea216`): `79077d93` (dcci batching), `9189014a` (PIPE_V notify).
 **Platform:** a2a3 — 8× Ascend 910B2, CANN 9.0.0, real NPUs.

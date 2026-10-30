@@ -1,18 +1,13 @@
 #!/usr/bin/env python3
 """RFC #2521 A1 AllToAllV campaign wrapper (YunjiQin 2026-09-01 roadmap).
 
-Calls the A1 harness. Two copies exist and they are **not** interchangeable:
+Calls the in-tree A1 harness
+``$PYPTO_ROOT/tests/st/distributed/collectives/all_to_all_v_benchmark.py``
+(merged via pypto #2945 on 2026-10-20; it admits ``L>1`` on the ``managed-l2``
+rail). The vendored pre-O2 snapshot was removed 2026-10-30.
 
-* the bundled snapshot ``collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py``
-  (pre-O2: the CHIP/L2 rail is gated at ``core_num=1``), and
-* the in-tree harness ``$PYPTO_ROOT/tests/st/distributed/collectives/
-  all_to_all_v_benchmark.py`` (pypto PR #2945 + plan 129, which is the only one
-  that admits ``L>1`` on the ``managed-l2`` rail).
-
-Override with ``A2AV_HARNESS=/path/to/all_to_all_v_benchmark.py``; the fallback
-below resolves to the in-tree path. **For any ``L>1`` run on ``managed-l2`` you
-must set ``A2AV_HARNESS``** (or otherwise use the in-tree copy), or the harness
-will refuse the cell.
+Override with ``A2AV_HARNESS=/path/to/all_to_all_v_benchmark.py``. Resolution
+order: ``A2AV_HARNESS`` → ``PYPTO_ROOT`` → the sibling ``../pypto`` → ``/opt/pypto``.
 
 Related bundle (patch, Fabric MFE, provenance): ``collectives/a1_alltoallv/``.
 
@@ -59,23 +54,28 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
-_BUNDLED_HARNESS = (
-    _REPO_ROOT / "collectives" / "a1_alltoallv" / "harness" / "all_to_all_v_benchmark.py"
-)
+_HARNESS_REL = Path("tests/st/distributed/collectives/all_to_all_v_benchmark.py")
+
+
+def _resolve_pypto_root() -> Path:
+    env = os.environ.get("PYPTO_ROOT", "").strip()
+    if env:
+        return Path(env)
+    for candidate in (_REPO_ROOT.parent / "pypto", Path("/opt/pypto")):
+        if candidate.is_dir():
+            return candidate
+    return Path("/opt/pypto")
 
 
 def _resolve_harness() -> Path:
     override = os.environ.get("A2AV_HARNESS", "").strip()
     if override:
         return Path(override)
-    if _BUNDLED_HARNESS.is_file():
-        return _BUNDLED_HARNESS
-    pypto = Path(os.environ.get("PYPTO_ROOT", "/opt/pypto"))
-    return pypto / "tests" / "st" / "distributed" / "collectives" / "all_to_all_v_benchmark.py"
+    return _resolve_pypto_root() / _HARNESS_REL
 
 
 def _resolve_pypto_cwd() -> Path:
-    return Path(os.environ.get("PYPTO_ROOT", "/opt/pypto"))
+    return _resolve_pypto_root()
 
 
 HARNESS = _resolve_harness()
@@ -314,6 +314,17 @@ def run_one(
                 "rank_spread_us": harness.get("rank_spread_us"),
                 "egress_gbps": harness.get("egress_gbps"),
                 "duplex_gbps": harness.get("duplex_gbps"),
+                "per_rank_receive_bandwidth_gbps": harness.get(
+                    "per_rank_receive_bandwidth_gbps"
+                ),
+                "per_rank_task_time_us": harness.get("per_rank_task_time_us"),
+                "bandwidth_unit": harness.get("bandwidth_unit"),
+                "bandwidth_gbps": harness.get("egress_gbps")
+                if harness.get("egress_gbps") is not None
+                else harness.get("per_rank_receive_bandwidth_gbps"),
+                "bandwidth_source": "egress_gbps"
+                if harness.get("egress_gbps") is not None
+                else "per_rank_receive_bandwidth_gbps",
                 "host_timing_slot_mean_us": harness.get("host_timing_slot_mean_us"),
                 "host_timing_slot_p50_us": harness.get("host_timing_slot_p50_us"),
                 "host_timing_slot_includes_swimlane_tax": harness.get(
@@ -332,7 +343,7 @@ def run_one(
                 f"  OK attempt={attempt} metric={row['metric']}  "
                 f"kernel_p50={row['fastest_p50_us']}  "
                 f"slot_p50={row['host_timing_slot_p50_us']}  "
-                f"egress={row['egress_gbps']}",
+                f"bw[{row['bandwidth_source']}]={row['bandwidth_gbps']}",
                 flush=True,
             )
             if stage is not None or back is not None:
@@ -389,6 +400,13 @@ def _upsert_row(rows: list[dict], row: dict) -> list[dict]:
 
 
 def main() -> int:
+    if not HARNESS.is_file():
+        print(
+            f"error: A1 harness not found at {HARNESS}\n"
+            "set A2AV_HARNESS or PYPTO_ROOT",
+            file=sys.stderr,
+        )
+        return 2
     stamp = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     out = Path(
         os.environ.get(

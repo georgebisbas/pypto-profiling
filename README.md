@@ -8,6 +8,9 @@ Authoritative plan: [pypto-3.0-notes/collectives_benchmarking/collectives_perfor
 
 Profiling playbook: [pypto-3.0-notes/performance_tuning.md/profiling.md](../pypto-3.0-notes/performance_tuning/profiling.md)
 
+Upstream SHAs and PR states: [`reports/upstream-status.md`](reports/upstream-status.md) (last
+verified 2026-10-30). Campaign index: [`reports/issue-2521-INDEX.md`](reports/issue-2521-INDEX.md).
+
 ## Principles
 
 1. **EquivalenceCase** — one case object drives every stack (same P, count, dtype, devices, window, golden, orchestration profile).
@@ -44,9 +47,9 @@ A committed campaign directory carries the **durable evidence only** — `README
 
 Auto-detection order (`collectives/config.py`): environment variable → sibling directory →
 `/opt/pypto` / `/opt/pypto/runtime` → `<pypto>/runtime`. `simpler` is the **`runtime` git submodule
-of the pypto checkout**, not a standalone clone; in this workspace that submodule is not
-initialised, so the empty `pypto/runtime` directory is accepted silently and the simpler stacks
-break — run `git submodule update --init runtime` in the pypto checkout first.
+of the pypto checkout**, not a standalone clone. In this workspace it is initialised; keep it at the
+gitlink recorded by `pypto HEAD` (`6b6b88f2` at `f32ecf3f0`) and check with
+`git -C ../pypto submodule status runtime` — a leading `+` means the checkout is stale.
 
 ## Running on the NPU boxes
 
@@ -95,7 +98,7 @@ lifecycle cost, and with `--persistent` + `--batch` `execute_s` converges toward
 | **hccl** | `max(per_rank)` from `HCCL_WARMUP` / `HCCL_TIMED` (slowest rank = collective completion) |
 | **simpler-own** | `worker.run()` wall time via in-process session reuse (compile + worker init once; comm domain allocated per run via `orch.allocate_domain`) |
 | **pypto-composite / pypto-host** | `rt.run()` wall time via in-process session reuse (compile + `prepare()` once; each timed round is a fresh `rt.run`) |
-| **simpler / pto-isa** | `phases["execute"]` when available, else subprocess wall (includes framework overhead) |
+| **pto-isa** | `phases["execute"]` when available, else subprocess wall (includes framework overhead) |
 
 HCCL, simpler-own, pypto-composite and pypto-host run warmup + timed rounds in **one
 process** (campaign mode), so `setup_s` is amortized once and excluded from timed means.
@@ -118,8 +121,8 @@ deliberate:
 - **`device_wall_s` is the apples-to-apples metric** and is now captured for every
   stack: the in-process pypto/simpler-own runners redirect stderr at the fd level
   *before* `prepare()`/`init()` (chip workers fork there and inherit fd 2) and drain
-  the slowest-rank `[STRACE] device_wall` span per round; the `simpler`/`pto-isa`
-  subprocess runners parse the same spans from their captured stderr. The model fit
+  the slowest-rank `[STRACE] device_wall` span per round; the `pto-isa`
+  subprocess runner parses the same spans from its captured stderr. The model fit
   (`summarize.py --model`) prefers it over `execute_s`.
 - **Host-side zeroing is outside the timed region** — `outputs.zero_()` runs before
   `t0`, so `execute_s` is dispatch + device time only, not dispatch + memset + device.
@@ -171,21 +174,23 @@ deliberate:
 | Stack | kind | Variants | Count constraint | Notes |
 |-------|------|----------|------------------|-------|
 | **hccl** | campaign | mesh, ring, twophase | unbounded | CANN `HcclAllReduce` baseline; algorithm internal to HCCL |
-| **simpler** | subprocess | mesh, ring, twophase | `[256]` only | hand-written L3 C++ allreduce; current `examples/workers/l3/allreduce/main.py` is mesh-only (ring/twophase need the legacy `allreduce_distributed` example) |
 | **simpler-own** | campaign | mesh | unbounded | our dynamic-count AIV kernel via simpler `KernelCompiler` |
 | **pypto-composite** | campaign | mesh, ring | unbounded | InCore `pld.tensor.allreduce` composite via `@pl.jit.host`; **single-AIV only** (`core_num==1`) |
 | **pypto-host** | campaign | mesh, ring | unbounded | HOST builtin `pld.tensor.allreduce` via `@pl.jit.host`; `core_num` launch width (mesh); ring = Sum + FP32 only |
 | **pto-isa** | subprocess | mesh | unbounded | PTO-ISA path |
 
-Default apples-to-apples set (`DEFAULT_STACKS`): `hccl,simpler,pypto-composite,pypto-host`.
-`simpler-own` and `pto-isa` are opt-in via `--stacks`.
+Default apples-to-apples set (`DEFAULT_STACKS`): `hccl,pypto-composite,pypto-host`.
+`simpler-own` and `pto-isa` are opt-in via `--stacks`. The upstream-example `simpler` subprocess
+stack was retired on 2026-10-30 — its legacy `allreduce_distributed` example no longer exists at
+the current runtime pin. `simpler` is still the runtime underneath both pypto stacks; only that
+benchmark stack is gone.
 
 Current figure outputs from a full campaign include:
 
 - `figures/strong_scaling_t_total.png` — execute time vs `P`, one line per stack
 - `figures/strong_scaling_efficiency.png` — parallel efficiency `E(P)=T(Pmin)·Pmin/(T(P)·P)` per stack
 - `figures/message_size_bw_eff.png` — bandwidth (MB/s) vs payload count (log-x crossover)
-- `figures/paired_stack_ratio.png` — per-case `stack / simpler` ratio (all stacks except simpler/hccl)
+- `figures/paired_stack_ratio.png` — per-case `stack / hccl` ratio (all stacks except hccl)
 - `figures/phase_breakdown.png` — stacked `startup/compile/init/execute` phase means per stack
 - `figures/setup_breakdown.png` — grouped `compile` / `init` / `execute` bars per stack
 - `figures/compile_breakdown.png` — PyPTO compile sub-stages (`passes` / `codegen` / residual other), captured via the thread-local `CompileProfiler` around `host_orch.compile`
@@ -260,12 +265,12 @@ PYTHONPATH=. python -m collectives.run_sweep validate-case \
 # Run a paired comparison (4-stack apples-to-apples, on hardware)
 PYTHONPATH=. python -m collectives.run_sweep pair-mesh \
   --case-file collectives/cases/mesh_p2_count65536_fp32_a2a3_d0-1.json \
-  --stacks hccl,simpler,pypto-composite,pypto-host \
+  --stacks hccl,pypto-composite,pypto-host \
   --timed-rounds 5 --warmup-rounds 2 \
   --campaign demo \
   --out results/campaigns/demo/run_001/results.json
 
-# Same comparison on the simulator (pypto stacks + simpler-own only; hccl/simpler need CANN)
+# Same comparison on the simulator (pypto stacks + simpler-own only; hccl needs CANN)
 PYTHONPATH=. python -m collectives.run_sweep pair-mesh \
   --case-file collectives/cases/mesh_p2_count65536_fp32_a2a3_d0-1.json \
   --stacks pypto-composite,pypto-host \
@@ -300,7 +305,7 @@ bash run_campaign.sh --variant mesh --p-values 2,4,8 \
 
 # Cross-variant: mesh vs ring at P=4
 bash run_campaign.sh --mode cross-variant --variants mesh,ring \
-  --p-values 4 --count 65536 --stacks hccl,simpler,pypto-composite,pypto-host
+  --p-values 4 --count 65536 --stacks hccl,pypto-composite,pypto-host
 
 # Generate cases (after adding new variants/sizes)
 PYTHONPATH=. python collectives/cases/generate.py --dry-run
@@ -341,7 +346,7 @@ Manual (for debugging a single stack):
 
 ```bash
 # Dev workspace
-export PYPTO_ROOT=../pypto SIMPLER_ROOT=../simpler
+export PYPTO_ROOT=../pypto SIMPLER_ROOT=../pypto/runtime
 # Docker
 export PYPTO_ROOT=/opt/pypto SIMPLER_ROOT=/opt/pypto/runtime
 

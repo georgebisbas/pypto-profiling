@@ -13,4 +13,4 @@ Python package for Phase E collective benchmarks. See [../README.md](../README.m
 | `plot_figures.py` | Figure catalog from `results.json` including total-time, phase-breakdown, and PyPTO compile-breakdown plots (E4) |
 | `cases/*.json` | Checked-in `EquivalenceCase` fixtures |
 | `alltoallv_a1.py` | RFC #2521 A1 AllToAllV campaign driver |
-| `a1_alltoallv/` | Vendored A1 harness + FORCE_IPC patch + Fabric MFE (see that README) |
+| `a1_alltoallv/` | A1 bundle: FORCE_IPC patch + Fabric MFE + provenance (harness is in-tree; see that README) |

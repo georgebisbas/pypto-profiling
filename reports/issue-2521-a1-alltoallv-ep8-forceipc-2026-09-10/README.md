@@ -1,5 +1,7 @@
 # EP8 A1 continuation with `SIMPLER_COMM_FORCE_IPC`
 
+> **Report status:** archived — FORCE_IPC probe; the patch was never upstreamed. See [../upstream-status.md](../upstream-status.md).
+
 Probe of remaining EP8 §8.3 points under `SIMPLER_COMM_FORCE_IPC=1`
 (local simpler patch; see `collectives/a1_alltoallv/patches/`).
 

@@ -1,5 +1,7 @@
 # RFC #2521 A1 — EP8 attempt (roadmap-aligned)
 
+> **Report status:** archived — first EP8 attempt; superseded by the later EP8/K1/K3 campaigns. See [../upstream-status.md](../upstream-status.md).
+
 EP=8 on devices 0–7, same §8.6 conditions as the EP2/EP4 ubfix campaign.
 Follows Yunji roadmap priority for official A1 archive (EP8 first).
 

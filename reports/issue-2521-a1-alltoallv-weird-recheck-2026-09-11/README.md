@@ -1,5 +1,7 @@
 # Weird-point recheck (2026-09-11) — COMPLETE
 
+> **Report status:** archived — re-check of off-trend A1 points. See [../upstream-status.md](../upstream-status.md).
+
 Re-run of points that look off the main trend in the A1 archive.
 
 | Focus | Why |

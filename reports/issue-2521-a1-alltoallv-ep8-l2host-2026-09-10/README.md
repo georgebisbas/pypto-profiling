@@ -1,5 +1,7 @@
 # EP8 L2 vs HOST (known-good / mid-curve)
 
+> **Report status:** archived — mid-curve L2-vs-HOST; superseded by the 2026-10-14 L>1 run. See [../upstream-status.md](../upstream-status.md).
+
 Focused EP=8 run on devices 0–7. Not a full §8.3 archive.
 
 ## Results (2026-09-10)

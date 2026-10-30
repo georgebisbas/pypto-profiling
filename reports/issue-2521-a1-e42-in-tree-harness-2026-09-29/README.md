@@ -1,13 +1,15 @@
 # E4.2 — in-tree harness verification (2026-09-29)
 
+> **Report status:** archived — PR #2945 merged 2026-10-20. See [../upstream-status.md](../upstream-status.md).
+
 **Deliverable:** A1/E4.2 — port the measurement harness into the pypto tree
 (`tests/st/distributed/collectives/all_to_all_v_benchmark.py`) as
 `hw-native-sys/pypto` PR **#2945** (head `georgebisbas:a2av-in-tree-harness`,
-commit `86abfffb`).
+commit `86abfffb`; **merged 2026-10-20**).
 
 **What changed vs the measurement bundle:** measurement logic unchanged
 (formatting-normalized by ruff 0.14.8; no logic edits); the bundle copy is synced
-to identical content (pypto-profiling `bb2f0e27`). Functional deltas:
+to identical content (pypto-profiling `bb2f0e27`; the bundle copy was removed 2026-10-30). Functional deltas:
 `read_pypto_commit()` repo-root walk + `git rev-parse` (worktree-safe; a timeout
 falls back to `unknown`), plus the review-round fixes — empty-sample rank
 exclusion (`aiv_ranks_missing` marker), compile-only device-id validation, and

@@ -1,5 +1,7 @@
 # Plan 107 — re-anchored ablation campaign record (2026-09-03)
 
+> **Report status:** reference — plan 107 record. See [upstream-status.md](upstream-status.md).
+
 **Status:** executed (re-anchored on the current composite gap) — **full matrix measured
 126/126 correctness PASS; attribution table NOT FILED** (see §6/§9: single-pass medians are
 unreliable on this shared box). Two hard findings landed: fillpad NPU crash (root-caused,

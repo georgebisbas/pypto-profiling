@@ -3,8 +3,8 @@
 
 Writes ``results/campaigns/demo_figures/run_001/results.json`` with realistic
 (but synthetic) NPU-scale numbers — mesh + ring across P=2/4/8 and payload
-counts 4K/64K/1M — for hccl / simpler / simpler-own / pypto-composite /
-pypto-host. Use it as template-picture generator and as living documentation of
+counts 4K/64K/1M — for hccl / simpler-own / pypto-composite / pypto-host.
+Use it as template-picture generator and as living documentation of
 the results.json schema that run_sweep.py produces.
 
 Usage:
@@ -23,33 +23,32 @@ _P_VALUES = (2, 4, 8)
 _BYTES_PER_ELT = 4  # fp32
 
 # (P, count) -> execute seconds per stack. Ballpark NPU allreduce numbers:
-# HCCL is the fastest baseline; hand-written simpler in between; pypto stacks
-# pay a small framework tax; host builtin is the slowest of the pypto pair.
+# HCCL is the fastest baseline; pypto stacks pay a small framework tax; host
+# builtin is the slowest of the pypto pair.
 _BASE_EXEC: dict[tuple[int, int], dict[str, float]] = {
-    (2, 4096):    {"hccl": 8e-6, "simpler": 20e-6, "simpler-own": 18e-6,
+    (2, 4096):    {"hccl": 8e-6, "simpler-own": 18e-6,
                    "pypto-composite": 26e-6, "pypto-host": 42e-6},
-    (2, 65536):   {"hccl": 32e-6, "simpler": 62e-6, "simpler-own": 55e-6,
+    (2, 65536):   {"hccl": 32e-6, "simpler-own": 55e-6,
                    "pypto-composite": 82e-6, "pypto-host": 125e-6},
-    (2, 1048576): {"hccl": 420e-6, "simpler": 720e-6, "simpler-own": 680e-6,
+    (2, 1048576): {"hccl": 420e-6, "simpler-own": 680e-6,
                    "pypto-composite": 920e-6, "pypto-host": 1350e-6},
-    (4, 4096):    {"hccl": 14e-6, "simpler": 34e-6, "simpler-own": 30e-6,
+    (4, 4096):    {"hccl": 14e-6, "simpler-own": 30e-6,
                    "pypto-composite": 44e-6, "pypto-host": 70e-6},
-    (4, 65536):   {"hccl": 55e-6, "simpler": 105e-6, "simpler-own": 95e-6,
+    (4, 65536):   {"hccl": 55e-6, "simpler-own": 95e-6,
                    "pypto-composite": 140e-6, "pypto-host": 210e-6},
-    (4, 1048576): {"hccl": 720e-6, "simpler": 1250e-6, "simpler-own": 1150e-6,
+    (4, 1048576): {"hccl": 720e-6, "simpler-own": 1150e-6,
                    "pypto-composite": 1580e-6, "pypto-host": 2350e-6},
-    (8, 4096):    {"hccl": 26e-6, "simpler": 60e-6, "simpler-own": 52e-6,
+    (8, 4096):    {"hccl": 26e-6, "simpler-own": 52e-6,
                    "pypto-composite": 78e-6, "pypto-host": 125e-6},
-    (8, 65536):   {"hccl": 100e-6, "simpler": 190e-6, "simpler-own": 170e-6,
+    (8, 65536):   {"hccl": 100e-6, "simpler-own": 170e-6,
                    "pypto-composite": 250e-6, "pypto-host": 380e-6},
-    (8, 1048576): {"hccl": 1300e-6, "simpler": 2300e-6, "simpler-own": 2100e-6,
+    (8, 1048576): {"hccl": 1300e-6, "simpler-own": 2100e-6,
                    "pypto-composite": 2900e-6, "pypto-host": 4300e-6},
 }
 
 # One-time setup per stack (compile + init), seconds.
 _SETUP_S = {
     "hccl": 0.05,
-    "simpler": 0.0,          # subprocess — setup attributed per round
     "simpler-own": 0.8,
     "pypto-composite": 2.9,
     "pypto-host": 6.4,
@@ -59,7 +58,6 @@ _SETUP_S = {
 # that execute_s includes but device_wall excludes.
 _DEVICE_FRAC = {
     "hccl": 1.0,
-    "simpler": 0.90,
     "simpler-own": 0.85,
     "pypto-composite": 0.80,
     "pypto-host": 0.70,
@@ -71,7 +69,7 @@ _COMPILE_PROFILE = {
     "pypto-host": {"total": 1.40, "passes": 0.005, "codegen": 1.36, "other": 0.035},
 }
 
-_STACKS = ("hccl", "simpler", "simpler-own", "pypto-composite", "pypto-host")
+_STACKS = ("hccl", "simpler-own", "pypto-composite", "pypto-host")
 
 
 def _case_id(variant: str, p: int, count: int) -> str:

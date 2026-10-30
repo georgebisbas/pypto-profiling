@@ -1,5 +1,7 @@
 # Noise re-run (2026-09-14) — DONE
 
+> **Report status:** archived — noise re-run of cells from the 2026-09-10 campaigns. See [../upstream-status.md](../upstream-status.md).
+
 Only cells that looked noisy after weird-recheck.
 
 ## 1. EP4 L2 uniform `@0` ×3

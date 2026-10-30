@@ -31,7 +31,6 @@ def _group_by_case(runs: list[dict[str, Any]]) -> dict[str, dict[str, dict[str, 
 
 STACK_ORDER = (
     "hccl",
-    "simpler",
     "simpler-own",
     "pypto-composite",
     "pypto-host",
@@ -90,12 +89,12 @@ def _time_str(run: dict[str, Any]) -> str:
 
 def _print_table(
     groups: dict[str, dict[str, dict[str, Any]]],
-    baseline: str = "simpler",
+    baseline: str = "hccl",
 ) -> list[dict[str, Any]]:
     """Print an N-stack comparison table and return summary rows for JSON export.
 
     Every stack gets a per-case execute_s column; ``pypto-composite`` is also
-    shown as a ratio against ``baseline`` (default ``simpler``).
+    shown as a ratio against ``baseline`` (default ``hccl``).
     """
     stacks = _stacks_present(groups)
     width = max(8, max((len(s) for s in stacks), default=8))
@@ -262,7 +261,7 @@ def _write_report(
     run_dir: Path,
     rows: list[dict[str, Any]],
     header: dict[str, Any],
-    baseline: str = "simpler",
+    baseline: str = "hccl",
     models: list[bw_model.BandwidthModel] | None = None,
 ) -> Path:
     """Write reports/summary.md with N-stack tables and metadata."""
@@ -445,7 +444,7 @@ def main(argv: list[str] | None = None) -> int:
     """Summarize a campaign run directory's results.json."""
     parser = argparse.ArgumentParser(description="Summarize collective benchmark results")
     parser.add_argument("--run-dir", type=Path, required=True, help=".../run_<timestamp>/")
-    parser.add_argument("--baseline", default="simpler", help="Reference stack for paired ratios")
+    parser.add_argument("--baseline", default="hccl", help="Reference stack for paired ratios")
     parser.add_argument("--emit-report", action="store_true", help="Write reports/summary.md")
     parser.add_argument("--json", type=Path, default=None, help="Write summary rows as JSON")
     parser.add_argument("--model", action="store_true",

@@ -1,5 +1,7 @@
 # E1.4 — Tail points (1, 15, 31, 33, 4159, 4161 B) — acceptance probe
 
+> **Report status:** archived — tail-point acceptance probe; all N/A by construction. See [../upstream-status.md](../upstream-status.md).
+
 **Status: COMPLETE (2026-09-28) — all six points N/A (rejected by the compiler front-end).**
 
 Protocol: attempt-once per point (per exclusion policy), `managed-l2`, EP8, 30r,

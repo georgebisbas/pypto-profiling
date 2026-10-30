@@ -1,5 +1,7 @@
 # On-box TODO queue
 
+> **Report status:** reference — live hardware queue. See [upstream-status.md](upstream-status.md).
+
 Hardware-only checks this repo owes someone — things that cannot be settled in sim, on the dev box,
 or by reading source, and that are therefore taken on when we next hold an NPU window.
 
@@ -16,12 +18,37 @@ and is **not** `.11`-only as an earlier revision of this file claimed).
 
 ---
 
+## 0. O2/A3 Part B — HOST-vs-L2 matrix cells (blocked on pypto #3229)
+
+**Reporter:** us. **Upstream status:** pypto [#3229](https://github.com/hw-native-sys/pypto/pull/3229)
+(open, 2026-10-30) captures builtin collective dispatches in DFX; until it merges the HOST rail
+emits no AIV span, so the `managed-host` g1/g2 cells in
+[`issue-2521-o2-a3-2026-10-22/`](issue-2521-o2-a3-2026-10-22/README.md) cannot be scored.
+**Decides:** whether RFC #2521 §10 L2-track acceptance item 6 (HOST-vs-L2 parity) can be answered
+like-for-like; it is the last blocker on Part B.
+
+### 0.1 What is owed
+
+1. Re-run the 9 `managed-host` g1/g2 cells with the same protocol as Part B pass 1.
+2. Fold them into the existing `managed-l2` matrix and publish the cross-rail ratio.
+3. Flip the O2/A3 report from **PARTIAL** to complete, or record the residual caveat.
+
+### 0.2 Exit criteria
+
+- [ ] #3229 merged and the runtime/image rebuilt at the new pin
+- [ ] 9/9 HOST cells OK, correctness passing
+- [ ] Cross-rail ratio published in the report
+- [ ] `issue-2521-o2-a3-2026-10-22/README.md` status updated
+
+---
+
 ## 1. RFC #2521 plan 129 — A1 `managed-l2` `core_num>1` sweep
 
-**Reporter:** us. **Upstream status:** O2a landed (pypto #2971, `fe651f29`, merged 2026-10-13) and
-the harness side is **implemented** on branch `a2av-harness-l2-core-num` @ `22fc5886`, stacked on
-`a2av-in-tree-harness` @ `eb1ed877` (pypto PR #2945, open — bot-approved only). **The hardware
-sweep has never been run.**
+**Reporter:** us. **Upstream status:** O2a landed (pypto #2971, `fe651f29`, merged 2026-10-13);
+the in-tree harness landed as pypto #2945 (merged 2026-10-20; `main` harness sha `958f6490…`).
+The plan-129 branch `a2av-harness-l2-core-num` @ `22fc5886` is **archived** on the fork
+(tag, 2026-10-30), so only the sweep is owed. **The `L ∈ {4,16}` hardware sweep has never been
+run.**
 **Decides:** whether the sanctioned RFC #2521 §10 HOST-vs-L2 comparison can be produced at all —
 today the A1 harness refuses `L>1` on the `managed-l2` rail, so no L2 row of any `L`/`B` sweep is
 obtainable from the sanctioned tool. Unblocks plan 116 (A3) and the `managed-l2` rows of plan 110.
@@ -37,15 +64,16 @@ Queue task `task_20261014_085749_20485986058`. Results + caveats:
 Headline: `managed-l2 L=8` = **186 µs** kernel p50 / **19.75 Gbit/s/rank** (6.5× over L2 `L=1`,
 34× over the HOST `L=1` baseline), while the HOST rail gained ~nothing from multi-lane (2.9%).
 
-**Still owed:** `L ∈ {4,16}`, the rest of the `§8.3` payload curve, the official 100-round
-conditions, and the PR after #2945 merges.
+**Still owed:** `L ∈ {4,16}`, the rest of the `§8.3` payload curve, and the official 100-round
+conditions. The PR branch was archived on 2026-10-30 (see [`upstream-status.md`](upstream-status.md)).
 
 ### 1.2 What is owed
 
-1. Steps 4–6 of plan 129: the hardware sweep on a real box, both rails, for `L ∈ {1,4,8,16}`.
-2. The PR, **only after #2945 merges** (the branch is stacked on `eb1ed877`; rebase onto `main`
-   first). Do not add this commit to #2945 — its body already promises "a separate change after
-   #2945".
+1. Steps 4–6 of plan 129: the hardware sweep on a real box, both rails, for `L ∈ {1,4,8,16}`
+   (`L = 1,8` already done — see §1.1).
+2. ~~The PR, only after #2945 merges~~ — #2945 merged 2026-10-20, but the branch was **archived**
+   on 2026-10-30 without a PR. If the sweep is resumed, start from the archive tag recorded in
+   [`upstream-status.md`](upstream-status.md) and rebase onto current `main`.
 
 ### 1.3 Things that will bite
 
@@ -70,16 +98,17 @@ conditions, and the PR after #2945 merges.
 - [ ] Cross-rail HOST-vs-L2 ratio either resolved or explicitly caveated as directional
       (still blocked: the HOST rail emits only `timing_slot`, no per-rank AIV span — see the
       2026-10-14 report caveat 1)
-- [ ] PR opened after #2945 merges (fork remote only), rebased onto `main`
+- [—] PR — not opened; branch archived 2026-10-30 (see [`upstream-status.md`](upstream-status.md))
 
 ---
 
 ## 2. TFILLPAD UB-OOB (pto-isa#291) — verify the upstream fix and un-hack the ablation kernels
 
 **Reporter:** us (filed 2026-09-03 from the plan-107 `fillpad`/`allfour` crash). **Upstream status:**
-fixed by pto-isa `a77a7e2` (2026-09-08) + `3b49066` (2026-09-11), both on `origin/main`; the
-pto-isa side asked us to verify and close.
-**Ours:** not verified. The two ablation kernels still carry the slot-order workaround (`0790b5d`).
+fixed by pto-isa `a77a7e2` (2026-09-08) + `3b49066` (2026-09-11) and **closed upstream 2026-09-16**;
+the current runtime pin derives pto-isa `217bb989…` (checked 2026-10-30).
+**Ours:** not verified on hardware. The two ablation kernels still carry the slot-order workaround
+(`0790b5d`) — do not revert it until the hardware A/B below passes.
 **Decides:** whether pto-isa#291 can be closed, whether the workaround can be reverted, and whether
 `pypto/runtime/pto_isa.pin` needs the bump.
 **Detail:** [issue291_tfillpad_ub_oob.md](https://github.com/hw-native-sys/pypto-3.0-notes/blob/main/issues/issue291_tfillpad_ub_oob.md)
@@ -138,6 +167,6 @@ where it exists.
 - [ ] `pypto/runtime/pto_isa.pin` bumped `96ba706c` → ≥ `3b49066` (simpler's pin already has it).
       Read the pin **through the recorded gitlink**, not the submodule working tree:
       `git -C pypto show "$(git -C pypto ls-tree HEAD runtime | awk '{print $3}')":pto_isa.pin`
-- [ ] Comment the results on [pto-isa#291](https://github.com/hw-native-sys/pto-isa/issues/291) and
-      close it; then re-measure `fillpad`/`allfour` at count ≥ 16384 (unblocks plan 107's allfour
-      composition check)
+- [ ] Post the A/B results on the closed [pto-isa#291](https://github.com/hw-native-sys/pto-isa/issues/291)
+      for the record; then re-measure `fillpad`/`allfour` at count ≥ 16384 (unblocks plan 107's
+      allfour composition check)

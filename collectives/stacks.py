@@ -25,15 +25,6 @@ STACK_REGISTRY: dict[str, dict[str, Any]] = {
         "orch_profile": "mesh_l3_host_domain_v1",
         "description": "CANN HcclAllReduce baseline (algorithm internal to HCCL)",
     },
-    "simpler": {
-        "kind": "subprocess",
-        "variants": ("mesh", "ring", "twophase"),
-        "count_constraint": [256],  # ALLREDUCE_COUNT hardcoded in the C++ kernel
-        "orch_profile": "mesh_l3_host_domain_v1",
-        "description": "hand-written L3 C++ allreduce via simpler's "
-        "examples/workers/l3/allreduce/main.py (mesh one-phase, count 256; "
-        "ring/twophase only when the legacy allreduce_distributed example is present)",
-    },
     "simpler-own": {
         "kind": "campaign",
         "variants": ("mesh",),
@@ -74,8 +65,10 @@ SUBPROCESS_STACKS = frozenset(
     name for name, info in STACK_REGISTRY.items() if info["kind"] == "subprocess"
 )
 
-# Default stack set for the 4-stack apples-to-apples comparison.
-DEFAULT_STACKS = ("hccl", "simpler", "pypto-composite", "pypto-host")
+# Default stack set for the apples-to-apples comparison. The upstream-example
+# `simpler` subprocess stack was retired 2026-10-30: its legacy
+# allreduce_distributed example no longer exists at the current runtime pin.
+DEFAULT_STACKS = ("hccl", "pypto-composite", "pypto-host")
 
 
 def supported_variants(stack: str) -> tuple[str, ...]:

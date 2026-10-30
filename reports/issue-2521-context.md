@@ -1,5 +1,7 @@
 # Reference note — pypto issue #2521 (L2 orchestration & dispatch overhead)
 
+> **Report status:** reference — RFC #2521 background note. See [upstream-status.md](upstream-status.md).
+
 **Source:** https://github.com/hw-native-sys/pypto/issues/2521
 **Author:** YunjiQin · **Review:** vloncar (ZeCO) — measured, not projected
 **Review 2:** georgebisbas (this repo) — measured, merged PR #2591

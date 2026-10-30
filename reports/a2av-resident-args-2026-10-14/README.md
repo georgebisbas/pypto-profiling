@@ -1,5 +1,7 @@
 # Action A — worker-resident benchmark arguments (EP8, 1 MiB)
 
+> **Report status:** current — 1.97x resident-args result; code branch archived, evidence stands. See [../upstream-status.md](../upstream-status.md).
+
 **Date:** 2026-10-14 · **Box:** hng-atlas02 · **Queue task:** `task_20261014_112920_242602513476`
 (`--device auto --device-num 8 --max-time 3300`) · **Branch:** `a2av-resident-args`
 (stacked on `a2av-harness-l2-core-num` @ `22fc5886`)

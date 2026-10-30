@@ -1,5 +1,7 @@
 # Multi-AIV (core_num) scaling vs message size — crossover analysis
 
+> **Report status:** reference — crossover analysis still referenced. See [upstream-status.md](upstream-status.md).
+
 **Date:** 2026-08-31
 **Platform:** a2a3, 8× Ascend 910B2 (64 GB HBM/chip), CANN 9.0.0, Ubuntu 22.04.5 (192-core aarch64)
 **Kernel:** pypto-host mesh allreduce (`pld.tensor.allreduce`, fp32), persistent CommDomains

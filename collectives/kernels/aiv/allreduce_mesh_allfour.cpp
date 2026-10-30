@@ -24,6 +24,10 @@
  * tile, and a FULL-width (16384-col) TFILLPAD tail-pad addresses tile_end; if
  * recvTile ended at the 192 KiB UB top (0x30000) that write faulted the AIV
  * (chip run lane poisoned, code -100). Slot order is cost-neutral.
+ *
+ * Upstream fixed this OOB in pto-isa 3b49066; the current runtime pin (pto-isa
+ * 217bb989) contains it. Keep the workaround until the hardware A/B in
+ * reports/onbox-todo.md §2 passes — do not revert it speculatively.
  */
 
 #include <cstdint>

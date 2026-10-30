@@ -34,7 +34,7 @@ Yunji — sharing an A1-style pre-change baseline for managed `pld.tensor.all_to
 |------|------|
 | Colleague analytic report (tables + §8 checklist) | https://github.com/georgebisbas/pypto-profiling/blob/main/reports/issue-2521-a1-alltoallv-ubfix-2026-09-09/ANALYTIC_REPORT_FOR_COLLEAGUES.md |
 | Campaign driver | https://github.com/georgebisbas/pypto-profiling/blob/main/collectives/alltoallv_a1.py |
-| Harness | https://github.com/georgebisbas/pypto-profiling/blob/main/collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py |
+| Harness | https://github.com/hw-native-sys/pypto/blob/main/tests/st/distributed/collectives/all_to_all_v_benchmark.py (in-tree since #2945; the pypto-profiling vendored copy was removed 2026-10-30) |
 | FORCE_IPC patch | https://github.com/georgebisbas/pypto-profiling/blob/main/collectives/a1_alltoallv/patches/simpler_comm_force_ipc.patch |
 | Bundle README | https://github.com/georgebisbas/pypto-profiling/blob/main/collectives/a1_alltoallv/README.md |
 | EP8 gap-fill archive | https://github.com/georgebisbas/pypto-profiling/tree/main/reports/issue-2521-a1-alltoallv-ep8-gapfill-2026-09-10 |

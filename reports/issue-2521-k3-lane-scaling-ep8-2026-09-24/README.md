@@ -1,5 +1,7 @@
 # K3 lane scaling — EP8 (8-rank) campaign (2026-09-24 → 2026-09-25)
 
+> **Report status:** current — EP8 envelope complementing the EP4 campaigns. See [../upstream-status.md](../upstream-status.md).
+
 *RFC #2521 K3 validation, 8-rank envelope complementing the EP4 campaigns
 ([2026-09-23](../issue-2521-k3-lane-scaling-2026-09-23/K3_LANE_SCALING_REPORT.md)
 and [2026-09-24](../issue-2521-k3-lane-scaling-2026-09-24/README.md)):

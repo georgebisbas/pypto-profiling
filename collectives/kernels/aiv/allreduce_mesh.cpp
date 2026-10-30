@@ -11,7 +11,7 @@
 /**
  * Mesh AllReduce kernel — dynamic-count, 4-phase, HCCL-window scratch pattern.
  *
- * Identical algorithm to simpler allreduce_distributed/kernels/aiv/allreduce_kernel.cpp
+ * Identical algorithm to simpler examples/workers/l3/allreduce/kernels/aiv/allreduce_onephase_kernel.cpp
  * but count is a runtime scalar instead of a compile-time constant.
  *
  * Large payloads are processed in UB-sized chunks (kChunkCols). Tile buffers are

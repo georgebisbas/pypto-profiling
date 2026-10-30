@@ -1,5 +1,7 @@
 # EP8 gap-fill / open-items
 
+> **Report status:** archived — gap-fill for the 2026-09-10 EP8 campaign. See [../upstream-status.md](../upstream-status.md).
+
 ## 2026-09-11 open-items (`sweep_open_2026-09-11.log`) — DONE
 
 | Area | Result |

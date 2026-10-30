@@ -1,5 +1,7 @@
 # E2.1 — K1 delta @ EP8 (paired 30-round protocol)
 
+> **Report status:** archived — K1 delta; K1 merged. See [../upstream-status.md](../upstream-status.md).
+
 **Status: COMPLETE (2026-09-28).** Both sides 16/16 cells OK, 0 failures.
 Paired comparison of the K1 kernel template vs the pre-K1 template on the frozen
 B1 tree, EP8, FORCE_IPC, uniform sweep (0 → 64 KiB), both rails.

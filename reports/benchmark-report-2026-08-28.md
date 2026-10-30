@@ -1,5 +1,7 @@
 # PyPTO vs HCCL AllReduce — Benchmark Report (2026-08-28)
 
+> **Report status:** reference — methodology baseline; pre-queue numbers. See [upstream-status.md](upstream-status.md).
+
 **Date:** 2026-08-28 · **Platform:** a2a3 (8× Ascend 910B2, CANN 9.0.0) · **Repo:** `pypto-profiling`
 **Interpreter:** `/usr/local/python3.12.13/bin/python3` (pypto 0.1.0, torch 2.13.0)
 **Harness:** `run_sweep.py pair-mesh` / `run_campaign.sh`, `--persistent` unless stated.

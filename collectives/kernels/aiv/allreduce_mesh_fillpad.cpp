@@ -26,6 +26,10 @@
  * (chip run lane poisoned, code -100). Slot order is cost-neutral, so the
  * one-construct delta to mesh is unchanged.
  *
+ * Upstream fixed this OOB in pto-isa 3b49066; the current runtime pin (pto-isa
+ * 217bb989) contains it. Keep the workaround until the hardware A/B in
+ * reports/onbox-todo.md §2 passes — do not revert it speculatively.
+ *
  * Purpose: attribute a share of the measured 6.7x on-device gap between the
  * hand-written kernel (0.132 ms @64K P=2) and the pypto composite (0.888 ms
  * @64K P=2) to that construct.

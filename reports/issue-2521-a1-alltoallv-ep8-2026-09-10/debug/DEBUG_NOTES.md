@@ -25,7 +25,7 @@ Evidence:
 | Artifact | Root signal |
 |----------|-------------|
 | Campaign `builds/.../4096/dfx_outputs/host.3713532.log` | cross-server on **devId=7** |
-| `debug/campaign_exact/pb0/log.txt` | cross-server on **devId=5**, then release_domain -1, **rc=139** |
+| `debug/campaign_exact/pb0/log.txt` | cross-server on **devId=5**, then release_domain -1, **rc=139** (log file untracked 2026-10-30; on disk / in git history only) |
 | Successful campaign sizes (32/128/1024/8192) | **no** cross-server in DFX |
 
 a2a3 window path (`runtime/src/a2a3/.../comm_hccl.cpp`): Fabric V2 (`ACL_MEM_SHARE_HANDLE_TYPE_FABRIC`) with IPC shareable-handle fallback. The failing call is **ExportToShareableHandleV2** (Fabric), which this box sometimes rejects mid-run as “cross-server”.

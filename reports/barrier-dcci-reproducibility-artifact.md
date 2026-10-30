@@ -1,5 +1,7 @@
 # Plan 98 — Reproducibility Artifact (HPC-conference style)
 
+> **Report status:** archived — DCCI work landed as #2591. See [upstream-status.md](upstream-status.md).
+
 **Claim supported by this artifact:** the pypto InCore composite allreduce's
 generated kernel carries two per-peer serialisation primitives — a full-pipeline
 `pipe_barrier(PIPE_ALL)` before each `TNOTIFY` and a whole-cache

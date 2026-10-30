@@ -1,8 +1,10 @@
 # Main snapshot `54521824` — A1 protocol @ EP8 (L=1 sweep + L=16 spots)
 
+> **Report status:** archived — pre-K3/O2 main snapshot. See [../upstream-status.md](../upstream-status.md).
+
 **Status: COMPLETE (2026-09-29).** 10/10 L=1 cells OK, 2/2 L=16 cells OK, 0 failures.
 
-**Tree:** pypto `main` @ `54521824f2777fcba180322b7148ce335d254709` (`/opt/a1/main` worktree; post-K2 `e48937b9` / PR #2889, pre-K3 / PR #2900) · **Box:** hng-atlas01, 8× Ascend NPUs (a2a3) · **Harness:** in-tree `tests/st/distributed/collectives/all_to_all_v_benchmark.py` (e42 @ `86abfffb`, PR #2945; sha256 `3c1f83be…`, byte-identical to the `pypto-profiling/collectives/a1_alltoallv/harness/` copy).
+**Tree:** pypto `main` @ `54521824f2777fcba180322b7148ce335d254709` (`/opt/a1/main` worktree; post-K2 `e48937b9` / PR #2889, pre-K3 / PR #2900) · **Box:** hng-atlas01, 8× Ascend NPUs (a2a3) · **Harness:** in-tree `tests/st/distributed/collectives/all_to_all_v_benchmark.py` (e42 @ `86abfffb`, PR #2945, **merged 2026-10-20**; sha256 `3c1f83be…` at that head — the `pypto-profiling` snapshot was removed 2026-10-30, and pypto `main` has since advanced to `958f6490…`).
 
 ## Why
 
@@ -60,5 +62,5 @@ Frozen A1, protocol-matched to the E2.1 series:
 ## Caveats
 
 - L=16 was measured on `managed-host` only (K3's comparator rail); no aicore-rail L=16 cells.
-- Harness version delta vs the B1 refs: refs used `dd960384…` (pre-e42) vs this run `3c1f83be…` (e42). The e42 changes are additive (completion metric, capture flags) plus trace-view dedup; validated to reproduce archived outputs with 0 diffs; the timing-slot path is untouched.
+- Harness version delta vs the B1 refs: refs used `dd960384…` (pre-e42) vs this run `3c1f83be…` (e42 at that head; the current in-tree harness is `958f6490…`). The e42 changes are additive (completion metric, capture flags) plus trace-view dedup; validated to reproduce archived outputs with 0 diffs; the timing-slot path is untouched.
 - Shared box; the HOST rail has ±6% cross-day scatter — small HOST deltas are not attributable; L2 is the tight rail.

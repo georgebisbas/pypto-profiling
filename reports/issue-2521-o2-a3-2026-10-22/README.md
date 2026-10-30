@@ -1,5 +1,7 @@
 # RFC #2521 O2/A3 gate + #3051 payload re-run on `main` `af75165dd` (2026-10-22)
 
+> **Report status:** current — latest O2/A3 gate + #3051 re-run; Part B partial. See [../upstream-status.md](../upstream-status.md).
+
 **Status: PARTIAL.** O2 §11.2 (Part A) held at its gate — the HOST rail returns no AIV span.
 A3 Part B pass 1 ran on the L2 rail: 30/30 cells + 8 anchors OK (grants g3–g6); 9 matrix points wait
 in g1/g2 behind the HOST-rail fix. The #3051 payload sweep was re-run: 9/11 cells OK, 2 compile

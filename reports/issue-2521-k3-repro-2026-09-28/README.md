@@ -1,5 +1,7 @@
 # K3 (PR #2900) — external reproduction of the claimed speedups
 
+> **Report status:** current — external reproduction of the K3 speedups. See [../upstream-status.md](../upstream-status.md).
+
 **Date:** 2026-09-28 · **Box:** hng-atlas01, 8× Ascend NPUs (a2a3) · **Kernel tree:** `cf136e73` (`feat/all-to-all-v-multiaiv-lanes` head, includes the post-campaign 32-byte lane-alignment fix) · **Harness:** `pypto-profiling/collectives/alltoallv_a1.py` (same protocol as the claimed campaigns; metric `host_timing_slot_mean_us`).
 
 ## Why

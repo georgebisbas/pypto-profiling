@@ -1,5 +1,7 @@
 # K3 multi-AIV lane scaling — managed-host `all_to_all_v`, EP4 on 4×910B2
 
+> **Report status:** superseded — repeatability re-run in the 2026-09-24 campaign. See [../upstream-status.md](../upstream-status.md).
+
 *Campaign: 2026-09-23 · `--impl managed-host`, EP4, NPUs 4,5,6,7 · **50/50 cells OK** ·
 kernel under test: pypto branch `feat/all-to-all-v-multiaiv-lanes`, as-run `1af2335b`
 (post-rebase equivalent `67572c26`; the 2026-09-24 rebase's only kernel delta is a comment, so these

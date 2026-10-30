@@ -3,6 +3,13 @@
 > ⚠️ **Run unqueued** — no `task-submit` on this box at the time, so timings are unisolated. See
 > [`npu-queue-runbook.md`](../npu-queue-runbook.md) §10 for the shared caveat.
 
+> **Harness copy removed (2026-10-30).** The vendored
+> `collectives/a1_alltoallv/harness/all_to_all_v_benchmark.py` linked throughout this report is
+> gone; the harness now lives in-tree at
+> `pypto/tests/st/distributed/collectives/all_to_all_v_benchmark.py` (merged as pypto #2945 on
+> 2026-10-20). Treat the paths below as historical; use the in-tree file (or `A2AV_HARNESS=...`)
+> to re-run. The old copy remains reachable in git history.
+
 **For:** colleagues reviewing A1 performance / HOST vs L2  
 **Campaigns:**
 - **EP2/EP4 full curve:** `issue-2521-a1-alltoallv-ubfix-2026-09-09` (72/72 OK)

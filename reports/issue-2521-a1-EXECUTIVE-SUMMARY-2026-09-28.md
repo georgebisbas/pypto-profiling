@@ -1,12 +1,14 @@
 # RFC #2521 — A1 executive summary (2026-09-28)
 
+> **Report status:** reference — refreshed 2026-10-30; #2945 now merged. See [upstream-status.md](upstream-status.md).
+
 > ⚠️ **Every campaign behind this summary was run unqueued.** See
 > [`npu-queue-runbook.md`](npu-queue-runbook.md) §10 for what that means for the numbers, and for
 > the queue procedure to use on the follow-up (plan 129) work.
 
 **Scope:** A1 = benchmark harness + pre-change baseline (plan 110). Measurement program
 **COMPLETE** — all deliverables closed, incl. the in-tree harness PR
-[#2945](https://github.com/hw-native-sys/pypto/pull/2945) (opened 2026-09-29). All artifacts pushed to
+[#2945](https://github.com/hw-native-sys/pypto/pull/2945) (opened 2026-09-29, **merged 2026-10-20**). All artifacts pushed to
 this repo; change record in `pypto-3.0-notes` (`d66a84e`, `07e6b98`).
 
 ## Deliverable definition (tactic change, 2026-09-25)
@@ -38,7 +40,8 @@ device span stays ~0.6 ms at 24960). Details in the E2.1/E1 reports.
    runtime-level; bisect in `RESUME_COMPLETION_2026-09-28.md`). Recommend a runtime/simpler issue;
    campaigns use 30r + retries + heals meanwhile.
 5. **In-tree harness PR (E4.2)** → [#2945](https://github.com/hw-native-sys/pypto/pull/2945), opened
-   2026-09-29 — all A1 deliverables closed (smoke + live EP2 verified; worktree-safe commit lookup).
+   2026-09-29, **merged 2026-10-20** — all A1 deliverables closed (smoke + live EP2 verified;
+   worktree-safe commit lookup).
 
 ## Policy (adopted 2026-09-28)
 

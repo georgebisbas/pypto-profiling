@@ -15,7 +15,6 @@ from pathlib import Path
 from typing import Any
 
 from collectives.artifacts import RunArtifactBundle
-from collectives.config import simpler_root
 from collectives.equivalence import EquivalenceCase
 from collectives.golden import fill_rank_inputs, verify_outputs
 from collectives.metrics import parse_device_wall_s, parse_hccl_per_rank, dispersion
@@ -288,23 +287,6 @@ def _build_sample(
         sample["device_wall_s"] = round(device_wall_s, 6)
     return sample
 
-# Phase markers for simpler stdout parsing.
-# Each marker records the wall time from the *previous* marker to the line
-# containing this string.  The first marker records from process start.
-_SIMPLER_MARKERS = [
-    ("startup",      "compiling kernels"),        # t0 → "compiling kernels" (imports, arg parse)
-    ("compile",      "init worker"),               # → kernel + orch compilation
-    ("init",         "running "),                  # → worker.init + domain alloc + TaskArgs
-    # execute_done: fires when simpler main.py emits this marker.
-    # Today simpler doesn't emit it, so this phase stays empty
-    # and execute below captures init → golden_match (DAG + host-side verify).
-    # When simpler adds the print, execute captures DAG-only.
-    ("execute_done", "SIMPLER_EXECUTE_DONE"),      # → DAG execution complete
-    ("execute",      "all ranks matched golden"),  # → DAG + host-side golden verify
-    ("fail",         "golden check FAILED"),
-]
-
-
 def _run_with_phases(
     cmd: list[str], cwd: str, env: dict[str, str], timeout: int,
     markers: list[tuple[str, str]],
@@ -358,47 +340,6 @@ def _run_with_phases(
         error += f"\nstderr: {stderr_text[-500:]}"
 
     return ok, error, lines, total, phase_times
-
-
-def _run_simpler_once(case: EquivalenceCase, extra_flags: list[str] | None = None) -> tuple[bool, str, list[str], float, dict[str, float]]:
-    """Single simpler invocation. Returns (ok, error, lines, total_s, phases)."""
-    if case.count != 256:
-        return False, (
-            f"simpler supports only count=256 (hardcoded ALLREDUCE_COUNT); "
-            f"got {case.count}. Use 'hccl' stack for size sweeps."
-        ), [], 0.0, {}
-    script = simpler_root() / "examples" / "workers" / "l3" / "allreduce" / "main.py"
-    legacy = simpler_root() / "examples" / "workers" / "l3" / "allreduce_distributed" / "main.py"
-    if not script.is_file():
-        script = legacy
-    if not script.is_file():
-        return False, f"simpler script not found (tried {script} and {legacy})", [], 0.0, {}
-
-    mode_flags: list[str] = []
-    if script == legacy:
-        # Legacy allreduce_distributed example: --mode ring|twophase.
-        if case.variant == "ring":
-            mode_flags = ["--mode", "ring"]
-        elif case.variant == "twophase":
-            mode_flags = ["--mode", "twophase"]
-    elif case.variant in ("ring", "twophase"):
-        # Current examples/workers/l3/allreduce/main.py is a mesh-only one-phase
-        # kernel (no --mode); ring/twophase need the legacy example.
-        return False, (
-            f"simpler example {script} is mesh-only; ring/twophase need the "
-            f"legacy allreduce_distributed example ({legacy})"
-        ), [], 0.0, {}
-
-    cmd = [
-        sys.executable, str(script),
-        "-p", case.platform,
-        "-d", _devices_dash(case.device_ids),
-    ] + mode_flags + (extra_flags or [])
-    return _run_with_phases(
-        cmd, str(simpler_root()),
-        {**os.environ, "PYTHONUNBUFFERED": "1"},
-        timeout=600, markers=_SIMPLER_MARKERS,
-    )
 
 
 _SIMPLER_OWN_MARKERS = [
@@ -850,9 +791,7 @@ def _run_stack_multi(
         if err and all_ok:
             last_error = err
     else:
-        if stack == "simpler":
-            runner = _run_simpler_once
-        elif stack == "pto-isa":
+        if stack == "pto-isa":
             runner = _run_pto_isa_once
         else:
             return False, f"unknown stack: {stack}", [], 0.0, 0.0, 0.0, None, 0.0
@@ -979,14 +918,6 @@ def _print_diagnostics(case: EquivalenceCase, args) -> None:
             print(f"  pypto: importable ✅  v{ver}")
         except Exception as e:
             print(f"  pypto: FAILED — {str(e)[:50]}")
-
-    # simpler scripts
-    if "simpler" in stacks:
-        from collectives.config import simpler_root as _sr
-        mesh = _sr() / "examples" / "workers" / "l3" / "allreduce" / "main.py"
-        if not mesh.is_file():
-            mesh = _sr() / "examples" / "workers" / "l3" / "allreduce_distributed" / "main.py"
-        print(f"  simpler mesh script: {'✅' if mesh.is_file() else '❌ not found'}")
 
     # pto-isa treduce binary
     if "pto-isa" in stacks:

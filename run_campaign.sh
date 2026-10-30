@@ -80,8 +80,8 @@ Options:
                            one result file per (P, count). Takes precedence over
                            --count. Feeds message_size_bw_eff / summarize.
   --dtype TYPE             fp32 or fp16 (default: fp32)
-  --stacks CSV             Stacks: hccl,simpler,simpler-own,pypto-composite,
-                           pypto-host,pto-isa (default: hccl,simpler,pypto-composite,pypto-host)
+  --stacks CSV             Stacks: hccl,simpler-own,pypto-composite,
+                           pypto-host,pto-isa (default: hccl,pypto-composite,pypto-host)
   --platform PLATFORM      Platform (a2a3, a2a3sim, a5, a5sim)
   --warmup-rounds N        Override warmup rounds
   --timed-rounds N         Override timed rounds
@@ -100,7 +100,7 @@ P_VALUES_CSV="2,4,8"
 COUNT_OVERRIDE=""
 COUNTS_CSV=""
 DTYPE="fp32"
-STACKS="hccl,simpler,pypto-composite,pypto-host"
+STACKS="hccl,pypto-composite,pypto-host"
 PLATFORM=""
 WARMUP_OVERRIDE=""
 TIMED_OVERRIDE=""

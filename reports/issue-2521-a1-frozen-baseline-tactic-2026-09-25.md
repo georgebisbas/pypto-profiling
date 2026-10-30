@@ -1,5 +1,7 @@
 # RFC #2521 A1 — frozen-baseline tactic + experiment plan (2026-09-25)
 
+> **Report status:** reference — A1 measurement protocol. See [upstream-status.md](upstream-status.md).
+
 **Scope.** Work item **A1** (“benchmark harness + pre-change baseline”) of
 [pypto#2521](https://github.com/hw-native-sys/pypto/issues/2521). This file records the **tactic
 change agreed 2026-09-25** and the **experiment program** that delivers A1 under it.
