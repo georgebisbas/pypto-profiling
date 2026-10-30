@@ -84,7 +84,7 @@ def main() -> int:
     ax.set_xlabel("payload per remote peer  [KiB]")
     ax.set_ylabel("effective egress  [Gbit/s per rank]")
     ax.set_title("EP8 all_to_all_v — effective per-rank bandwidth vs payload\n"
-                 "(remote payload = (P-1) x peer_bytes, both sides)")
+                 "(remote payload as recorded in payload_sweep.json)")
     ax.legend(fontsize=8); ax.grid(alpha=0.25, which="both")
     fig.tight_layout(); fig.savefig(args.out / "a2av_ep8_payload_bw.png", dpi=150); plt.close(fig)
 
@@ -98,8 +98,30 @@ def main() -> int:
     ax.axhline(1.0, color="k", ls="--", lw=0.9)
     ax.set_xlabel("payload per remote peer  [KiB]")
     ax.set_ylabel("PyPTO / HCCL  host-slot p50  [x]")
-    ax.set_title("EP8 all_to_all_v — the PyPTO/HCCL gap WIDENS with payload\n"
-                 "6.3x at 64 KiB -> 23.6x at 1 MiB (best PyPTO config)")
+    payloads = sorted({r["peer_bytes"] for r in rows if r["config"] != "HCCL HcclAlltoAllV"})
+
+    def _best_ratio(pb: float) -> float | None:
+        base = next(
+            (r["slot_p50_us"] for r in rows
+             if r["config"] == "HCCL HcclAlltoAllV" and r["peer_bytes"] == pb),
+            None,
+        )
+        vals = [
+            r["slot_p50_us"] / base
+            for r in rows
+            if r["config"] != "HCCL HcclAlltoAllV" and r["peer_bytes"] == pb and base
+        ]
+        return min(vals) if vals else None
+
+    lo, hi = payloads[0], payloads[-1]
+    lo_r, hi_r = _best_ratio(lo), _best_ratio(hi)
+    subtitle = (
+        f"{lo_r:.1f}x at {lo // 1024} KiB -> {hi_r:.1f}x at {hi // 1024} KiB "
+        "(best PyPTO config)"
+        if lo_r is not None and hi_r is not None
+        else ""
+    )
+    ax.set_title("EP8 all_to_all_v — PyPTO/HCCL host-slot ratio vs payload\n" + subtitle)
     ax.legend(fontsize=8); ax.grid(alpha=0.25, which="both")
     fig.tight_layout(); fig.savefig(args.out / "a2av_ep8_payload_ratio.png", dpi=150); plt.close(fig)
 
