@@ -11,10 +11,13 @@ recorded; other docs link here instead of hard-coding them.
 | `pypto/runtime` gitlink | `6b6b88f2353cca12cfafe809750b50b59931b0d1` | the pin recorded by pypto `HEAD` |
 | `pypto/runtime` checkout | `6b6b88f2353cca12cfafe809750b50b59931b0d1` (2026-10-29) | synced 2026-10-30; matches the gitlink |
 | `pto-isa` pin (from runtime `6b6b88f2`) | `217bb98952a8f9004b95fe938da97d8d5f68f702` | read through the gitlink, not the submodule tree |
-| Container image | `pypto-docker` `b1c7129` (2026-10-28): pypto `dccabd79`, simpler `5e59ec5a`, pto-isa `dcebd22b`, PTOAS v0.70 | image is **older** than the workspace checkout |
+| Container image (local `pypto3-hw-native-sys:cann9`) | rebuilt 2026-10-30 at pypto `f32ecf3f0`, runtime `6b6b88f2`, pto-isa `217bb989`, PTOAS 0.70 | current; pypto-docker `dee4d45` carries the build pin. Old image preserved as `:cann9-7fc45aed` (installed pypto `7fc45aed`, runtime `6e383fc5`, PTOAS 0.65) |
 
 The image and the workspace are not the same tree. Quote the image pin for container runs and the
 workspace SHA for runs made from this checkout; never mix them in one comparison.
+
+Latest HCCL-vs-pypto comparison on the rebuilt image:
+[`post-cleanup-main-2026-10-30/`](post-cleanup-main-2026-10-30/README.md).
 
 ## RFC #2521 PRs
 
@@ -70,4 +73,11 @@ git -C ../pypto ls-tree HEAD runtime
 git -C ../pypto/runtime rev-parse HEAD
 git -C ../pypto/runtime show "$(git -C ../pypto ls-tree HEAD runtime | awk '{print $3}')":pto_isa.pin
 gh pr view 3229 --repo hw-native-sys/pypto --json state,mergedAt
+
+# Verify what the container actually installed (build args can lie):
+docker exec <container> git -C /opt/pypto rev-parse HEAD
+docker exec <container> git -C /opt/pypto/runtime rev-parse HEAD
 ```
+
+To measure current `main`, rebuild the image with
+`docker build --build-arg PYPTO_COMMIT=f32ecf3f05d23a83a52283ad7998ca59cd8d291d -t pypto3-hw-native-sys:cann9-main -f Dockerfile.hw-native-sys.cann9.0 .`.
