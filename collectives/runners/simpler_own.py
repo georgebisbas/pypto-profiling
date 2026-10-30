@@ -63,6 +63,21 @@ def expected_output(nranks: int, count: int) -> list[float]:
     return [float(nranks * i + 100 * nranks * (nranks - 1) // 2) for i in range(count)]
 
 
+_ALIGN_BYTES = 64
+
+
+def _scratch_layout(count: int, nranks: int) -> tuple[int, int]:
+    """Return ``(scratch_nbytes, window_size)``, both 64-byte aligned.
+
+    The runtime (simpler 6b6b88f2) requires ``window_size`` and every buffer's
+    ``nbytes`` to be multiples of 64. The signal tail stays at ``count * 4``;
+    only the physical buffer is padded.
+    """
+    raw = count * 4 + nranks * 4
+    nbytes = (raw + _ALIGN_BYTES - 1) // _ALIGN_BYTES * _ALIGN_BYTES
+    return nbytes, max(nbytes, 4096)
+
+
 # Kernel variants for the perf-improvement experiments (2026-08-28). Select with
 # PYPTO_SIMPLER_KERNEL selects the kernel; see _KERNEL_VARIANTS below.
 # Default is "mesh" (the fast hand-written baseline).
@@ -192,10 +207,7 @@ class MeshAllreduceSession:
         if count <= 0:
             raise ValueError(f"count must be positive, got {count}")
 
-        dtype_nbytes = 4
-        signal_tail_nbytes = self.nranks * 4
-        self.scratch_nbytes = count * dtype_nbytes + signal_tail_nbytes
-        self.window_size = max(self.scratch_nbytes, 4096)
+        self.scratch_nbytes, self.window_size = _scratch_layout(count, self.nranks)
 
         self.host_inputs = [
             torch.tensor([i + rank * 100 for i in range(count)], dtype=torch.float32).share_memory_()
