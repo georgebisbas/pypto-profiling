@@ -25,6 +25,12 @@ contention the lock removes. An unqueued run on this box has no claim to either.
 **If `task-submit --list` fails, your container is not on the queue: stop and report. Do not fall
 back to a direct run.**
 
+> **Agent checklist, in order.** (1) `task-submit --list` succeeds — otherwise stop, do not run
+> directly. (2) Submit with `--device auto --device-num <P> --max-time <300–3600> --timeout 0`.
+> (3) Inside the payload use `$TASK_DEVICE`; never set `ASCEND_RT_VISIBLE_DEVICES` or `LD_PRELOAD`
+> in the client shell. (4) Record the task id with the result. (5) Never nest `task-submit` and
+> never start the broker. `CLAUDE.md` and `AGENTS.md` §2.1 carry the same rule.
+
 ---
 
 ## 2. Where `task-submit` actually is

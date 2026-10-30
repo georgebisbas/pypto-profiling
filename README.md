@@ -53,9 +53,25 @@ gitlink recorded by `pypto HEAD` (`6b6b88f2` at `f32ecf3f0`) and check with
 
 ## Running on the NPU boxes
 
-The NPU hosts are shared and **queued**: on `192.168.150.11` / `192.168.150.12` every
-card-touching command must go through `task-submit`; `192.168.150.13` has no queue, and sim work
-(container `pypto3-hw-native-sys:sim`) never needs one. Start with [`AGENTS.md` §2.1](AGENTS.md)
+The NPU hosts are shared and **queued**. On `192.168.150.11` / `192.168.150.12` **every**
+card-touching command must go through `task-submit` — a direct run does not hold a card lock, and
+a card picked from `npu-smi` is not a card you hold. `192.168.150.13` has no queue; simulator work
+(`pypto3-hw-native-sys:sim`) and unit tests never need one.
+
+```bash
+export PATH="$PATH:/var/lib/taskqueue/bin"
+export TASKQUEUE_CONF=/var/lib/taskqueue/taskqueue.conf
+task-submit --list          # if this fails, STOP; do not run directly
+
+task-submit --device auto --device-num 2 --max-time 3600 --timeout 0 \
+  --run 'cd /mounted_home/hw-native-sys/pypto-profiling && export PYTHONPATH=. && \
+         python3 -m collectives.run_sweep pair-mesh \
+           --case-file collectives/cases/mesh_p2_count65536_fp32_a2a3_d0-1.json \
+           --stacks hccl,pypto-composite,pypto-host --persistent \
+           --timed-rounds 5 --warmup-rounds 2'
+```
+
+Keep each submitted payload inside the 3600 s kill deadline. Start with [`AGENTS.md` §2.1](AGENTS.md)
 and the full recipe book in [`reports/npu-queue-runbook.md`](reports/npu-queue-runbook.md).
 
 ## Benchmark methodology

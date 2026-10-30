@@ -9,6 +9,14 @@ collectives. Authoritative methodology: `pypto-3.0-notes/collectives_benchmarkin
 Upstream SHAs, PR states, and archived branch SHAs: [`reports/upstream-status.md`](reports/upstream-status.md)
 (last verified 2026-10-30).
 
+> **NON-NEGOTIABLE — hardware runs are queued.** On `.11`/`.12`, every card-touching command goes
+> through `task-submit`; a card picked from `npu-smi` is not a card you hold. Preflight:
+> `export PATH="$PATH:/var/lib/taskqueue/bin"; export TASKQUEUE_CONF=/var/lib/taskqueue/taskqueue.conf;
+> task-submit --list`. If `--list` fails, **stop and report** — do not fall back to a direct run.
+> Submit: `task-submit --device auto --device-num <P> --max-time 3600 --timeout 0 --run '<payload>'`.
+> Unit tests and simulator runs need no queue. Full rules: §2.1 and
+> [`reports/npu-queue-runbook.md`](reports/npu-queue-runbook.md).
+
 ---
 
 ## 1. What this repo is
@@ -55,8 +63,8 @@ older revision — ignore it).
 | NPU | `/dev/davinci*` (8× Ascend 910B2) | **shared box, queue mandatory** — see §2.1 |
 | CANN | `/usr/local/Ascend/cann-9.0.0` (`CANN_HOME`, also `ASCEND_HOME_PATH`) | baked into the image; never mount `/usr/local/Ascend` from the host |
 | HCCL | `${CANN_HOME}/aarch64-linux/lib64/libhccl.so` | needed for the `hccl` stack; the image defines a `hccl-preload` bash function and deliberately leaves `LD_PRELOAD` unset |
-| pypto | `/opt/pypto` (`PYPTO_DIR`) | pinned commit install — current image `PYPTO_COMMIT=dccabd79508e8811dd83b4242d078dc818d78740` (pypto-docker `b1c7129`, 2026-10-28); not editable (use the `.dev.` image for that) |
-| simpler | `/opt/pypto/runtime` (`SIMPLER_ROOT`) | the **`runtime/` git submodule of the pypto checkout** — not a sibling clone, not a PyPI package; image pin `5e59ec5a` (2026-10-28) |
+| pypto | `/opt/pypto` (`PYPTO_DIR`) | pinned commit install. Local `pypto3-hw-native-sys:cann9` was rebuilt 2026-10-30 at `f32ecf3f0` (runtime `6b6b88f2`, pto-isa `217bb989`, PTOAS 0.70). The previous image is preserved as `:cann9-7fc45aed`; its installed pypto was `7fc45aed` (2026-09-23), not the build arg. Verify with `git -C /opt/pypto rev-parse HEAD`. |
+| simpler | `/opt/pypto/runtime` (`SIMPLER_ROOT`) | the **`runtime/` git submodule of the pypto checkout** — not a sibling clone, not a PyPI package; local image pin `6b6b88f2` (2026-10-29) |
 | pto-isa | `/opt/pto-isa` (`PTO_ISA_ROOT`) | commit derived at build time from `runtime/pto_isa.pin` |
 | PTOAS | `/opt/ptoas-bin` (`PTOAS_ROOT`) | py3.10 venv holding the v0.65 cp310 wheel; **appended** to `PATH`, never prepended, so it cannot shadow the system py3.12 |
 | **Python** | **bare `python3`** = `/usr/local/python3.12.13/bin/python3` | the py3.12 interpreter that has pypto + torch. The py3.10 `/opt/ptoas-bin` venv is *appended* to `PATH`, so it does not shadow it — the old "you MUST use the absolute path" advice is obsolete; bare `python3` is correct (and the absolute path still works). |
