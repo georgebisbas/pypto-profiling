@@ -288,6 +288,19 @@ def run_one(
         proc = _run_harness(cmd, log_path=log_path)
         if proc.returncode == 0 and json_path.is_file():
             harness = json.loads(json_path.read_text())
+            per_rank_bw = harness.get("per_rank_receive_bandwidth_gbps")
+            if isinstance(per_rank_bw, dict):
+                fastest_rank = harness.get("fastest_rank")
+                scalar_bw = (
+                    per_rank_bw.get(str(fastest_rank))
+                    if fastest_rank is not None
+                    else next(iter(per_rank_bw.values()), None)
+                )
+            else:
+                scalar_bw = per_rank_bw
+            host_slot = harness.get("host_timing_slot_p50_us")
+            if host_slot is None:
+                host_slot = harness.get("end_to_end_latency_p50_us")
             row = {
                 "tag": tag,
                 "ok": True,
@@ -321,14 +334,20 @@ def run_one(
                 "bandwidth_unit": harness.get("bandwidth_unit"),
                 "bandwidth_gbps": harness.get("egress_gbps")
                 if harness.get("egress_gbps") is not None
-                else harness.get("per_rank_receive_bandwidth_gbps"),
+                else scalar_bw,
                 "bandwidth_source": "egress_gbps"
                 if harness.get("egress_gbps") is not None
                 else "per_rank_receive_bandwidth_gbps",
+                "host_slot_p50_us": host_slot,
                 "host_timing_slot_mean_us": harness.get("host_timing_slot_mean_us"),
                 "host_timing_slot_p50_us": harness.get("host_timing_slot_p50_us"),
                 "host_timing_slot_includes_swimlane_tax": harness.get(
                     "host_timing_slot_includes_swimlane_tax"
+                ),
+                "end_to_end_latency_p50_us": harness.get("end_to_end_latency_p50_us"),
+                "end_to_end_latency_mean_us": harness.get("end_to_end_latency_mean_us"),
+                "end_to_end_latency_includes_swimlane_tax": harness.get(
+                    "end_to_end_latency_includes_swimlane_tax"
                 ),
                 "aiv_rounds_captured": harness.get("aiv_rounds_captured"),
                 "send_bytes": (harness.get("per_rank_send_bytes") or {}).get("0"),
@@ -342,7 +361,7 @@ def run_one(
             print(
                 f"  OK attempt={attempt} metric={row['metric']}  "
                 f"kernel_p50={row['fastest_p50_us']}  "
-                f"slot_p50={row['host_timing_slot_p50_us']}  "
+                f"slot_p50={row['host_slot_p50_us']}  "
                 f"bw[{row['bandwidth_source']}]={row['bandwidth_gbps']}",
                 flush=True,
             )
@@ -408,12 +427,14 @@ def main() -> int:
         )
         return 2
     stamp = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    # The harness runs with cwd=PYPTO_ROOT, so a relative A2AV_OUT would land
+    # under /opt/pypto and the driver's file check would miss it.
     out = Path(
         os.environ.get(
             "A2AV_OUT",
             f"/opt/pypto-profiling/reports/issue-2521-a1-alltoallv-baseline-{stamp}",
         )
-    )
+    ).expanduser().resolve()
     out.mkdir(parents=True, exist_ok=True)
     rounds = _env_int("A2AV_ROUNDS", 100)
     warmup = _env_int("A2AV_WARMUP", 5)
