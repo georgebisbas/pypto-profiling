@@ -14,6 +14,7 @@ Upstream SHAs and PR states live in [`upstream-status.md`](upstream-status.md).
 
 | Date | Campaign | Establishes | Provenance |
 |---|---|---|---|
+| 2026-10-30 | [a2av-main](a2av-main-2026-10-30/README.md) | A2AV on `f32ecf3f0`: L2 L=8 is 10.2×/17.5× behind HCCL at 64 KiB/1 MiB; gap widens; L=8 moves the kernel, not the host slot | `task_20261030_161545_299625718603` |
 | 2026-10-22 | [o2-a3](issue-2521-o2-a3-2026-10-22/README.md) | O2/A3 gate held (HOST rail emits no AIV span); L2 Part B pass 1 30/30 + anchors; #3051 payload re-run | pypto `af75165dd`, runtime `d8f997fa`; queue ids in report |
 | 2026-10-14 | [ep8-l2corenum](issue-2521-a1-ep8-l2corenum-2026-10-14/README.md) | first L2 multi-lane: `managed-l2` L=8 = 186 µs / 19.75 Gbit/s/rank; HOST rail gains ~3% from multi-lane | `task_20261014_085749_20485986058` |
 | 2026-10-14 | [a2av-resident-args](a2av-resident-args-2026-10-14/README.md) | `--resident-args` cuts the EP8 L=8 1 MiB host slot 10377→5270 µs (1.97×), kernel unchanged | `task_20261014_112920_242602513476`; branch archived (SHA in upstream-status) |

@@ -18,6 +18,8 @@ workspace SHA for runs made from this checkout; never mix them in one comparison
 
 Latest HCCL-vs-pypto comparison on the rebuilt image:
 [`post-cleanup-main-2026-10-30/`](post-cleanup-main-2026-10-30/README.md).
+Latest AllToAllV comparison on the rebuilt image:
+[`a2av-main-2026-10-30/`](a2av-main-2026-10-30/README.md).
 
 ## RFC #2521 PRs
 
